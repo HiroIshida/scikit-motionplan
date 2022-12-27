@@ -55,5 +55,5 @@ class AbstractSolver(ABC):
         ...
 
     @abstractmethod
-    def solve(self) -> ResultProtocol:
+    def solve(self, init_traj: Optional[Trajectory] = None) -> ResultProtocol:
         ...

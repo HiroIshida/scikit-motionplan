@@ -61,7 +61,7 @@ class OMPLSolver(AbstractSolver):
         )
         return cls(problem, config, planner)
 
-    def solve(self):
+    def solve(self, init_traj: Optional[Trajectory] = None):
         ts = time.time()
 
         result: Optional[SatisfactionResult] = None

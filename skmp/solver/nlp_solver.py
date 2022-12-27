@@ -105,7 +105,11 @@ class SQPBasedSolver(AbstractSolver):
         mat = smoothcost_fullmat(n_dof, config.n_wp)
         return cls(traj_eq_const, traj_ineq_const, problem, mat, config)
 
-    def solve(self, init_traj: Trajectory) -> "SQPBasedSolver.Result":
+    def solve(self, init_traj: Optional[Trajectory] = None) -> "SQPBasedSolver.Result":
+        """solve
+        Actually this function don't case init_traj
+        """
+        assert init_traj is not None  # TODO: remove this
         # TODO: add motion step constraint
         ts = time.time()
 
