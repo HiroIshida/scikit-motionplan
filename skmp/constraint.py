@@ -2,7 +2,7 @@ import copy
 from abc import abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, List, Optional, Tuple, TypeVar
 
 import numpy as np
 from skrobot.coordinates import Coordinates, rpy_angle
@@ -31,6 +31,9 @@ class AbstractIneqConst(AbstractConst):
 
 class AbstractEqConst(AbstractConst):
     ...
+
+
+ConstraintT = TypeVar("ConstraintT", bound=AbstractConst)
 
 
 @dataclass
