@@ -6,7 +6,7 @@ import numpy as np
 from ompl import Algorithm, Planner
 
 from skmp.satisfy import SatisfactionResult, satisfy_by_optimization
-from skmp.solver_interface import AbstractSolver, Problem
+from skmp.solver.interface import AbstractSolver, Problem
 from skmp.trajectory import Trajectory
 
 

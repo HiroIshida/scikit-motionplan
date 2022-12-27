@@ -4,9 +4,8 @@ from skrobot.model.primitives import Box
 from skrobot.models import PR2
 
 from skmp.constraint import CollFreeConst, PoseConstraint
-from skmp.ompl_solver import OMPLSolver
+from skmp.solver import OMPLSolver, Problem
 from skmp.robot.pr2 import PR2Config
-from skmp.solver_interface import Problem
 
 
 def test_ompl_solver():
