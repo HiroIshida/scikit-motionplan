@@ -28,7 +28,7 @@ def scipinize(fun: Callable) -> Tuple[Callable, Callable]:
 
 
 @dataclass
-class ConstraintSatisfactionConfig:
+class SatisfactionConfig:
     ftol: float = 1e-6
     disp: bool = False
     n_max_eval: int = 200
@@ -36,38 +36,38 @@ class ConstraintSatisfactionConfig:
 
 
 @dataclass
-class ConstSatisfactionResult:
+class SatisfactionResult:
     q: np.ndarray
     elapsed_time: float
     success: bool
 
 
-def satisfy_by_optimize(
+def satisfy_by_optimization(
     eq_const: AbstractEqConst,
     box_const: BoxConst,
     ineq_const: Optional[AbstractIneqConst],
     q_seed: Optional[np.ndarray],
-    config: Optional[ConstraintSatisfactionConfig] = None,
-) -> ConstSatisfactionResult:
+    config: Optional[SatisfactionConfig] = None,
+) -> SatisfactionResult:
     ts = time.time()
     if config is None:
-        config = ConstraintSatisfactionConfig()
+        config = SatisfactionConfig()
 
     if isinstance(eq_const, ConfigPointConst):
-        return ConstSatisfactionResult(eq_const.desired_angles, 0.0, True)
+        return SatisfactionResult(eq_const.desired_angles, 0.0, True)
 
     def objective_fun(q: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         vals, jac = eq_const.evaluate_single(q, with_jacobian=True)
         f = vals.dot(vals)
-        2 * jac.T.dot(f)
-        return vals, jac
+        grad = 2 * vals.dot(jac)
+        return f, grad
 
     f, jac = scipinize(objective_fun)
 
     constraints = []
     if ineq_const is not None:
 
-        def fun_ineq(self, q: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+        def fun_ineq(q: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
             val, jac = ineq_const.evaluate_single(q, with_jacobian=True)  # type: ignore[union-attr]
             margin_numerical = 1e-7
             return val + margin_numerical, jac
@@ -78,7 +78,7 @@ def satisfy_by_optimize(
 
     bounds = Bounds(box_const.lb, box_const.ub, keep_feasible=True)  # type: ignore
 
-    if q_seed is not None:
+    if q_seed is None:
         q_seed = box_const.sample()
 
     slsqp_option: Dict = {
@@ -104,4 +104,4 @@ def satisfy_by_optimize(
 
     elapsed_time = time.time() - ts
 
-    return ConstSatisfactionResult(res.x, elapsed_time, res.success)
+    return SatisfactionResult(res.x, elapsed_time, res.success)
