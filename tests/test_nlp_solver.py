@@ -55,5 +55,8 @@ def test_sqp_based_solver(standard_problem: Problem):  # noqa
     solver = SQPBasedSolver.setup(standard_problem, config)
 
     q_goal_cand = np.array([-0.78, 0.055, -1.37, -0.59, -0.494, -0.20, 1.87])
-    traj = Trajectory.from_two_points(standard_problem.start, q_goal_cand, n_wp)
-    solver.solve(traj)
+    init_traj = Trajectory.from_two_points(standard_problem.start, q_goal_cand, n_wp)
+    assert not standard_problem.is_satisfied(init_traj)
+    result = solver.solve(init_traj)
+    assert result.traj is not None
+    standard_problem.is_satisfied(result.traj)

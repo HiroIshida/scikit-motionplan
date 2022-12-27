@@ -21,9 +21,21 @@ class Problem:
     goal_const: AbstractEqConst
     global_ineq_const: Optional[AbstractIneqConst]
     global_eq_const: Optional[AbstractEqConst]
+    eqconst_admissible_mse: float = 1e-6
 
     def is_constrained(self) -> bool:
         return self.global_eq_const is not None
+
+    def is_satisfied(self, traj: Trajectory) -> bool:
+        # check goal satsifaction
+        vals, _ = self.goal_const.evaluate_single(traj[-1], with_jacobian=False)
+        if vals.dot(vals) > self.eqconst_admissible_mse:
+            return False
+
+        # check ineq satisfaction
+        assert self.global_ineq_const is not None
+        valss, _ = self.global_ineq_const.evaluate(traj.numpy(), with_jacobian=False)
+        return bool(np.all(valss > 0))
 
 
 class ConfigProtocol(Protocol):
