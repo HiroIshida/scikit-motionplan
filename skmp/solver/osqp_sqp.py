@@ -30,7 +30,7 @@ class OsqpSqpConfig:
     maxrelax: int = 10
     trust_box_init_size: float = 0.5
     osqp_verbose: bool = False
-    verbose: bool = True
+    verbose: bool = False
     relax_step_convex: float = 0.1
 
 
