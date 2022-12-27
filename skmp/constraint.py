@@ -76,8 +76,8 @@ class BoxConst(AbstractIneqConst):
         f_upper = (self.ub - qs).flatten()
         f = np.hstack((f_lower, f_upper)).reshape(n_point, -1)
         if with_jacobian:
-            jac = np.vstack((np.eye(len(f_lower)), -np.eye(len(f_upper))))
-            jac = jac.reshape(n_point, -1, dim)
+            jac_single = np.vstack((np.eye(dim), -np.eye(dim)))
+            jac = np.array([jac_single for _ in range(n_point)])
         else:
             jac = self.dummy_jacobian()
         return f, jac

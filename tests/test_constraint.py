@@ -22,17 +22,26 @@ def jac_numerical(const: AbstractConst, q0: np.ndarray) -> np.ndarray:
     return jac
 
 
-def check_jacobian(const: AbstractConst, q: np.ndarray):
-    _, jac_anal = const.evaluate_single(q, with_jacobian=True)
-    jac_numel = jac_numerical(const, q)
-    np.testing.assert_almost_equal(jac_anal, jac_numel, decimal=4)
+def check_jacobian(const: AbstractConst):
+    # check single jacobian
+    for _ in range(10):
+        q_test = np.random.randn(7)
+        _, jac_anal = const.evaluate_single(q_test, with_jacobian=True)
+        jac_numel = jac_numerical(const, q_test)
+        np.testing.assert_almost_equal(jac_anal, jac_numel, decimal=4)
+
+    # check traj jacobian
+    for _ in range(10):
+        qs_test = np.random.randn(10, 7)
+        _, jac_anal = const.evaluate(qs_test, with_jacobian=True)
+        jac_numel = np.array([jac_numerical(const, q) for q in qs_test])
+        np.testing.assert_almost_equal(jac_anal, jac_numel, decimal=4)
 
 
 def test_box_const():
     config = PR2Config(with_base=False)
     box_const = config.get_box_const()
-    for _ in range(10):
-        check_jacobian(box_const, box_const.sample())
+    check_jacobian(box_const)
 
 
 def test_collfree_const():
@@ -42,21 +51,15 @@ def test_collfree_const():
     box.translate(np.array([0.85, -0.2, 0.9]))
     assert box.sdf is not None
     collfree_const = CollFreeConst(colkin, box.sdf, 3)
-
-    box_const = config.get_box_const()
-    for _ in range(10):
-        q_test = box_const.sample()
-        check_jacobian(collfree_const, q_test)
+    check_jacobian(collfree_const)
 
 
 def test_configpoint_const():
-    for _ in range(10):
-        q_test = np.random.randn(7)
-        const = ConfigPointConst(np.zeros(7))
-        check_jacobian(const, q_test)
+    const = ConfigPointConst(np.zeros(7))
+    check_jacobian(const)
 
 
 if __name__ == "__main__":
-    # test_box_const()
-    # test_collfree_const()
+    test_box_const()
+    test_collfree_const()
     test_configpoint_const()
