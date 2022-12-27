@@ -17,7 +17,7 @@ ProblemT = TypeVar("ProblemT", bound="Problem")
 @dataclass
 class Problem:
     start: np.ndarray
-    box_constraint: BoxConst
+    box_const: BoxConst
     goal_const: AbstractEqConst
     global_ineq_const: Optional[AbstractIneqConst]
     global_eq_const: Optional[AbstractEqConst]

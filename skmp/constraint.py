@@ -95,9 +95,7 @@ class CollFreeConst(AbstractIneqConst):
     dim_tspace: int
     clearance: float = 0.0
 
-    def evaluate(
-        self, qs: np.ndarray, with_jacobian: bool = False
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    def evaluate(self, qs: np.ndarray, with_jacobian: bool) -> Tuple[np.ndarray, np.ndarray]:
         """compute signed distance of feature points and its jacobian
         input:
             qs: R^{n_point, dim_cspace}
@@ -143,9 +141,7 @@ class CollFreeConst(AbstractIneqConst):
 class ConfigPointConst(AbstractEqConst):
     desired_angles: np.ndarray
 
-    def evaluate(
-        self, qs: np.ndarray, with_jacobian: bool = False
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    def evaluate(self, qs: np.ndarray, with_jacobian: bool) -> Tuple[np.ndarray, np.ndarray]:
         n_point, dim = qs.shape
         val = qs - self.desired_angles
         if with_jacobian:

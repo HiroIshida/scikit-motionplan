@@ -1,29 +1,30 @@
 import time
-from abc import abstractmethod
 from dataclasses import dataclass
-from typing import Optional, Type, TypeVar
+from typing import List, Optional, Type, TypeVar, Union
 
 import numpy as np
 from ompl import Algorithm, Planner
 
-from skmp.constraint import AbstractEqConst, AbstractIneqConst, BoxConst
-from skmp.solver_interface import AbstractSolver, ConfigProtocol, Problem
+from skmp.satisfy import SatisfactionResult, satisfy_by_optimization
+from skmp.solver_interface import AbstractSolver, Problem
 from skmp.trajectory import Trajectory
 
 
 @dataclass
-class OMPLSolverConfig(ConfigProtocol):
-    n_max_eval: int
-    motion_step_box: np.ndarray
+class OMPLSolverConfig:
+    n_max_eval: int = 2000
+    n_max_satisfaction_trial: int = 100
+    motion_step_box: Union[np.ndarray, float] = 0.1
     algorithm: Algorithm = Algorithm.RRTConnect
 
 
-OMPLSolverT = TypeVar("OMPLSolverT", bound="OMPLSolverBase")
+OMPLSolverT = TypeVar("OMPLSolverT", bound="OMPLSolver")
 
 
 @dataclass
-class OMPLSolverBase(AbstractSolver):
+class OMPLSolver(AbstractSolver):
     problem: Problem
+    config: OMPLSolverConfig
     planner: Planner
 
     @dataclass
@@ -32,45 +33,55 @@ class OMPLSolverBase(AbstractSolver):
         time_elapsed: float
 
     @classmethod
-    def setup(cls: Type[OMPLSolverT], problem: Problem, config: OMPLSolverConfig) -> OMPLSolverT:
+    def setup(cls: Type[OMPLSolverT], problem: Problem, config: Optional[OMPLSolverConfig] = None) -> OMPLSolverT:  # type: ignore[override]
+
+        if config is None:
+            config = OMPLSolverConfig()
+
         assert not problem.is_constrained()
 
-        def is_valid(x: np.ndarray) -> bool:
+        def is_valid(q_: List[float]) -> bool:
+            q = np.array(q_)
             if problem.global_ineq_const is None:
                 return True
             else:
-                val, _ = problem.global_ineq_const.evaluate_single(x, with_jacobian=False)
-                return val > 0
+                val, _ = problem.global_ineq_const.evaluate_single(q, with_jacobian=False)
+                return bool(np.all(val > 0))
 
-        lb = problem.box_constraint.lb
-        ub = problem.box_constraint.ub
+        lb = problem.box_const.lb
+        ub = problem.box_const.ub
 
         planner = Planner(
             lb,
             ub,
             is_valid,
             config.n_max_eval,
-            validation_box=config.n_max_eval,
+            validation_box=config.motion_step_box,
             algo=config.algorithm,
         )
-        return cls(problem, planner)
+        return cls(problem, config, planner)
 
     def solve(self):
         ts = time.time()
-        goal = self.sample_goal(
-            self.problem.goal_const, self.problem.box_constraint, self.problem.global_ineq_const
-        )
-        plan_result = self.planner.solve(self.problem.start, goal)
-        elapsed = time.time() - ts
+
+        result: Optional[SatisfactionResult] = None
+        for _ in range(self.config.n_max_satisfaction_trial):
+            result = satisfy_by_optimization(
+                self.problem.goal_const,
+                self.problem.box_const,
+                self.problem.global_ineq_const,
+                None,
+            )
+            if result.success:
+                break
+        assert result is not None
+        if not result.success:
+            return self.Result(None, time.time() - ts)
+        q_start = self.problem.start
+        q_goal = result.q
+        plan_result = self.planner.solve(q_start, q_goal)
         if plan_result is not None:
             traj = Trajectory(plan_result)
         else:
             traj = None
-        return self.Result(traj, elapsed)
-
-    @staticmethod
-    @abstractmethod
-    def sample_goal(
-        eq_const: AbstractEqConst, box_const: BoxConst, ineq_const: Optional[AbstractIneqConst]
-    ) -> np.ndarray:
-        ...
+        return self.Result(traj, time.time() - ts)
