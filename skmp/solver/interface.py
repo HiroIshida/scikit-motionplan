@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Optional, Protocol, Type, TypeVar
+from typing import Optional, Protocol, Type, TypeVar, Union
 
 import numpy as np
 
@@ -28,7 +28,7 @@ class Problem:
 
 class ConfigProtocol(Protocol):
     n_max_eval: int
-    motion_step_box: np.ndarray
+    motion_step_box: Union[np.ndarray, float]
 
 
 class ResultProtocol(Protocol):
