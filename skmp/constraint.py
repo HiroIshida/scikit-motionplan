@@ -5,8 +5,9 @@ from pathlib import Path
 from typing import Callable, List, Optional, Tuple
 
 import numpy as np
+from skrobot.coordinates import Coordinates, rpy_angle
 
-from skmp.kinematics import CollisionKinmaticsMapProtocol
+from skmp.kinematics import CollisionKinmaticsMapProtocol, KinematicsMapProtocol
 from skmp.utils.urdf import URDF, JointLimit
 
 
@@ -152,3 +153,35 @@ class ConfigPointConst(AbstractEqConst):
         else:
             jac = self.dummy_jacobian()
         return val, jac
+
+
+@dataclass
+class PoseConstraint(AbstractEqConst):
+    desired_poses: List[np.ndarray]
+    efkin: KinematicsMapProtocol
+
+    def evaluate(
+        self, qs: np.ndarray, with_jacobian: bool = False
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        n_point, n_dim = qs.shape
+        xs_tmp, jacs_tmp = self.efkin.map(qs)
+        xs = xs_tmp.reshape(n_point, -1)
+        jacs = jacs_tmp.reshape(n_point, -1, n_dim)
+        n_point, dim = qs.shape
+
+        target = np.hstack(self.desired_poses)
+        values = xs - target
+        return values, jacs
+
+    @classmethod
+    def from_skrobot_coords(
+        cls, co_list: List[Coordinates], efkin: KinematicsMapProtocol
+    ) -> "PoseConstraint":
+        vector_list = []
+        for co in co_list:
+            pos = co.worldpos()
+            ypr = rpy_angle(co.worldrot())[0]
+            rpy = np.flip(ypr)
+            vector = np.hstack([pos, rpy])
+            vector_list.append(vector)
+        return cls(vector_list, efkin)

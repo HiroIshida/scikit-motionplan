@@ -1,9 +1,15 @@
 from copy import deepcopy
 
 import numpy as np
+from skrobot.coordinates import Coordinates
 from skrobot.model.primitives import Box
 
-from skmp.constraint import AbstractConst, CollFreeConst, ConfigPointConst
+from skmp.constraint import (
+    AbstractConst,
+    CollFreeConst,
+    ConfigPointConst,
+    PoseConstraint,
+)
 from skmp.robot.pr2 import PR2Config
 
 
@@ -59,7 +65,17 @@ def test_configpoint_const():
     check_jacobian(const)
 
 
+def test_pose_const():
+    config = PR2Config(with_base=False)
+    efkin = config.get_endeffector_kin()
+
+    target = Coordinates(pos=[0.8, -0.6, 1.1])
+    const = PoseConstraint.from_skrobot_coords([target], efkin)
+    check_jacobian(const)
+
+
 if __name__ == "__main__":
     test_box_const()
     test_collfree_const()
     test_configpoint_const()
+    test_pose_const()
