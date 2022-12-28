@@ -63,8 +63,8 @@ def test_sqp_based_solver():
     # init_traj = Trajectory.from_two_points(problem.start, q_goal_cand, n_wp)
     # assert not problem.is_satisfied(init_traj)
 
-    config1 = SQPBasedSolverConfig(n_wp=30, verbose=True, motion_step_satisfaction="implicit")
-    config2 = SQPBasedSolverConfig(n_wp=50, verbose=True, motion_step_satisfaction="explicit")
+    config1 = SQPBasedSolverConfig(n_wp=30, motion_step_satisfaction="implicit")
+    config2 = SQPBasedSolverConfig(n_wp=50, motion_step_satisfaction="explicit")
     for config in [config1, config2]:
         solver = SQPBasedSolver.setup(problem, config)
         result = solver.solve(init_traj.resample(config.n_wp))

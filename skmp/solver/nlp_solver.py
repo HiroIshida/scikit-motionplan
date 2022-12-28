@@ -1,5 +1,6 @@
+import copy
 import time
-from dataclasses import dataclass, fields
+from dataclasses import dataclass
 from typing import Literal, Optional, Tuple
 
 import numpy as np
@@ -66,22 +67,19 @@ class SQPBasedSolverConfig:
     """
 
     n_wp: int
-    ftol: float = 1e-3
-    ctol_eq: float = 1e-4  # constraint tolerance
-    ctol_ineq: float = 1e-3  # constraint tolerance
     n_max_eval: int = 30
-    maxrelax: int = 10
-    trust_box_init_size: float = 0.5
-    osqp_verbose: bool = False
-    verbose: bool = False
-    relax_step_convex: float = 0.1
     motion_step_satisfaction: Literal["implicit", "explicit", "post"] = "implicit"
+    _osqpsqp_config: OsqpSqpConfig = OsqpSqpConfig()  # don't directly access this
 
-    def to_osqpsqp_config(self) -> OsqpSqpConfig:
-        dic = {}
-        for f in fields(OsqpSqpConfig):
-            dic[f.name] = self.__dict__[f.name]
-        return OsqpSqpConfig(**dic)
+    @property
+    def osqpsqp_config(self) -> OsqpSqpConfig:
+        osqpsqp_config = copy.deepcopy(self._osqpsqp_config)
+        # for f in fields(OsqpSqpConfig):
+        #     has_same_attribute = f.name in self.__dict__
+        #     if has_same_attribute:
+        #         osqpsqp_config.__dict__[f.name] = self.__dict__[f.name]
+        osqpsqp_config.n_max_eval = self.n_max_eval
+        return osqpsqp_config
 
 
 @dataclass
@@ -115,11 +113,13 @@ class SQPBasedSolver(AbstractSolver):
             msconst = MotionStepInequalityConstraint(n_dof, n_wp, motion_step_box)
             traj_ineq_const.global_constraint_table.append(msconst)
 
+        ctol_ineq = config.osqpsqp_config.ctol_ineq
+
         def ineq_tighten(x):
             # somehow, osqp-sqp result has some ineq error
             # thus to compensate that, we tighten the ineq constraint here
             f, jac = traj_ineq_const.evaluate(x)
-            return f - config.ctol_ineq * 2, jac
+            return f - ctol_ineq * 2, jac
 
         solver = OsqpSqpSolver(
             smooth_mat,
@@ -136,7 +136,7 @@ class SQPBasedSolver(AbstractSolver):
         ts = time.time()
 
         x_init = init_traj.numpy().flatten()
-        raw_result = self.solver.solve(x_init, config=self.config.to_osqpsqp_config())
+        raw_result = self.solver.solve(x_init, config=self.config.osqpsqp_config)
 
         traj_solution: Optional[Trajectory] = None
         if raw_result.success:
