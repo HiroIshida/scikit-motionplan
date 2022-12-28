@@ -59,11 +59,16 @@ def smoothcost_fullmat(n_dof: int, n_wp: int, weights: Optional[np.ndarray] = No
 
 @dataclass
 class SQPBasedSolverConfig:
-    """this is almost same as OsqpSqpConfig
-    except for n_wp, motion_step_box, check_motion_step_finally
+    """
+    motion_step_satisfaction: either of "implicit", "explicit", "post"
 
-    I wanted to use OsqpSqpConfig as a super class but it's not possible
-    because we need to put n_wp at the top of the attribute
+    NOTE: choice motion_step_satisfaction affects performance a lot.
+
+    In general, the following inequality is observed.
+    solvability: implicit > explicit >> post
+    speed: post >> explicit > implicit
+    when you choose good n_wp, the solvability order will be
+    solvability: explicit > post ~ implicit
     """
 
     n_wp: int
