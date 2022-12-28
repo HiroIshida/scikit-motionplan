@@ -1,4 +1,5 @@
 import copy
+import importlib
 from abc import abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
@@ -6,9 +7,17 @@ from typing import Callable, List, Optional, Tuple, TypeVar
 
 import numpy as np
 from skrobot.coordinates import Coordinates, rpy_angle
+from skrobot.model import RobotModel
 
 from skmp.kinematics import CollisionKinmaticsMapProtocol, KinematicsMapProtocol
 from skmp.utils.urdf import URDF, JointLimit
+
+if importlib.find_loader("selcol") is not None:
+    SELCOL_FOUND = True
+    from selcol.file import default_cache_basepath
+    from selcol.runtime import OrtSelColInferencer
+else:
+    SELCOL_FOUND = False
 
 
 class AbstractConst:
@@ -184,3 +193,43 @@ class PoseConstraint(AbstractEqConst):
             vector = np.hstack([pos, rpy])
             vector_list.append(vector)
         return cls(vector_list, efkin)
+
+
+@dataclass
+class NeuralSelfCollFreeConst(AbstractIneqConst):
+    model: OrtSelColInferencer  # type: ignore
+    threshold: float = 0.5
+
+    @classmethod
+    def load(cls, urdf_path: Path, control_joint_names: List[str]) -> "NeuralSelfCollFreeConst":
+        assert SELCOL_FOUND
+        cache_basepath = default_cache_basepath()
+        model = OrtSelColInferencer.load(
+            cache_basepath, urdf_path=urdf_path, eval_joint_names=control_joint_names
+        )
+        return cls(model)
+
+    def reflect_skrobot_model(self, robot_model: RobotModel):
+        angles = [robot_model.__dict__[jn].joint_angle() for jn in self.model.joint_names]
+        self.model.set_context(np.array(angles))
+
+    def evaluate(
+        self, qs: np.ndarray, with_jacobian: bool = False
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        n_point, n_dim = qs.shape
+
+        val_list = []
+        grad_list = []
+        for q in qs:
+            val, grad = self.model.infer(q, with_grad=with_jacobian)
+            val_list.append(self.threshold - val)
+            grad_list.append(-grad)
+
+        valss = np.array(val_list).reshape(n_point, 1)
+
+        if not with_jacobian:
+            return valss, self.dummy_jacobian()
+
+        grads = np.array(grad_list)
+        jacs = grads.reshape(n_point, 1, n_dim)
+        return valss, jacs

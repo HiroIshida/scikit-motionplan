@@ -1,4 +1,3 @@
-import importlib
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -12,23 +11,11 @@ from skmp.collision import (
     SphereCreatorConfig,
     create_sphere_collection,
 )
-from skmp.constraint import BoxConst
+from skmp.constraint import BoxConst, NeuralSelfCollFreeConst
 from skmp.kinematics import (
     ArticulatedCollisionKinematicsMap,
     ArticulatedEndEffectorKinematicsMap,
 )
-
-if importlib.find_loader("selcol") is not None:
-    _SELCOL_FOUND = True
-    from selcol.file import default_cache_basepath
-    from selcol.neural import load_model
-
-    from skmp.self_collision import SelfCollisionMap
-else:
-    _SELCOL_FOUND = False
-
-    class SelfCollisionMap:  # type: ignore
-        ...
 
 
 class ControlArm(Enum):
@@ -260,11 +247,5 @@ class PR2Config:
         )
         return kinmap
 
-    def get_self_collision_map(self) -> SelfCollisionMap:
-        assert _SELCOL_FOUND
-        base_path = default_cache_basepath()
-        model, header = load_model(base_path, "pr2")
-        selcol_map = SelfCollisionMap.from_deep_model(
-            model, header, self._get_control_joint_names()
-        )
-        return selcol_map
+    def get_neural_selcol_const(self) -> NeuralSelfCollFreeConst:
+        return NeuralSelfCollFreeConst.load(self.urdf_path(), self._get_control_joint_names())
