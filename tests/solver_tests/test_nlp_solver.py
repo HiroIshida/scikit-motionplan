@@ -69,8 +69,6 @@ def test_sqp_based_solver():
         solver = SQPBasedSolver.setup(problem, config)
         result = solver.solve(init_traj.resample(config.n_wp))
         assert result.traj is not None
-        ineq_vals, _ = solver.traj_ineq_const.evaluate(result.traj.numpy().flatten())
-        assert np.all(ineq_vals > 0)
         assert problem.is_satisfied(result.traj)
 
 

@@ -86,10 +86,7 @@ class SQPBasedSolverConfig:
 
 @dataclass
 class SQPBasedSolver(AbstractSolver):
-    traj_eq_const: TrajectoryEqualityConstraint
-    traj_ineq_const: TrajectoryInequalityConstraint
-    problem: Problem
-    smooth_mat: np.ndarray
+    solver: OsqpSqpSolver
     config: SQPBasedSolverConfig
 
     @dataclass
@@ -102,48 +99,44 @@ class SQPBasedSolver(AbstractSolver):
     def setup(cls, problem: Problem, config: SQPBasedSolverConfig) -> "SQPBasedSolver":  # type: ignore[override]
         traj_eq_const, traj_ineq_const = translate(problem, config.n_wp)
         n_dof = len(problem.start)
-        mat = smoothcost_fullmat(n_dof, config.n_wp)
-        return cls(traj_eq_const, traj_ineq_const, problem, mat, config)
+        smooth_mat = smoothcost_fullmat(n_dof, config.n_wp)
+
+        box_const = problem.box_const
+        lb_stacked = np.tile(box_const.lb, config.n_wp)
+        ub_stacked = np.tile(box_const.ub, config.n_wp)
+
+        n_dof = traj_ineq_const.n_dof
+        n_wp = traj_ineq_const.n_wp
+
+        motion_step_box = problem.motion_step_box
+        if config.motion_step_satisfaction == "implicit":
+            traj_ineq_const.motion_step_box = motion_step_box
+        elif config.motion_step_satisfaction == "explicit":
+            msconst = MotionStepInequalityConstraint(n_dof, n_wp, motion_step_box)
+            traj_ineq_const.global_constraint_table.append(msconst)
+
+        def ineq_tighten(x):
+            # somehow, osqp-sqp result has some ineq error
+            # thus to compensate that, we tighten the ineq constraint here
+            f, jac = traj_ineq_const.evaluate(x)
+            return f - config.ctol_ineq * 2, jac
+
+        solver = OsqpSqpSolver(
+            smooth_mat,
+            lambda x: traj_eq_const.evaluate(x),
+            ineq_tighten,
+            lb_stacked,
+            ub_stacked,
+        )
+        return cls(solver, config)
 
     def solve(self, init_traj: Optional[Trajectory] = None) -> "SQPBasedSolver.Result":
-        """solve
-        Actually this function don't case init_traj
-        """
         assert init_traj is not None  # TODO: remove this
         # TODO: add motion step constraint
         ts = time.time()
 
         x_init = init_traj.numpy().flatten()
-
-        box_const = self.problem.box_const
-        lb_stacked = np.tile(box_const.lb, self.config.n_wp)
-        ub_stacked = np.tile(box_const.ub, self.config.n_wp)
-
-        n_dof = self.traj_ineq_const.n_dof
-        n_wp = self.traj_ineq_const.n_wp
-
-        motion_step_box = self.problem.motion_step_box
-
-        if self.config.motion_step_satisfaction == "implicit":
-            self.traj_ineq_const.motion_step_box = motion_step_box
-        elif self.config.motion_step_satisfaction == "explicit":
-            msconst = MotionStepInequalityConstraint(n_dof, n_wp, motion_step_box)
-            self.traj_ineq_const.global_constraint_table.append(msconst)
-
-        def ineq_tighten(x):
-            # somehow, osqp-sqp result has some ineq error
-            # thus to compensate that, we tighten the ineq constraint here
-            f, jac = self.traj_ineq_const.evaluate(x)
-            return f - self.config.ctol_ineq * 2, jac
-
-        solver = OsqpSqpSolver(
-            self.smooth_mat,
-            lambda x: self.traj_eq_const.evaluate(x),
-            ineq_tighten,
-            lb_stacked,
-            ub_stacked,
-        )
-        raw_result = solver.solve(x_init, config=self.config.to_osqpsqp_config())
+        raw_result = self.solver.solve(x_init, config=self.config.to_osqpsqp_config())
 
         traj_solution: Optional[Trajectory] = None
         if raw_result.success:
