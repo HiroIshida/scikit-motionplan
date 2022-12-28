@@ -2,6 +2,7 @@ import time
 from typing import Optional
 
 import numpy as np
+from ompl import set_ompl_random_seed
 from skrobot.model.primitives import Axis, Box
 from skrobot.models import PR2
 from skrobot.viewers import TrimeshSceneViewer
@@ -10,6 +11,9 @@ from skmp.constraint import CollFreeConst, ConfigPointConst, PoseConstraint
 from skmp.robot.pr2 import PR2Config
 from skmp.robot.utils import set_robot_state
 from skmp.solver import OMPLSolver, Problem, SQPBasedSolver, SQPBasedSolverConfig
+
+np.random.seed(0)
+set_ompl_random_seed(0)
 
 if __name__ == "__main__":
     pr2 = PR2(use_tight_joint_limit=True)
@@ -51,6 +55,7 @@ if __name__ == "__main__":
     sqp_config = SQPBasedSolverConfig(n_wp=n_wp)
     nlp_solver = SQPBasedSolver.setup(problem, sqp_config)
     result = nlp_solver.solve(result.traj.resample(n_wp))
+    print(result.time_elapsed)
     assert result.traj is not None
 
     viewer = TrimeshSceneViewer(resolution=(640, 480))
