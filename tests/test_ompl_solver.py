@@ -1,11 +1,12 @@
-from test_solver_interface import standard_problem  # noqa
+from utils import create_standard_problem
 
-from skmp.solver import OMPLSolver, Problem
+from skmp.solver import OMPLSolver
 
 
-def test_ompl_solver(standard_problem: Problem):  # noqa
-    solver = OMPLSolver.setup(standard_problem)
+def test_ompl_solver():  # noqa
+    problem = create_standard_problem()
+    solver = OMPLSolver.setup(problem)
     result = solver.solve()
     assert result.traj is not None
 
-    assert standard_problem.is_satisfied(result.traj)
+    assert problem.is_satisfied(result.traj)

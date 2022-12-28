@@ -1,10 +1,9 @@
 from copy import deepcopy
 
 import numpy as np
-from test_solver_interface import standard_problem  # noqa
+from utils import create_standard_problem
 
 from skmp.satisfy import satisfy_by_optimization
-from skmp.solver.interface import Problem
 from skmp.solver.nlp_solver import SQPBasedSolver, SQPBasedSolverConfig, translate
 from skmp.solver.trajectory_constraint import TrajectoryConstraint
 from skmp.trajectory import Trajectory
@@ -25,20 +24,21 @@ def jac_numerical(const: TrajectoryConstraint, qs0: np.ndarray) -> np.ndarray:
     return jac
 
 
-def test_translate(standard_problem: Problem):  # noqa
+def test_translate():
+    problem = create_standard_problem()
     n_wp = 10
 
     q_goal_cand = np.array([-0.78, 0.055, -1.37, -0.59, -0.494, -0.20, 1.87])
-    traj = Trajectory.from_two_points(standard_problem.start, q_goal_cand, n_wp)
+    traj = Trajectory.from_two_points(problem.start, q_goal_cand, n_wp)
     qs0 = traj.numpy().flatten()
 
     satisfy_by_optimization(
-        standard_problem.goal_const,
-        standard_problem.box_const,
-        standard_problem.global_ineq_const,
+        problem.goal_const,
+        problem.box_const,
+        problem.global_ineq_const,
         None,
     )
-    traj_eq_const, traj_ineq_const = translate(standard_problem, n_wp)
+    traj_eq_const, traj_ineq_const = translate(problem, n_wp)
     _, jac_eq_anal = traj_eq_const.evaluate(qs0)
     _, jac_ineq_anal = traj_ineq_const.evaluate(qs0)
 
@@ -49,14 +49,15 @@ def test_translate(standard_problem: Problem):  # noqa
     np.testing.assert_almost_equal(jac_ineq_anal, jac_ineq_numel, decimal=4)
 
 
-def test_sqp_based_solver(standard_problem: Problem):  # noqa
+def test_sqp_based_solver():  # noqa
+    problem = create_standard_problem()
     n_wp = 10
     config = SQPBasedSolverConfig(n_wp)
-    solver = SQPBasedSolver.setup(standard_problem, config)
+    solver = SQPBasedSolver.setup(problem, config)
 
     q_goal_cand = np.array([-0.78, 0.055, -1.37, -0.59, -0.494, -0.20, 1.87])
-    init_traj = Trajectory.from_two_points(standard_problem.start, q_goal_cand, n_wp)
-    assert not standard_problem.is_satisfied(init_traj)
+    init_traj = Trajectory.from_two_points(problem.start, q_goal_cand, n_wp)
+    assert not problem.is_satisfied(init_traj)
     result = solver.solve(init_traj)
     assert result.traj is not None
-    standard_problem.is_satisfied(result.traj)
+    problem.is_satisfied(result.traj)

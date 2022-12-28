@@ -1,5 +1,4 @@
 import numpy as np
-import pytest
 from skrobot.coordinates import Coordinates
 from skrobot.model.primitives import Box
 from skrobot.models import PR2
@@ -9,8 +8,7 @@ from skmp.robot.pr2 import PR2Config
 from skmp.solver import Problem
 
 
-@pytest.fixture(scope="session")
-def standard_problem():
+def create_standard_problem() -> Problem:
     # setup kinematics
     pr2 = PR2()
     pr2.reset_manip_pose()
