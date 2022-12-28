@@ -10,3 +10,7 @@ def test_ompl_solver():  # noqa
     assert result.traj is not None
 
     assert problem.is_satisfied(result.traj)
+
+
+if __name__ == "__main__":
+    test_ompl_solver()

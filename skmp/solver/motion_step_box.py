@@ -1,6 +1,8 @@
-from typing import List
+from typing import List, Union
 
 import numpy as np
+
+from skmp.constraint import AbstractIneqConst
 
 
 def interpolate_fractions(
@@ -36,3 +38,22 @@ def interpolate_fractions(
         interp_fractions.append(1.0)
 
     return interp_fractions
+
+
+def is_valid_motion_step(
+    motion_step_box: Union[np.ndarray, float],
+    q1: np.ndarray,
+    q2: np.ndarray,
+    ineq_const: AbstractIneqConst,
+) -> bool:
+    if isinstance(motion_step_box, float):
+        motion_step_box = motion_step_box * np.ones(len(q1))
+
+    fractions = interpolate_fractions(motion_step_box, q1, q2, True)
+    for frac in fractions:
+        q_test = q1 + (q2 - q1) * frac
+        fs, _ = ineq_const.evaluate_single(q_test, False)
+        is_valid = np.all(fs > 0.0)
+        if not is_valid:
+            return False
+    return True

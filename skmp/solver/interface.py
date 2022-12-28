@@ -5,6 +5,7 @@ from typing import Optional, Protocol, Type, TypeVar, Union
 import numpy as np
 
 from skmp.constraint import AbstractEqConst, AbstractIneqConst, BoxConst
+from skmp.solver.motion_step_box import is_valid_motion_step
 from skmp.trajectory import Trajectory
 
 GoalConstT = TypeVar("GoalConstT")
@@ -22,6 +23,7 @@ class Problem:
     global_ineq_const: Optional[AbstractIneqConst]
     global_eq_const: Optional[AbstractEqConst]
     eqconst_admissible_mse: float = 1e-6
+    motion_step_box: Union[float, np.ndarray] = 0.1
 
     def is_constrained(self) -> bool:
         return self.global_eq_const is not None
@@ -33,9 +35,19 @@ class Problem:
             return False
 
         # check ineq satisfaction
-        assert self.global_ineq_const is not None
-        valss, _ = self.global_ineq_const.evaluate(traj.numpy(), with_jacobian=False)
-        return bool(np.all(valss > 0))
+        if self.global_ineq_const is not None:
+            valss, _ = self.global_ineq_const.evaluate(traj.numpy(), with_jacobian=False)
+            if not np.all(valss > 0):
+                return False
+
+        # check motion step box
+        if self.global_ineq_const is not None or self.global_eq_const is not None:
+            assert self.global_eq_const is None, "currently not implemented yet"
+            for i in range(len(traj) - 1):
+                q1, q2 = traj[i], traj[i + 1]
+                if not is_valid_motion_step(self.motion_step_box, q1, q2, self.global_ineq_const):  # type: ignore[arg-type]
+                    return False
+        return True
 
 
 class ConfigProtocol(Protocol):
