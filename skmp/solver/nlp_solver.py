@@ -1,6 +1,6 @@
 import time
 from dataclasses import dataclass, fields
-from typing import Optional, Tuple, Union
+from typing import Literal, Optional, Tuple, Union
 
 import numpy as np
 
@@ -8,6 +8,7 @@ from skmp.constraint import ConfigPointConst
 from skmp.solver.interface import AbstractSolver, Problem
 from skmp.solver.osqp_sqp import OsqpSqpConfig, OsqpSqpResult, OsqpSqpSolver
 from skmp.solver.trajectory_constraint import (
+    MotionStepInequalityConstraint,
     TrajectoryEqualityConstraint,
     TrajectoryInequalityConstraint,
 )
@@ -75,7 +76,7 @@ class SQPBasedSolverConfig:
     verbose: bool = False
     relax_step_convex: float = 0.1
     motion_step_box: Union[np.ndarray, float] = 0.1
-    check_motion_step_finally: bool = False
+    motion_step_satisfaction: Literal["implicit", "explicit", "post"] = "implicit"
 
     def to_osqpsqp_config(self) -> OsqpSqpConfig:
         dic = {}
@@ -119,14 +120,19 @@ class SQPBasedSolver(AbstractSolver):
         lb_stacked = np.tile(box_const.lb, self.config.n_wp)
         ub_stacked = np.tile(box_const.ub, self.config.n_wp)
 
+        n_dof = self.traj_ineq_const.n_dof
+        n_wp = self.traj_ineq_const.n_wp
+
         motion_step_box = self.config.motion_step_box
         if isinstance(motion_step_box, float):
-            n_dim = len(self.problem.start)
-            motion_step_box = np.ones(n_dim) * motion_step_box
+            len(self.problem.start)
+            motion_step_box = np.ones(n_dof) * motion_step_box
 
-        assert not self.config.check_motion_step_finally, "currently"
-        if not self.config.check_motion_step_finally:
+        if self.config.motion_step_satisfaction == "implicit":
             self.traj_ineq_const.motion_step_box = motion_step_box
+        elif self.config.motion_step_satisfaction == "explicit":
+            msconst = MotionStepInequalityConstraint(n_dof, n_wp, motion_step_box)
+            self.traj_ineq_const.global_constraint_table.append(msconst)
 
         def ineq_tighten(x):
             # somehow, osqp-sqp result has some ineq error

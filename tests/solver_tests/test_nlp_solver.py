@@ -53,24 +53,25 @@ def test_translate():
 
 def test_sqp_based_solver():
     problem = create_standard_problem()
-    n_wp = 30
-    config = SQPBasedSolverConfig(n_wp, verbose=True)
-
-    solver = SQPBasedSolver.setup(problem, config)
 
     np.random.seed(0)
     set_ompl_random_seed(1)
     ompl_solver = OMPLSolver.setup(problem)
-    init_traj = ompl_solver.solve().traj.resample(n_wp)
+    init_traj = ompl_solver.solve().traj
     assert init_traj is not None
     # q_goal_cand = np.array([-0.78, 0.055, -1.37, -0.59, -0.494, -0.20, 1.87])
     # init_traj = Trajectory.from_two_points(problem.start, q_goal_cand, n_wp)
     # assert not problem.is_satisfied(init_traj)
-    result = solver.solve(init_traj)
-    assert result.traj is not None
-    ineq_vals, _ = solver.traj_ineq_const.evaluate(result.traj.numpy().flatten())
-    assert np.all(ineq_vals > 0)
-    assert problem.is_satisfied(result.traj)
+
+    config1 = SQPBasedSolverConfig(n_wp=30, verbose=True, motion_step_satisfaction="implicit")
+    config2 = SQPBasedSolverConfig(n_wp=50, verbose=True, motion_step_satisfaction="explicit")
+    for config in [config1, config2]:
+        solver = SQPBasedSolver.setup(problem, config)
+        result = solver.solve(init_traj.resample(config.n_wp))
+        assert result.traj is not None
+        ineq_vals, _ = solver.traj_ineq_const.evaluate(result.traj.numpy().flatten())
+        assert np.all(ineq_vals > 0)
+        assert problem.is_satisfied(result.traj)
 
 
 if __name__ == "__main__":

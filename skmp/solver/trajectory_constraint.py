@@ -1,7 +1,17 @@
 from collections.abc import Mapping
 from dataclasses import dataclass
 from functools import cached_property
-from typing import Dict, Generic, Iterator, List, MutableMapping, Optional, Tuple, Union
+from typing import (
+    Dict,
+    Generic,
+    Iterator,
+    List,
+    MutableMapping,
+    Optional,
+    Protocol,
+    Tuple,
+    Union,
+)
 
 import numpy as np
 from scipy.linalg import block_diag
@@ -10,12 +20,17 @@ from skmp.constraint import AbstractEqConst, AbstractIneqConst, ConstraintT
 from skmp.solver.motion_step_box import interpolate_fractions
 
 
+class GlobalConstraintProtocol(Protocol):
+    def evaluate(self, __qs: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+        ...
+
+
 @dataclass
 class TrajectoryConstraint(Mapping, Generic[ConstraintT]):
     n_dof: int
     n_wp: int
     local_constraint_table: MutableMapping[int, ConstraintT]  # constraint on sigle waypoint
-    global_constraint_table: List[ConstraintT]
+    global_constraint_table: List[GlobalConstraintProtocol]
 
     def add(self, idx: int, constraint: ConstraintT, force: bool = False) -> None:
         assert idx > -1
@@ -99,7 +114,7 @@ class TrajectoryConstraint(Mapping, Generic[ConstraintT]):
         # then evaluate global constraints
         if len(self.global_constraint_table) > 0:
             values, jacobis = zip(
-                *[cons.evaluate_single(traj_vector, True) for cons in self.global_constraint_table]
+                *[cons.evaluate(traj_vector) for cons in self.global_constraint_table]
             )
             global_value_total = np.hstack(values)
             global_jacobi_total = np.vstack(jacobis)
@@ -131,7 +146,7 @@ class TrajectoryInequalityConstraint(TrajectoryConstraint[AbstractIneqConst]):
         n_wp: int,
         n_dof: int,
         local_const: Optional[AbstractIneqConst] = None,
-        global_consts: Optional[List[AbstractIneqConst]] = None,
+        global_consts: Optional[List[GlobalConstraintProtocol]] = None,
         motion_step_box: Optional[np.ndarray] = None,
     ) -> "TrajectoryInequalityConstraint":
         table: Dict[int, AbstractIneqConst] = {}
