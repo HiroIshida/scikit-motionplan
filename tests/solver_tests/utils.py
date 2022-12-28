@@ -23,7 +23,7 @@ def create_standard_problem() -> Problem:
 
     # goal
     start = np.array([0.564, 0.35, -0.74, -0.7, -0.7, -0.17, -0.63])
-    target = Coordinates(pos=[0.8, -0.6, 1.1])
+    target = Coordinates(pos=[0.7, -0.6, 1.0])
     goal_eq_const = PoseConstraint.from_skrobot_coords([target], efkin)
 
     # global ineq

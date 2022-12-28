@@ -5,6 +5,7 @@ from utils import create_standard_problem
 
 from skmp.satisfy import satisfy_by_optimization
 from skmp.solver.nlp_solver import SQPBasedSolver, SQPBasedSolverConfig, translate
+from skmp.solver.ompl_solver import OMPLSolver
 from skmp.solver.trajectory_constraint import TrajectoryConstraint
 from skmp.trajectory import Trajectory
 
@@ -49,15 +50,25 @@ def test_translate():
     np.testing.assert_almost_equal(jac_ineq_anal, jac_ineq_numel, decimal=4)
 
 
-def test_sqp_based_solver():  # noqa
+def test_sqp_based_solver():
     problem = create_standard_problem()
-    n_wp = 10
-    config = SQPBasedSolverConfig(n_wp)
+    n_wp = 30
+    config = SQPBasedSolverConfig(n_wp, verbose=True)
+
     solver = SQPBasedSolver.setup(problem, config)
 
-    q_goal_cand = np.array([-0.78, 0.055, -1.37, -0.59, -0.494, -0.20, 1.87])
-    init_traj = Trajectory.from_two_points(problem.start, q_goal_cand, n_wp)
-    assert not problem.is_satisfied(init_traj)
+    # np.random.seed(0)
+    # set_ompl_random_seed(1)
+    ompl_solver = OMPLSolver.setup(problem)
+    init_traj = ompl_solver.solve().traj.resample(n_wp)
+    assert init_traj is not None
+    # q_goal_cand = np.array([-0.78, 0.055, -1.37, -0.59, -0.494, -0.20, 1.87])
+    # init_traj = Trajectory.from_two_points(problem.start, q_goal_cand, n_wp)
+    # assert not problem.is_satisfied(init_traj)
     result = solver.solve(init_traj)
     assert result.traj is not None
-    problem.is_satisfied(result.traj)
+    assert problem.is_satisfied(result.traj)
+
+
+if __name__ == "__main__":
+    test_sqp_based_solver()

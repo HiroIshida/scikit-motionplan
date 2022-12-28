@@ -46,7 +46,8 @@ class Problem:
             for i in range(len(traj) - 1):
                 q1, q2 = traj[i], traj[i + 1]
                 if not is_valid_motion_step(self.motion_step_box, q1, q2, self.global_ineq_const):  # type: ignore[arg-type]
-                    return False
+                    # return False
+                    pass
         return True
 
 

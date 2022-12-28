@@ -68,7 +68,7 @@ class SQPBasedSolverConfig:
     ftol: float = 1e-3
     ctol_eq: float = 1e-4  # constraint tolerance
     ctol_ineq: float = 1e-3  # constraint tolerance
-    n_max_eval: int = 10
+    n_max_eval: int = 30
     maxrelax: int = 10
     trust_box_init_size: float = 0.5
     osqp_verbose: bool = False
@@ -119,10 +119,16 @@ class SQPBasedSolver(AbstractSolver):
         lb_stacked = np.tile(box_const.lb, self.config.n_wp)
         ub_stacked = np.tile(box_const.ub, self.config.n_wp)
 
+        def ineq_tighten(x):
+            # somehow, osqp-sqp result has some ineq error
+            # thus to compensate that, we tighten the ineq constraint here
+            f, jac = self.traj_ineq_const.evaluate(x)
+            return f - self.config.ctol_ineq * 2, jac
+
         solver = OsqpSqpSolver(
             self.smooth_mat,
             lambda x: self.traj_eq_const.evaluate(x),
-            lambda x: self.traj_ineq_const.evaluate(x),
+            ineq_tighten,
             lb_stacked,
             ub_stacked,
         )
