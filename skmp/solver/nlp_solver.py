@@ -75,7 +75,7 @@ class SQPBasedSolverConfig:
     verbose: bool = False
     relax_step_convex: float = 0.1
     motion_step_box: Union[np.ndarray, float] = 0.1
-    check_motion_step_finally: bool = True
+    check_motion_step_finally: bool = False
 
     def to_osqpsqp_config(self) -> OsqpSqpConfig:
         dic = {}
@@ -118,6 +118,15 @@ class SQPBasedSolver(AbstractSolver):
         box_const = self.problem.box_const
         lb_stacked = np.tile(box_const.lb, self.config.n_wp)
         ub_stacked = np.tile(box_const.ub, self.config.n_wp)
+
+        motion_step_box = self.config.motion_step_box
+        if isinstance(motion_step_box, float):
+            n_dim = len(self.problem.start)
+            motion_step_box = np.ones(n_dim) * motion_step_box
+
+        assert not self.config.check_motion_step_finally, "currently"
+        if not self.config.check_motion_step_finally:
+            self.traj_ineq_const.motion_step_box = motion_step_box
 
         def ineq_tighten(x):
             # somehow, osqp-sqp result has some ineq error

@@ -1,6 +1,7 @@
 from copy import deepcopy
 
 import numpy as np
+from ompl import set_ompl_random_seed
 from utils import create_standard_problem
 
 from skmp.satisfy import satisfy_by_optimization
@@ -57,8 +58,8 @@ def test_sqp_based_solver():
 
     solver = SQPBasedSolver.setup(problem, config)
 
-    # np.random.seed(0)
-    # set_ompl_random_seed(1)
+    np.random.seed(0)
+    set_ompl_random_seed(1)
     ompl_solver = OMPLSolver.setup(problem)
     init_traj = ompl_solver.solve().traj.resample(n_wp)
     assert init_traj is not None
@@ -67,6 +68,8 @@ def test_sqp_based_solver():
     # assert not problem.is_satisfied(init_traj)
     result = solver.solve(init_traj)
     assert result.traj is not None
+    ineq_vals, _ = solver.traj_ineq_const.evaluate(result.traj.numpy().flatten())
+    assert np.all(ineq_vals > 0)
     assert problem.is_satisfied(result.traj)
 
 
