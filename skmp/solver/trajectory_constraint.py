@@ -7,6 +7,7 @@ import numpy as np
 from scipy.linalg import block_diag
 
 from skmp.constraint import AbstractEqConst, AbstractIneqConst, ConstraintT
+from skmp.solver.motion_step_box import interpolate_fractions
 
 
 @dataclass
@@ -142,46 +143,15 @@ class TrajectoryInequalityConstraint(TrajectoryConstraint[AbstractIneqConst]):
             global_consts = []
         return cls(n_dof, n_wp, table, global_consts, motion_step_box)
 
-    def _interpolate_fractions(
-        self, q1: np.ndarray, q2: np.ndarray, is_init: bool = False
-    ) -> List[float]:
-        # Note that q1 is omitted as in the checkMotion in ompl
-        assert self.motion_step_box is not None
-
-        # determine the active axis idx
-        diff = q2 - q1
-        abs_scaled_diff = np.abs(diff) / self.motion_step_box
-        active_idx = np.argmax(abs_scaled_diff)
-
-        diff_active_axis = diff[active_idx]
-        two_point_two_close = abs(diff_active_axis) < 1e-6
-        if two_point_two_close:
-            return []
-
-        step_ratio = self.motion_step_box[active_idx] / abs(diff_active_axis)
-        if step_ratio > 1.0:
-            return [1.0]  # only the last one
-
-        travel_rate = 0.0
-        interp_fractions = []
-
-        if is_init:
-            interp_fractions.append(travel_rate)
-
-        while travel_rate + step_ratio < 1.0:
-            travel_rate += step_ratio
-            interp_fractions.append(travel_rate)
-        if abs(interp_fractions[-1] - 1) > 1e-6:
-            interp_fractions.append(1.0)
-
-        return interp_fractions
-
     def _get_linear_map_to_interp_points(self, traj_vector):
+        assert self.motion_step_box is not None
         traj = traj_vector.reshape(-1, self.n_dof)
         block_list = []
         for i in range(len(traj) - 1):
-            is_init = i == 0
-            fractions = self._interpolate_fractions(traj[i], traj[i + 1], is_init=is_init)
+            include_q1 = i == 0
+            fractions = interpolate_fractions(
+                self.motion_step_box, traj[i], traj[i + 1], include_q1
+            )
             fractions_np = np.array(fractions)
             # like, (1 - t) * q1 + t * q2
             block = np.vstack((1 - fractions_np, fractions_np)).T
@@ -199,12 +169,13 @@ class TrajectoryInequalityConstraint(TrajectoryConstraint[AbstractIneqConst]):
         return block_diaged_expaneded
 
     def _get_eval_points(self, traj_vector: np.ndarray) -> List[np.ndarray]:
+        assert self.motion_step_box is not None
         traj = traj_vector.reshape(-1, self.n_dof)
         points = []
         for i in range(len(traj) - 1):
             q1, q2 = traj[i], traj[i + 1]
-            is_init = i == 0
-            fractions = np.array(self._interpolate_fractions(q1, q2, is_init=is_init))
+            include_q1 = i == 0
+            fractions = np.array(interpolate_fractions(self.motion_step_box, q1, q2, include_q1))
             Q = q1[:, None] * (1 - fractions) + q2[:, None] * fractions
             points.extend(list(Q.T))
         return points
