@@ -1,6 +1,6 @@
 import time
 from dataclasses import dataclass, fields
-from typing import Literal, Optional, Tuple, Union
+from typing import Literal, Optional, Tuple
 
 import numpy as np
 
@@ -75,7 +75,6 @@ class SQPBasedSolverConfig:
     osqp_verbose: bool = False
     verbose: bool = False
     relax_step_convex: float = 0.1
-    motion_step_box: Union[np.ndarray, float] = 0.1
     motion_step_satisfaction: Literal["implicit", "explicit", "post"] = "implicit"
 
     def to_osqpsqp_config(self) -> OsqpSqpConfig:
@@ -123,10 +122,7 @@ class SQPBasedSolver(AbstractSolver):
         n_dof = self.traj_ineq_const.n_dof
         n_wp = self.traj_ineq_const.n_wp
 
-        motion_step_box = self.config.motion_step_box
-        if isinstance(motion_step_box, float):
-            len(self.problem.start)
-            motion_step_box = np.ones(n_dof) * motion_step_box
+        motion_step_box = self.problem.motion_step_box
 
         if self.config.motion_step_satisfaction == "implicit":
             self.traj_ineq_const.motion_step_box = motion_step_box

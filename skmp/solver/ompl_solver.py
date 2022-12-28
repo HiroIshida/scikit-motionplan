@@ -1,6 +1,6 @@
 import time
 from dataclasses import dataclass
-from typing import List, Optional, Type, TypeVar, Union
+from typing import List, Optional, Type, TypeVar
 
 import numpy as np
 from ompl import Algorithm, Planner
@@ -14,7 +14,6 @@ from skmp.trajectory import Trajectory
 class OMPLSolverConfig:
     n_max_eval: int = 2000
     n_max_satisfaction_trial: int = 100
-    motion_step_box: Union[np.ndarray, float] = 0.1
     algorithm: Algorithm = Algorithm.RRTConnect
 
 
@@ -56,7 +55,7 @@ class OMPLSolver(AbstractSolver):
             ub,
             is_valid,
             config.n_max_eval,
-            validation_box=config.motion_step_box,
+            validation_box=problem.motion_step_box,
             algo=config.algorithm,
         )
         return cls(problem, config, planner)

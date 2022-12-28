@@ -61,7 +61,6 @@ class Problem:
 
 class ConfigProtocol(Protocol):
     n_max_eval: int
-    motion_step_box: Union[np.ndarray, float]
 
 
 class ResultProtocol(Protocol):
