@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import List
 
 import numpy as np
 
@@ -41,13 +41,11 @@ def interpolate_fractions(
 
 
 def is_valid_motion_step(
-    motion_step_box: Union[np.ndarray, float],
+    motion_step_box: np.ndarray,
     q1: np.ndarray,
     q2: np.ndarray,
     ineq_const: AbstractIneqConst,
 ) -> bool:
-    if isinstance(motion_step_box, float):
-        motion_step_box = motion_step_box * np.ones(len(q1))
 
     fractions = interpolate_fractions(motion_step_box, q1, q2, True)
     for frac in fractions:
