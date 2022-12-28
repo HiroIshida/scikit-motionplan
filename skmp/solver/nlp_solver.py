@@ -91,6 +91,7 @@ class SQPBasedSolverConfig:
 class SQPBasedSolver(AbstractSolver):
     solver: OsqpSqpSolver
     config: SQPBasedSolverConfig
+    post_motion_step_validator: Optional[MotionStepInequalityConstraint]
 
     @dataclass
     class Result:
@@ -112,11 +113,13 @@ class SQPBasedSolver(AbstractSolver):
         n_wp = traj_ineq_const.n_wp
 
         motion_step_box = problem.motion_step_box
+        msconst = MotionStepInequalityConstraint(n_dof, n_wp, motion_step_box)
+
         if config.motion_step_satisfaction == "implicit":
             traj_ineq_const.motion_step_box = motion_step_box
         elif config.motion_step_satisfaction == "explicit":
-            msconst = MotionStepInequalityConstraint(n_dof, n_wp, motion_step_box)
             traj_ineq_const.global_constraint_table.append(msconst)
+        post_motion_step_validator = msconst if config.motion_step_satisfaction == "post" else None
 
         ctol_ineq = config.osqpsqp_config.ctol_ineq
 
@@ -133,7 +136,7 @@ class SQPBasedSolver(AbstractSolver):
             lb_stacked,
             ub_stacked,
         )
-        return cls(solver, config)
+        return cls(solver, config, post_motion_step_validator)
 
     def solve(self, init_traj: Optional[Trajectory] = None) -> "SQPBasedSolver.Result":
         assert init_traj is not None  # TODO: remove this
@@ -143,7 +146,14 @@ class SQPBasedSolver(AbstractSolver):
         x_init = init_traj.numpy().flatten()
         raw_result = self.solver.solve(x_init, config=self.config.osqpsqp_config)
 
+        success = raw_result.success
+        if success and self.post_motion_step_validator is not None:
+            vals, _ = self.post_motion_step_validator.evaluate(raw_result.x)
+            if np.any(vals < 0):
+                success = False
+
         traj_solution: Optional[Trajectory] = None
-        if raw_result.success:
+        if success:
             traj_solution = Trajectory(list(raw_result.x.reshape(self.config.n_wp, -1)))
+
         return self.Result(traj_solution, time.time() - ts, raw_result)

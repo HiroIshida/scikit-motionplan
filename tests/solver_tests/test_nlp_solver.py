@@ -71,6 +71,15 @@ def test_sqp_based_solver():
         assert result.traj is not None
         assert problem.is_satisfied(result.traj)
 
+    config3 = SQPBasedSolverConfig(n_wp=15, motion_step_satisfaction="post")
+    solver = SQPBasedSolver.setup(problem, config3)
+    result = solver.solve(init_traj.resample(config3.n_wp))
+    # internal solver supposed to report "solved"
+    # but, the solver will report not solved because n_wp = 15 is too small
+    # to satisfy the motion_step constraint
+    assert result.osqpsqp_raw_result.success
+    assert result.traj is None
+
 
 if __name__ == "__main__":
     test_sqp_based_solver()
