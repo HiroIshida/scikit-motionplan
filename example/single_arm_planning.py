@@ -7,7 +7,12 @@ from skrobot.model.primitives import Axis, Box
 from skrobot.models import PR2
 from skrobot.viewers import TrimeshSceneViewer
 
-from skmp.constraint import CollFreeConst, ConfigPointConst, PoseConstraint
+from skmp.constraint import (
+    CollFreeConst,
+    ConfigPointConst,
+    IneqCompositeConst,
+    PoseConstraint,
+)
 from skmp.robot.pr2 import PR2Config
 from skmp.robot.utils import set_robot_state
 from skmp.solver import OMPLSolver, Problem, SQPBasedSolver, SQPBasedSolverConfig
@@ -29,6 +34,7 @@ if __name__ == "__main__":
     start = np.array([0.564, 0.35, -0.74, -0.7, -0.7, -0.17, -0.63])
     box_const = robot_config.get_box_const()
 
+    # create equality constraint
     target: Optional[Axis]
     if use_pose_constraint:
         target = Axis(axis_radius=0.01, axis_length=0.05)
@@ -39,12 +45,19 @@ if __name__ == "__main__":
         goal = np.array([-0.78, 0.055, -1.37, -0.59, -0.494, -0.20, 1.87])
         goal_eq_const = ConfigPointConst(goal)  # type: ignore[assignment]
 
+    # create inequality constraint
     obstacle = Box(extents=[0.7, 0.5, 1.2], with_sdf=True)
     obstacle.translate(np.array([0.85, -0.2, 0.9]))
     assert obstacle.sdf is not None
-    global_ienq_const = CollFreeConst(colkin, obstacle.sdf, 3)
+    collfree_const = CollFreeConst(colkin, obstacle.sdf, 3)
 
-    problem = Problem(start, box_const, goal_eq_const, global_ienq_const, None)
+    selcolfree_const = robot_config.get_neural_selcol_const()
+    selcolfree_const.reflect_skrobot_model(pr2)
+
+    global_ineq_const = IneqCompositeConst.composite([collfree_const, selcolfree_const])
+
+    # construct problem
+    problem = Problem(start, box_const, goal_eq_const, global_ineq_const, None)
 
     ompl_solver = OMPLSolver.setup(problem)
     result = ompl_solver.solve()

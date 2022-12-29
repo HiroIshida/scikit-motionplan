@@ -3,7 +3,7 @@ import importlib
 from abc import abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, List, Optional, Tuple, TypeVar
+from typing import Callable, List, Optional, Tuple, Type, TypeVar
 
 import numpy as np
 from skrobot.coordinates import Coordinates, rpy_angle
@@ -33,16 +33,64 @@ class AbstractConst:
     def dummy_jacobian(self) -> np.ndarray:
         return np.array([[np.nan]])
 
-
-class AbstractIneqConst(AbstractConst):
-    ...
-
-
-class AbstractEqConst(AbstractConst):
-    ...
+    @classmethod
+    @abstractmethod
+    def is_equality(cls) -> bool:
+        ...
 
 
 ConstraintT = TypeVar("ConstraintT", bound=AbstractConst)
+
+
+class AbstractIneqConst(AbstractConst):
+    @classmethod
+    def is_equality(cls) -> bool:
+        return False
+
+
+class AbstractEqConst(AbstractConst):
+    @classmethod
+    def is_equality(cls) -> bool:
+        return True
+
+
+CompositeConstT = TypeVar("CompositeConstT", bound="_CompositeConst")
+
+
+@dataclass
+class _CompositeConst(AbstractConst):
+    const_list: List[AbstractConst]
+
+    @classmethod
+    def composite(cls: Type[CompositeConstT], const_list: List[AbstractConst]) -> CompositeConstT:
+        for const in const_list:
+            assert const.is_equality() == cls.is_equality()
+        return cls(const_list)
+
+    def evaluate(self, qs: np.ndarray, with_jacobian: bool) -> Tuple[np.ndarray, np.ndarray]:
+        valuess_list = []
+        jacs_list = []
+
+        for const in self.const_list:
+            values, jac = const.evaluate(qs, with_jacobian=with_jacobian)
+            valuess_list.append(values)
+            jacs_list.append(jac)
+
+        valuess_out = np.hstack(valuess_list)
+
+        if not with_jacobian:
+            return valuess_out, self.dummy_jacobian()
+
+        jacs_out = np.concatenate(jacs_list, axis=1)
+        return valuess_out, jacs_out
+
+
+class IneqCompositeConst(AbstractIneqConst, _CompositeConst):
+    ...
+
+
+class EqCompositeConst(AbstractEqConst, _CompositeConst):
+    ...
 
 
 @dataclass

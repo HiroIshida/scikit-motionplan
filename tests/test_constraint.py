@@ -10,6 +10,7 @@ from skmp.constraint import (
     AbstractConst,
     CollFreeConst,
     ConfigPointConst,
+    IneqCompositeConst,
     PoseConstraint,
 )
 from skmp.robot.pr2 import PR2Config
@@ -90,9 +91,29 @@ def test_pose_const():
     check_jacobian(const)
 
 
+def test_composite_constraint():
+    config = PR2Config(with_base=False)
+
+    colkin = config.get_collision_kin()
+    box = Box(extents=[0.7, 0.5, 1.2], with_sdf=True)
+    box.translate(np.array([0.85, -0.2, 0.9]))
+    assert box.sdf is not None
+    collfree_const = CollFreeConst(colkin, box.sdf, 3)
+
+    selcol_const = config.get_neural_selcol_const()
+    pr2 = PR2()
+    pr2.reset_manip_pose()
+    selcol_const.reflect_skrobot_model(pr2)
+
+    IneqCompositeConst.composite([collfree_const, selcol_const])
+    # NOTE: selcol model uses float32. So, larger eps is required
+    check_jacobian(selcol_const, eps=1e-4, decimal=2)
+
+
 if __name__ == "__main__":
     test_box_const()
     test_collfree_const()
     test_neural_collfree_const()
     test_configpoint_const()
     test_pose_const()
+    test_composite_constraint()
