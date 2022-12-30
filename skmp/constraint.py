@@ -1,4 +1,5 @@
 import copy
+from functools import lru_cache
 import importlib
 from abc import abstractmethod
 from dataclasses import dataclass
@@ -241,6 +242,31 @@ class PoseConstraint(AbstractEqConst):
             vector = np.hstack([pos, rpy])
             vector_list.append(vector)
         return cls(vector_list, efkin)
+
+
+@dataclass
+class PairWiseSelfCollFreeConst(AbstractIneqConst):
+    colkin: CollisionKinmaticsMapProtocol
+    dim_tspace: int
+
+    @lru_cache
+    def pair_indices_consideration(self) -> List[Tuple[int, int]]:
+        n_feature = self.colkin.n_feature
+        pairs = set(itertools.product(list(range(100)), list(range(100))))
+        return list(pairs)
+
+    def evaluate(self, qs: np.ndarray, with_jacobian: bool) -> Tuple[np.ndarray, np.ndarray]:
+        n_point, dim_cspace = qs.shape
+        n_feature = self.colkin.n_feature
+
+        # xss: R^{n_point, n_feature * dim_tspace}
+        # jss: R^{n_point, n_feature, dim_tspace, dim_cspace}
+        xss, jacss = self.colkin.map(qs)  # ss refere to points of points
+
+        for q in qs:
+            for i, j in self.pair_indices_consideration():
+
+
 
 
 @dataclass
