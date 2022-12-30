@@ -2,7 +2,7 @@ import time
 from typing import Optional
 
 import numpy as np
-from ompl import set_ompl_random_seed
+from ompl import Algorithm, set_ompl_random_seed
 from skrobot.model.primitives import Axis, Box
 from skrobot.models import PR2
 from skrobot.viewers import TrimeshSceneViewer
@@ -15,7 +15,13 @@ from skmp.constraint import (
 )
 from skmp.robot.pr2 import PR2Config
 from skmp.robot.utils import set_robot_state
-from skmp.solver import OMPLSolver, Problem, SQPBasedSolver, SQPBasedSolverConfig
+from skmp.solver import (
+    OMPLSolver,
+    OMPLSolverConfig,
+    Problem,
+    SQPBasedSolver,
+    SQPBasedSolverConfig,
+)
 
 np.random.seed(0)
 set_ompl_random_seed(0)
@@ -59,7 +65,8 @@ if __name__ == "__main__":
     # construct problem
     problem = Problem(start, box_const, goal_eq_const, global_ineq_const, None)
 
-    ompl_solver = OMPLSolver.setup(problem)
+    ompl_config = OMPLSolverConfig(n_max_eval=10000, algorithm=Algorithm.RRTConnect)
+    ompl_solver = OMPLSolver.setup(problem, config=ompl_config)
     result = ompl_solver.solve()
     print(result.time_elapsed)
     assert result.traj is not None
