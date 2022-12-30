@@ -11,6 +11,7 @@ from skmp.constraint import (
     CollFreeConst,
     ConfigPointConst,
     IneqCompositeConst,
+    PairWiseSelfCollFreeConst,
     PoseConstraint,
 )
 from skmp.robot.pr2 import PR2Config
@@ -89,6 +90,17 @@ def test_pose_const():
     const = PoseConstraint.from_skrobot_coords([target], efkin)
 
     check_jacobian(const)
+
+
+def test_pair_wise_selfcollfree_cost():
+    config = PR2Config(with_base=False)
+    colkin = config.get_collision_kin()
+    const = PairWiseSelfCollFreeConst.from_colkin(colkin)
+    check_jacobian(const)
+
+    q_init = np.zeros(7)
+    values, _ = const.evaluate_single(q_init, with_jacobian=False)
+    assert np.all(values > 0)
 
 
 def test_composite_constraint():

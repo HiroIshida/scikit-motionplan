@@ -1,5 +1,6 @@
 import copy
 import importlib
+import itertools
 from abc import abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
@@ -9,7 +10,11 @@ import numpy as np
 from skrobot.coordinates import Coordinates, rpy_angle
 from skrobot.model import RobotModel
 
-from skmp.kinematics import CollisionKinmaticsMapProtocol, KinematicsMapProtocol
+from skmp.kinematics import (
+    ArticulatedCollisionKinematicsMap,
+    CollisionKinmaticsMapProtocol,
+    KinematicsMapProtocol,
+)
 from skmp.utils.urdf import URDF, JointLimit
 
 if importlib.find_loader("selcol") is not None:
@@ -241,6 +246,72 @@ class PoseConstraint(AbstractEqConst):
             vector = np.hstack([pos, rpy])
             vector_list.append(vector)
         return cls(vector_list, efkin)
+
+
+@dataclass
+class PairWiseSelfCollFreeConst(AbstractIneqConst):
+    colkin: ArticulatedCollisionKinematicsMap
+    check_sphere_id_pairs: List[Tuple[int, int]]
+    check_sphere_pair_sqdists: np.ndarray  # pair sqdist means (r1 + r2) ** 2
+
+    @classmethod
+    def from_colkin(cls, colkin: ArticulatedCollisionKinematicsMap) -> "PairWiseSelfCollFreeConst":
+        # here in this constructor, we will filter out collision pair which is already collide
+        # at the initial pose np.zeros(n_dof)
+
+        # create sphere_id_raius_table
+        sphere_id_raius_table = {}
+        for sphere_id, radius in zip(colkin.tinyfk_feature_ids, colkin.radius_list):
+            sphere_id_raius_table[sphere_id] = radius
+
+        all_index_pairs = list(itertools.combinations(colkin.tinyfk_feature_ids, 2))
+        pair_pair_dist_table = {}
+        for pair in all_index_pairs:
+            sphere_id1 = pair[0]
+            sphere_id2 = pair[1]
+            r1 = sphere_id_raius_table[sphere_id1]
+            r2 = sphere_id_raius_table[sphere_id2]
+            pair_pair_dist_table[pair] = r1 + r2
+
+        # compute inter-sphere distances when q = np.zeros(n_dof)
+        q_init = np.zeros(colkin.dim_cspace)
+        sqdists, _ = colkin.fksolver.compute_inter_link_sqdists(
+            [q_init], all_index_pairs, colkin.tinyfk_joint_ids, with_base=colkin.with_base
+        )
+        dists = np.sqrt(sqdists)
+
+        # determine collision pairs
+        # because for cpython >= 3.6, dict is orderd...
+        collision_pair_indices = np.where(dists < np.array(list(pair_pair_dist_table.values())))[0]
+        collision_pairs = [all_index_pairs[idx] for idx in collision_pair_indices]
+
+        # subtract collision pairs from the all pairs
+        valid_sphere_id_pair_set = set(all_index_pairs).difference(set(collision_pairs))
+        valid_sphere_id_pairs = list(valid_sphere_id_pair_set)
+        valid_sphere_pair_dists = np.array(
+            [pair_pair_dist_table[pair] for pair in valid_sphere_id_pairs]
+        )
+
+        return cls(colkin, valid_sphere_id_pairs, valid_sphere_pair_dists**2)
+
+    def evaluate(self, qs: np.ndarray, with_jacobian: bool) -> Tuple[np.ndarray, np.ndarray]:
+        n_sample, n_dim = qs.shape
+
+        sqdists_stacked, grads_stacked = self.colkin.fksolver.compute_inter_link_sqdists(
+            qs,
+            self.check_sphere_id_pairs,
+            self.colkin.tinyfk_joint_ids,
+            with_base=self.colkin.with_base,
+            with_jacobian=with_jacobian,
+        )
+        sqdistss = sqdists_stacked.reshape(n_sample, -1)
+        valuess = sqdistss - self.check_sphere_pair_sqdists
+
+        if not with_jacobian:
+            return valuess, self.dummy_jacobian()
+
+        gradss = grads_stacked.reshape(n_sample, -1, n_dim)
+        return valuess, gradss
 
 
 @dataclass
