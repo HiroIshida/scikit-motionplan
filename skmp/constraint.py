@@ -1,7 +1,7 @@
 import copy
 import importlib
 import itertools
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, List, Optional, Tuple, Type, TypeVar
@@ -25,7 +25,7 @@ else:
     SELCOL_FOUND = False
 
 
-class AbstractConst:
+class AbstractConst(ABC):
     @abstractmethod
     def evaluate(self, qs: np.ndarray, with_jacobian: bool) -> Tuple[np.ndarray, np.ndarray]:
         ...
