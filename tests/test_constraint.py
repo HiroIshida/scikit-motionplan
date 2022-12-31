@@ -117,9 +117,9 @@ def test_composite_constraint():
     pr2.reset_manip_pose()
     selcol_const.reflect_skrobot_model(pr2)
 
-    IneqCompositeConst.composite([collfree_const, selcol_const])
+    composite_const = IneqCompositeConst.composite([collfree_const, selcol_const])
     # NOTE: selcol model uses float32. So, larger eps is required
-    check_jacobian(selcol_const, eps=1e-4, decimal=2)
+    check_jacobian(composite_const, eps=1e-4, decimal=2)
 
 
 if __name__ == "__main__":
