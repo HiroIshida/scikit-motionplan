@@ -282,7 +282,13 @@ class PairWiseSelfCollFreeConst(AbstractIneqConst):
 
         # determine collision pairs
         # because for cpython >= 3.6, dict is orderd...
-        collision_pair_indices = np.where(dists < np.array(list(pair_pair_dist_table.values())))[0]
+        rs = np.array(list(pair_pair_dist_table.values()))
+
+        # multiplying rs seems good heuristics.
+        # for example, if sphere is large, the margin must be large
+        # but for small one, we don't need large margin.
+        rs_with_margin = rs * 3
+        collision_pair_indices = np.where(dists - rs_with_margin < 0)[0]
         collision_pairs = [all_index_pairs[idx] for idx in collision_pair_indices]
 
         # subtract collision pairs from the all pairs
