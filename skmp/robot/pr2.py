@@ -92,6 +92,7 @@ class PR2Config:
     @classmethod
     def rarm_collision_link_names(cls) -> List[str]:
         return [
+            "r_shoulder_pan_link",
             "r_shoulder_lift_link",
             "r_upper_arm_link",
             "r_forearm_link",
@@ -103,6 +104,7 @@ class PR2Config:
     @classmethod
     def larm_collision_link_names(cls) -> List[str]:
         return [
+            "l_shoulder_pan_link",
             "l_shoulder_lift_link",
             "l_upper_arm_link",
             "l_forearm_link",
@@ -211,6 +213,7 @@ class PR2Config:
         link_wise_sphere_creator["r_forearm_link"] = create_creator(0.9)
         link_wise_sphere_creator["r_upper_arm_link"] = create_creator(0.9)
 
+        # link_wise_sphere_creator["l_shoulder_pan_link"] = create_creator(0.9)
         link_wise_sphere_creator["l_shoulder_lift_link"] = create_creator(0.8)
         link_wise_sphere_creator["l_forearm_link"] = create_creator(0.7)
         link_wise_sphere_creator["l_gripper_palm_link"] = create_creator(0.7)
@@ -218,6 +221,20 @@ class PR2Config:
         link_wise_sphere_creator["l_gripper_l_finger_link"] = create_creator(0.7)
         link_wise_sphere_creator["l_forearm_link"] = create_creator(0.9)
         link_wise_sphere_creator["l_upper_arm_link"] = create_creator(0.9)
+
+        r_shoulder_collection = SphereCollection(
+            [np.array([0.0, 0.0, 0.0]), np.array([0.0, 0.0, -0.25]), np.array([0.0, 0.0, -0.4])],
+            [0.2, 0.15, 0.15],
+            ["r_shoudler{}".format(i) for i in range(3)],
+        )
+
+        l_shoulder_collection = SphereCollection(
+            [np.array([0.0, 0.0, 0.0]), np.array([0.0, 0.0, -0.25]), np.array([0.0, 0.0, -0.4])],
+            [0.2, 0.15, 0.15],
+            ["l_shoudler{}".format(i) for i in range(3)],
+        )
+        link_wise_sphere_creator["r_shoulder_pan_link"] = lambda mesh: r_shoulder_collection
+        link_wise_sphere_creator["l_shoulder_pan_link"] = lambda mesh: l_shoulder_collection
 
         base_link_sphere_collection = SphereCollection(
             [
