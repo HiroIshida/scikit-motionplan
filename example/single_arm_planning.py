@@ -31,6 +31,8 @@ set_ompl_random_seed(0)
 if __name__ == "__main__":
     pr2 = PR2(use_tight_joint_limit=True)
     pr2.reset_manip_pose()
+    pr2.torso_lift_joint.joint_angle(0.1)
+
     robot_config = PR2Config(with_base=False)
     colkin = robot_config.get_collision_kin()
     efkin = robot_config.get_endeffector_kin()
@@ -38,7 +40,7 @@ if __name__ == "__main__":
     colkin.reflect_skrobot_model(pr2)
 
     use_pose_constraint = True
-    neural_selcol = True
+    neural_selcol = False
 
     start = np.array([0.564, 0.35, -0.74, -0.7, -0.7, -0.17, -0.63])
     box_const = robot_config.get_box_const()
@@ -55,8 +57,8 @@ if __name__ == "__main__":
         goal_eq_const = ConfigPointConst(goal)  # type: ignore[assignment]
 
     # create inequality constraint
-    obstacle = Box(extents=[0.7, 0.5, 1.2], with_sdf=True)
-    obstacle.translate(np.array([0.85, -0.2, 0.9]))
+    obstacle = Box(extents=[0.5, 0.5, 1.2], with_sdf=True)
+    obstacle.translate(np.array([0.8, -0.2, 0.9]))
     assert obstacle.sdf is not None
     collfree_const = CollFreeConst(colkin, obstacle.sdf, 3)
 
