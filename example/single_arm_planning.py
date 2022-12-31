@@ -11,6 +11,7 @@ from skmp.constraint import (
     CollFreeConst,
     ConfigPointConst,
     IneqCompositeConst,
+    PairWiseSelfCollFreeConst,
     PoseConstraint,
 )
 from skmp.robot.pr2 import PR2Config
@@ -22,6 +23,7 @@ from skmp.solver import (
     SQPBasedSolver,
     SQPBasedSolverConfig,
 )
+from skmp.visualization import CollisionSphereVisualizationManager
 
 np.random.seed(0)
 set_ompl_random_seed(0)
@@ -36,6 +38,7 @@ if __name__ == "__main__":
     colkin.reflect_skrobot_model(pr2)
 
     use_pose_constraint = True
+    neural_selcol = True
 
     start = np.array([0.564, 0.35, -0.74, -0.7, -0.7, -0.17, -0.63])
     box_const = robot_config.get_box_const()
@@ -57,15 +60,18 @@ if __name__ == "__main__":
     assert obstacle.sdf is not None
     collfree_const = CollFreeConst(colkin, obstacle.sdf, 3)
 
-    selcolfree_const = robot_config.get_neural_selcol_const()
-    selcolfree_const.reflect_skrobot_model(pr2)
+    if neural_selcol:
+        selcolfree_const = robot_config.get_neural_selcol_const()
+        selcolfree_const.reflect_skrobot_model(pr2)
+    else:
+        selcolfree_const = PairWiseSelfCollFreeConst.from_colkin(colkin)
 
     global_ineq_const = IneqCompositeConst.composite([collfree_const, selcolfree_const])
 
     # construct problem
     problem = Problem(start, box_const, goal_eq_const, global_ineq_const, None)
 
-    ompl_config = OMPLSolverConfig(n_max_eval=10000, algorithm=Algorithm.RRTConnect)
+    ompl_config = OMPLSolverConfig(n_max_eval=50000, algorithm=Algorithm.RRT)
     ompl_solver = OMPLSolver.setup(problem, config=ompl_config)
     result = ompl_solver.solve()
     print(result.time_elapsed)
@@ -79,6 +85,7 @@ if __name__ == "__main__":
     assert result.traj is not None
 
     viewer = TrimeshSceneViewer(resolution=(640, 480))
+    colvis = CollisionSphereVisualizationManager(colkin, viewer)
     viewer.add(pr2)
     viewer.add(obstacle)
     if target is not None:
@@ -86,8 +93,9 @@ if __name__ == "__main__":
 
     viewer.show()
     time.sleep(1.0)
-    for q in result.traj:
+    for q in result.traj.resample(n_wp):
         set_robot_state(pr2, robot_config._get_control_joint_names(), q)
+        colvis.update(pr2, obstacle.sdf)
         viewer.redraw()
         time.sleep(0.6)
 
