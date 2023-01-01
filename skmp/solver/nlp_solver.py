@@ -75,7 +75,7 @@ class SQPBasedSolverConfig:
 
     n_wp: int
     n_max_eval: int = 30
-    motion_step_satisfaction: Literal["implicit", "explicit", "post"] = "implicit"
+    motion_step_satisfaction: Literal["implicit", "explicit", "post", "debug_ignore"] = "implicit"
     _osqpsqp_config: OsqpSqpConfig = OsqpSqpConfig()  # don't directly access this
 
     @property
@@ -119,9 +119,14 @@ class SQPBasedSolver(AbstractSolver):
 
         if config.motion_step_satisfaction == "implicit":
             traj_ineq_const.motion_step_box = motion_step_box
+            post_motion_step_validator = None
         elif config.motion_step_satisfaction == "explicit":
             traj_ineq_const.global_constraint_table.append(msconst)
-        post_motion_step_validator = msconst if config.motion_step_satisfaction == "post" else None
+            post_motion_step_validator = None
+        elif config.motion_step_satisfaction in ["post", "debug_ignore"]:
+            post_motion_step_validator = msconst
+        else:
+            assert False
 
         ctol_ineq = config.osqpsqp_config.ctol_ineq
 
@@ -152,7 +157,12 @@ class SQPBasedSolver(AbstractSolver):
         if success and self.post_motion_step_validator is not None:
             vals, _ = self.post_motion_step_validator.evaluate(raw_result.x)
             if np.any(vals < 0):
-                success = False
+                if self.config.motion_step_satisfaction == "post":
+                    success = False
+                elif self.config.motion_step_satisfaction == "debug_ignore":
+                    print("motion step constraint is not satisfied but ignore")
+                else:
+                    assert False
 
         traj_solution: Optional[Trajectory] = None
         if success:
