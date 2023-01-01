@@ -50,7 +50,7 @@ if __name__ == "__main__":
     if use_pose_constraint:
         target = Axis(axis_radius=0.01, axis_length=0.05)
         target.translate([0.7, -0.6, 1.0])
-        goal_eq_const = PoseConstraint.from_skrobot_coords([target], efkin)
+        goal_eq_const = PoseConstraint.from_skrobot_coords([target], efkin, pr2)
     else:
         target = None
         goal = np.array([-0.78, 0.055, -1.37, -0.59, -0.494, -0.20, 1.87])
@@ -60,15 +60,15 @@ if __name__ == "__main__":
     obstacle = Box(extents=[0.5, 0.5, 1.2], with_sdf=True)
     obstacle.translate(np.array([0.8, -0.2, 0.9]))
     assert obstacle.sdf is not None
-    collfree_const = CollFreeConst(colkin, obstacle.sdf, 3)
+    collfree_const = CollFreeConst(colkin, obstacle.sdf, pr2)
 
     if neural_selcol:
-        selcolfree_const = robot_config.get_neural_selcol_const()
+        selcolfree_const = robot_config.get_neural_selcol_const(pr2)
         selcolfree_const.reflect_skrobot_model(pr2)
     else:
-        selcolfree_const = PairWiseSelfCollFreeConst.from_colkin(colkin)
+        selcolfree_const = PairWiseSelfCollFreeConst(colkin, pr2)  # type: ignore[assignment]
 
-    global_ineq_const = IneqCompositeConst.composite([collfree_const, selcolfree_const])
+    global_ineq_const = IneqCompositeConst([collfree_const, selcolfree_const])
 
     # construct problem
     problem = Problem(start, box_const, goal_eq_const, global_ineq_const, None)

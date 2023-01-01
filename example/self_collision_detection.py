@@ -17,7 +17,7 @@ viewer.show()
 conf = PR2Config(with_base=False)
 colkin = conf.get_collision_kin()
 
-const = PairWiseSelfCollFreeConst.from_colkin(colkin)
+const = PairWiseSelfCollFreeConst(colkin, robot)
 
 names = robot.joint_names
 indices = [names.index(jn) for jn in colkin.control_joint_names]

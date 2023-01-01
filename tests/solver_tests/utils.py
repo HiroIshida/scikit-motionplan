@@ -15,8 +15,6 @@ def create_standard_problem() -> Problem:
     config = PR2Config(with_base=False)
     colkin = config.get_collision_kin()
     efkin = config.get_endeffector_kin()
-    efkin.reflect_skrobot_model(pr2)
-    colkin.reflect_skrobot_model(pr2)
 
     # box
     box_const = config.get_box_const()
@@ -24,12 +22,12 @@ def create_standard_problem() -> Problem:
     # goal
     start = np.array([0.564, 0.35, -0.74, -0.7, -0.7, -0.17, -0.63])
     target = Coordinates(pos=[0.7, -0.6, 1.0])
-    goal_eq_const = PoseConstraint.from_skrobot_coords([target], efkin)
+    goal_eq_const = PoseConstraint.from_skrobot_coords([target], efkin, pr2)
 
     # global ineq
     obstacle = Box(extents=[0.7, 0.5, 1.2], with_sdf=True)
     obstacle.translate(np.array([0.85, -0.2, 0.9]))
     assert obstacle.sdf is not None
-    global_ienq_const = CollFreeConst(colkin, obstacle.sdf, 3)
+    global_ienq_const = CollFreeConst(colkin, obstacle.sdf, pr2)
 
     return Problem(start, box_const, goal_eq_const, global_ienq_const, None)

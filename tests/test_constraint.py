@@ -59,7 +59,7 @@ def test_collfree_const():
     box = Box(extents=[0.7, 0.5, 1.2], with_sdf=True)
     box.translate(np.array([0.85, -0.2, 0.9]))
     assert box.sdf is not None
-    collfree_const = CollFreeConst(colkin, box.sdf, 3)
+    collfree_const = CollFreeConst(colkin, box.sdf, PR2())
     check_jacobian(collfree_const)
 
 
@@ -68,10 +68,9 @@ def test_neural_collfree_const():
         return
 
     config = PR2Config(with_base=False)
-    selcol_const = config.get_neural_selcol_const()
     pr2 = PR2()
     pr2.reset_manip_pose()
-    selcol_const.reflect_skrobot_model(pr2)
+    selcol_const = config.get_neural_selcol_const(pr2)
 
     # NOTE: selcol model uses float32. So, larger eps is required
     check_jacobian(selcol_const, eps=1e-4, decimal=2)
@@ -87,15 +86,14 @@ def test_pose_const():
     efkin = config.get_endeffector_kin()
 
     target = Coordinates(pos=[0.8, -0.6, 1.1])
-    const = PoseConstraint.from_skrobot_coords([target], efkin)
-
+    const = PoseConstraint.from_skrobot_coords([target], efkin, PR2())
     check_jacobian(const)
 
 
 def test_pair_wise_selfcollfree_cost():
     config = PR2Config(with_base=False)
     colkin = config.get_collision_kin()
-    const = PairWiseSelfCollFreeConst.from_colkin(colkin)
+    const = PairWiseSelfCollFreeConst(colkin, PR2())
     check_jacobian(const)
 
     q_init = np.zeros(7)
@@ -104,20 +102,19 @@ def test_pair_wise_selfcollfree_cost():
 
 
 def test_composite_constraint():
+    pr2 = PR2()
+    pr2.reset_manip_pose()
+
     config = PR2Config(with_base=False)
 
     colkin = config.get_collision_kin()
     box = Box(extents=[0.7, 0.5, 1.2], with_sdf=True)
     box.translate(np.array([0.85, -0.2, 0.9]))
     assert box.sdf is not None
-    collfree_const = CollFreeConst(colkin, box.sdf, 3)
+    collfree_const = CollFreeConst(colkin, box.sdf, pr2)
+    selcol_const = config.get_neural_selcol_const(pr2)
 
-    selcol_const = config.get_neural_selcol_const()
-    pr2 = PR2()
-    pr2.reset_manip_pose()
-    selcol_const.reflect_skrobot_model(pr2)
-
-    composite_const = IneqCompositeConst.composite([collfree_const, selcol_const])
+    composite_const = IneqCompositeConst([collfree_const, selcol_const])
     # NOTE: selcol model uses float32. So, larger eps is required
     check_jacobian(composite_const, eps=1e-4, decimal=2)
 

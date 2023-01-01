@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Dict, List
 
 import numpy as np
+from skrobot.models import PR2
 from trimesh import Trimesh
 
 from skmp.collision import (
@@ -264,5 +265,7 @@ class PR2Config:
         )
         return kinmap
 
-    def get_neural_selcol_const(self) -> NeuralSelfCollFreeConst:
-        return NeuralSelfCollFreeConst.load(self.urdf_path(), self._get_control_joint_names())
+    def get_neural_selcol_const(self, robot_model: PR2) -> NeuralSelfCollFreeConst:
+        return NeuralSelfCollFreeConst.load(
+            self.urdf_path(), self._get_control_joint_names(), robot_model
+        )

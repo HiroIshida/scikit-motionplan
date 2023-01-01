@@ -1,13 +1,14 @@
-from typing import Tuple
+from typing import Optional, Tuple
 
 import numpy as np
+from skrobot.model import RobotModel
 
 from skmp.constraint import AbstractIneqConst
 from skmp.solver.trajectory_constraint import TrajectoryInequalityConstraint
 
 
 class CircleConstraint(AbstractIneqConst):
-    def evaluate(self, qs: np.ndarray, with_jacobian: bool) -> Tuple[np.ndarray, np.ndarray]:
+    def _evaluate(self, qs: np.ndarray, with_jacobian: bool) -> Tuple[np.ndarray, np.ndarray]:
         r = 1.0
         fss = []
         gradss = []
@@ -18,9 +19,13 @@ class CircleConstraint(AbstractIneqConst):
             gradss.append(grads)
         return np.array(fss), np.array(gradss)
 
+    def _reflect_skrobot_model(self, robot_model: Optional[RobotModel]) -> None:
+        pass
+
 
 def test_TrajectoryInequalityConstraint():
     const = CircleConstraint()
+    const.reflect_skrobot_model(None)
 
     ineq_const = TrajectoryInequalityConstraint.create_homogeneous(3, 2, const)
     points = np.array([[-1.0, 0.9], [0.0, 0.9], [1.0, 0.9]])

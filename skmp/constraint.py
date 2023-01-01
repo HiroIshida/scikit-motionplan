@@ -2,9 +2,8 @@ import copy
 import importlib
 import itertools
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, List, Optional, Tuple, Type, TypeVar
+from typing import Callable, List, Optional, Tuple, TypeVar
 
 import numpy as np
 from skrobot.coordinates import Coordinates, rpy_angle
@@ -12,8 +11,7 @@ from skrobot.model import RobotModel
 
 from skmp.kinematics import (
     ArticulatedCollisionKinematicsMap,
-    CollisionKinmaticsMapProtocol,
-    KinematicsMapProtocol,
+    ArticulatedEndEffectorKinematicsMap,
 )
 from skmp.utils.urdf import URDF, JointLimit
 
@@ -26,9 +24,16 @@ else:
 
 
 class AbstractConst(ABC):
-    @abstractmethod
+    reflect_robot_flag: bool = False
+
     def evaluate(self, qs: np.ndarray, with_jacobian: bool) -> Tuple[np.ndarray, np.ndarray]:
-        ...
+        if not self.reflect_robot_flag:
+            message = "{}: you need to call reflect_skrobot_model beforehand".format(
+                type(self).__name__
+            )
+            raise RuntimeError(message)
+
+        return self._evaluate(qs, with_jacobian)
 
     def evaluate_single(self, q: np.ndarray, with_jacobian: bool) -> Tuple[np.ndarray, np.ndarray]:
         assert q.ndim == 1
@@ -37,6 +42,23 @@ class AbstractConst(ABC):
 
     def dummy_jacobian(self) -> np.ndarray:
         return np.array([[np.nan]])
+
+    @abstractmethod
+    def _evaluate(self, qs: np.ndarray, with_jacobian: bool) -> Tuple[np.ndarray, np.ndarray]:
+        ...
+
+    def reflect_skrobot_model(self, robot_model: Optional[RobotModel]) -> None:
+        """reflect skrobot model state to internal state
+        Although constraints does not necessarily require to reflect robot model,
+        I believe defensive programming is always better.
+        For constraints that does not require robot, you can pass None.
+        """
+        self._reflect_skrobot_model(robot_model)
+        self.reflect_robot_flag = True
+
+    @abstractmethod
+    def _reflect_skrobot_model(self, robot_model: Optional[RobotModel]) -> None:
+        ...
 
     @classmethod
     @abstractmethod
@@ -62,17 +84,20 @@ class AbstractEqConst(AbstractConst):
 CompositeConstT = TypeVar("CompositeConstT", bound="_CompositeConst")
 
 
-@dataclass
 class _CompositeConst(AbstractConst):
     const_list: List[AbstractConst]
 
-    @classmethod
-    def composite(cls: Type[CompositeConstT], const_list: List[AbstractConst]) -> CompositeConstT:
+    def __init__(self, const_list: List[AbstractConst]) -> None:
         for const in const_list:
-            assert const.is_equality() == cls.is_equality()
-        return cls(const_list)
+            assert const.is_equality() == self.is_equality()
+        self.const_list = const_list
 
-    def evaluate(self, qs: np.ndarray, with_jacobian: bool) -> Tuple[np.ndarray, np.ndarray]:
+        # NOTE: composite constraint is special case that does not need
+        # call of _reflect_skrobot_model, because all const_list
+        # is supposed to already reflect robot state
+        self.reflect_robot_flag = True
+
+    def _evaluate(self, qs: np.ndarray, with_jacobian: bool) -> Tuple[np.ndarray, np.ndarray]:
         valuess_list = []
         jacs_list = []
 
@@ -89,6 +114,10 @@ class _CompositeConst(AbstractConst):
         jacs_out = np.concatenate(jacs_list, axis=1)
         return valuess_out, jacs_out
 
+    def _reflect_skrobot_model(self, robot_model: Optional[RobotModel]) -> None:
+        for const in self.const_list:
+            const.reflect_skrobot_model(robot_model)
+
 
 class IneqCompositeConst(AbstractIneqConst, _CompositeConst):
     ...
@@ -98,10 +127,14 @@ class EqCompositeConst(AbstractEqConst, _CompositeConst):
     ...
 
 
-@dataclass
 class BoxConst(AbstractIneqConst):
     lb: np.ndarray
     ub: np.ndarray
+
+    def __init__(self, lb: np.ndarray, ub: np.ndarray) -> None:
+        self.lb = lb
+        self.ub = ub
+        self.reflect_skrobot_model(None)
 
     @classmethod
     def from_urdf(
@@ -136,7 +169,7 @@ class BoxConst(AbstractIneqConst):
 
         return cls(np.array(b_min), np.array(b_max))
 
-    def evaluate(self, qs: np.ndarray, with_jacobian: bool) -> Tuple[np.ndarray, np.ndarray]:
+    def _evaluate(self, qs: np.ndarray, with_jacobian: bool) -> Tuple[np.ndarray, np.ndarray]:
         n_point, dim = qs.shape
         f_lower = (qs - self.lb).flatten()
         f_upper = (self.ub - qs).flatten()
@@ -148,23 +181,32 @@ class BoxConst(AbstractIneqConst):
             jac = self.dummy_jacobian()
         return f, jac
 
+    def _reflect_skrobot_model(self, robot_model: Optional[RobotModel]) -> None:
+        pass
+
     def sample(self) -> np.ndarray:
         w = self.ub - self.lb
         return np.random.rand(len(w)) * w + self.lb
 
 
-@dataclass
 class CollFreeConst(AbstractIneqConst):
-    colkin: CollisionKinmaticsMapProtocol
+    colkin: ArticulatedCollisionKinematicsMap
     sdf: Callable[[np.ndarray], np.ndarray]
-    dim_tspace: int
-    clearance: float = 0.0
 
-    def evaluate(self, qs: np.ndarray, with_jacobian: bool) -> Tuple[np.ndarray, np.ndarray]:
+    def __init__(
+        self,
+        colkin: ArticulatedCollisionKinematicsMap,
+        sdf: Callable[[np.ndarray], np.ndarray],
+        robot_model: RobotModel,
+    ) -> None:
+        self.colkin = colkin
+        self.sdf = sdf
+        self.reflect_skrobot_model(robot_model)
+
+    def _evaluate(self, qs: np.ndarray, with_jacobian: bool) -> Tuple[np.ndarray, np.ndarray]:
         """compute signed distance of feature points and its jacobian
         input:
             qs: R^{n_point, dim_cspace}
-            clearance: clearance
         output:
             fss: R^{n_point, n_feature}
             Jss: R^{n_point, n_feature, dim_cspace}
@@ -172,41 +214,49 @@ class CollFreeConst(AbstractIneqConst):
         assert self.sdf is not None
         n_point, dim_cspace = qs.shape
         n_feature = self.colkin.n_feature
+        dim_tspace = self.colkin.dim_tspace
 
         # xss: R^{n_point, n_feature * dim_tspace}
         # jss: R^{n_point, n_feature, dim_tspace, dim_cspace}
         xss, jacss = self.colkin.map(qs)  # ss refere to points of points
 
-        xs_stacked = xss.reshape((n_point * n_feature, self.dim_tspace))
+        xs_stacked = xss.reshape((n_point * n_feature, dim_tspace))
         sds_stacked = self.sdf(xs_stacked)
 
         # compute sd_vals_stacked
-        margin_radius = np.tile(np.array(self.colkin.radius_list), n_point) + self.clearance
+        margin_radius = np.tile(np.array(self.colkin.radius_list), n_point)
         fs_stacked = sds_stacked - margin_radius
         fss = fs_stacked.reshape(n_point, n_feature)
 
         # compute jacobian by chain rule
         if with_jacobian:
             eps = 1e-7
-            grads_stacked = np.zeros((n_feature * n_point, self.dim_tspace))
+            grads_stacked = np.zeros((n_feature * n_point, dim_tspace))
 
-            for i in range(self.dim_tspace):
+            for i in range(dim_tspace):
                 xs_stacked_plus = copy.deepcopy(xs_stacked)
                 xs_stacked_plus[:, i] += eps
                 sds_stacked_plus = self.sdf(xs_stacked_plus)
                 grads_stacked[:, i] = (sds_stacked_plus - sds_stacked) / eps
-            gradss = grads_stacked.reshape((n_point, n_feature, self.dim_tspace))
+            gradss = grads_stacked.reshape((n_point, n_feature, dim_tspace))
             Jss = np.einsum("ijk,ijkl->ijl", gradss, jacss)
         else:
             Jss = self.dummy_jacobian()
         return fss, Jss
 
+    def _reflect_skrobot_model(self, robot_model: Optional[RobotModel]) -> None:
+        assert robot_model, "robot_model must not be None"
+        self.colkin.reflect_skrobot_model(robot_model)
 
-@dataclass
+
 class ConfigPointConst(AbstractEqConst):
     desired_angles: np.ndarray
 
-    def evaluate(self, qs: np.ndarray, with_jacobian: bool) -> Tuple[np.ndarray, np.ndarray]:
+    def __init__(self, desired_angles: np.ndarray) -> None:
+        self.desired_angles = desired_angles
+        self.reflect_skrobot_model(None)
+
+    def _evaluate(self, qs: np.ndarray, with_jacobian: bool) -> Tuple[np.ndarray, np.ndarray]:
         n_point, dim = qs.shape
         val = qs - self.desired_angles
         if with_jacobian:
@@ -215,13 +265,25 @@ class ConfigPointConst(AbstractEqConst):
             jac = self.dummy_jacobian()
         return val, jac
 
+    def _reflect_skrobot_model(self, robot_model: Optional[RobotModel]) -> None:
+        pass
 
-@dataclass
+
 class PoseConstraint(AbstractEqConst):
+    efkin: ArticulatedEndEffectorKinematicsMap
     desired_poses: List[np.ndarray]
-    efkin: KinematicsMapProtocol
 
-    def evaluate(
+    def __init__(
+        self,
+        desired_poses: List[np.ndarray],
+        efkin: ArticulatedEndEffectorKinematicsMap,
+        robot_model: RobotModel,
+    ) -> None:
+        self.desired_poses = desired_poses
+        self.efkin = efkin
+        self.reflect_skrobot_model(robot_model)
+
+    def _evaluate(
         self, qs: np.ndarray, with_jacobian: bool = False
     ) -> Tuple[np.ndarray, np.ndarray]:
         n_point, n_dim = qs.shape
@@ -236,7 +298,10 @@ class PoseConstraint(AbstractEqConst):
 
     @classmethod
     def from_skrobot_coords(
-        cls, co_list: List[Coordinates], efkin: KinematicsMapProtocol
+        cls,
+        co_list: List[Coordinates],
+        efkin: ArticulatedEndEffectorKinematicsMap,
+        robot_model: RobotModel,
     ) -> "PoseConstraint":
         vector_list = []
         for co in co_list:
@@ -245,17 +310,19 @@ class PoseConstraint(AbstractEqConst):
             rpy = np.flip(ypr)
             vector = np.hstack([pos, rpy])
             vector_list.append(vector)
-        return cls(vector_list, efkin)
+        return cls(vector_list, efkin, robot_model)
+
+    def _reflect_skrobot_model(self, robot_model: Optional[RobotModel]) -> None:
+        assert robot_model is not None
+        self.efkin.reflect_skrobot_model(robot_model)
 
 
-@dataclass
 class PairWiseSelfCollFreeConst(AbstractIneqConst):
     colkin: ArticulatedCollisionKinematicsMap
     check_sphere_id_pairs: List[Tuple[int, int]]
     check_sphere_pair_sqdists: np.ndarray  # pair sqdist means (r1 + r2) ** 2
 
-    @classmethod
-    def from_colkin(cls, colkin: ArticulatedCollisionKinematicsMap) -> "PairWiseSelfCollFreeConst":
+    def __init__(self, colkin: ArticulatedCollisionKinematicsMap, robot_model: RobotModel) -> None:
         # here in this constructor, we will filter out collision pair which is already collide
         # at the initial pose np.zeros(n_dof)
 
@@ -298,9 +365,12 @@ class PairWiseSelfCollFreeConst(AbstractIneqConst):
             [pair_pair_dist_table[pair] for pair in valid_sphere_id_pairs]
         )
 
-        return cls(colkin, valid_sphere_id_pairs, valid_sphere_pair_dists**2)
+        self.colkin = colkin
+        self.check_sphere_id_pairs = valid_sphere_id_pairs
+        self.check_sphere_pair_sqdists = valid_sphere_pair_dists**2
+        self.reflect_skrobot_model(robot_model)
 
-    def evaluate(self, qs: np.ndarray, with_jacobian: bool) -> Tuple[np.ndarray, np.ndarray]:
+    def _evaluate(self, qs: np.ndarray, with_jacobian: bool) -> Tuple[np.ndarray, np.ndarray]:
         n_sample, n_dim = qs.shape
 
         sqdists_stacked, grads_stacked = self.colkin.fksolver.compute_inter_link_sqdists(
@@ -319,26 +389,31 @@ class PairWiseSelfCollFreeConst(AbstractIneqConst):
         gradss = grads_stacked.reshape(n_sample, -1, n_dim)
         return valuess, gradss
 
+    def _reflect_skrobot_model(self, robot_model: Optional[RobotModel]) -> None:
+        assert robot_model is not None
+        self.colkin.reflect_skrobot_model(robot_model)
 
-@dataclass
+
 class NeuralSelfCollFreeConst(AbstractIneqConst):
     model: OrtSelColInferencer  # type: ignore
     threshold: float = 0.5
 
+    def __init__(self, infer_model: OrtSelColInferencer, robot_Model: RobotModel) -> None:  # type: ignore
+        self.model = infer_model  # type: ignore
+        self.reflect_skrobot_model(robot_Model)
+
     @classmethod
-    def load(cls, urdf_path: Path, control_joint_names: List[str]) -> "NeuralSelfCollFreeConst":
+    def load(
+        cls, urdf_path: Path, control_joint_names: List[str], robot_model: RobotModel
+    ) -> "NeuralSelfCollFreeConst":
         assert SELCOL_FOUND
         cache_basepath = default_cache_basepath()
         model = OrtSelColInferencer.load(
             cache_basepath, urdf_path=urdf_path, eval_joint_names=control_joint_names
         )
-        return cls(model)
+        return cls(model, robot_model)
 
-    def reflect_skrobot_model(self, robot_model: RobotModel):
-        angles = [robot_model.__dict__[jn].joint_angle() for jn in self.model.joint_names]
-        self.model.set_context(np.array(angles))
-
-    def evaluate(
+    def _evaluate(
         self, qs: np.ndarray, with_jacobian: bool = False
     ) -> Tuple[np.ndarray, np.ndarray]:
         n_point, n_dim = qs.shape
@@ -358,3 +433,7 @@ class NeuralSelfCollFreeConst(AbstractIneqConst):
         grads = np.array(grad_list)
         jacs = grads.reshape(n_point, 1, n_dim)
         return valss, jacs
+
+    def _reflect_skrobot_model(self, robot_model: Optional[RobotModel]) -> None:
+        angles = [robot_model.__dict__[jn].joint_angle() for jn in self.model.joint_names]
+        self.model.set_context(np.array(angles))

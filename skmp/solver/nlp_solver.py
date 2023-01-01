@@ -22,7 +22,9 @@ def translate(
     n_dof = len(problem.start)
 
     traj_eq_const = TrajectoryEqualityConstraint(n_dof, n_wp, {}, [])
-    traj_eq_const.add(0, ConfigPointConst(problem.start))
+    init_const = ConfigPointConst(problem.start)
+    init_const.reflect_skrobot_model(None)
+    traj_eq_const.add(0, init_const)
     traj_eq_const.add_goal_constraint(problem.goal_const)
 
     traj_ineq_const = TrajectoryInequalityConstraint.create_homogeneous(
