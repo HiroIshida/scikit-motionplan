@@ -112,7 +112,7 @@ def test_composite_constraint():
     box.translate(np.array([0.85, -0.2, 0.9]))
     assert box.sdf is not None
     collfree_const = CollFreeConst(colkin, box.sdf, pr2)
-    selcol_const = config.get_neural_selcol_const(pr2)
+    selcol_const = PairWiseSelfCollFreeConst(colkin, PR2())
 
     composite_const = IneqCompositeConst([collfree_const, selcol_const])
     # NOTE: selcol model uses float32. So, larger eps is required
