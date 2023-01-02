@@ -13,7 +13,7 @@ from skmp.kinematics import (
     ArticulatedCollisionKinematicsMap,
     ArticulatedEndEffectorKinematicsMap,
 )
-from skmp.utils.urdf import URDF, JointLimit
+from skmp.utils.urdf import URDF, JointLimit  # type: ignore
 
 if importlib.find_loader("selcol") is not None:
     SELCOL_FOUND = True

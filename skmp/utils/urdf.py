@@ -1,3 +1,4 @@
+# type: ignore
 # taken from https://github.com/mmatl/urdfpy/blob/master/urdfpy/urdf.py
 #        and https://github.com/mmatl/urdfpy/blob/master/urdfpy/utils.py
 

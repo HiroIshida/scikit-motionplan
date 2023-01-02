@@ -9,7 +9,7 @@ from skrobot.model import RobotModel
 from trimesh import Trimesh
 
 from skmp.collision import SphereCollection, create_sphere_collection
-from skmp.utils.urdf import URDF
+from skmp.utils.urdf import URDF  # type: ignore
 
 
 class KinematicsMapProtocol(Protocol):
