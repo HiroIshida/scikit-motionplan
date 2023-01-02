@@ -1,0 +1,53 @@
+name: CI
+
+on:
+    push:
+        branches:
+            - master
+    pull_request:
+        branches:
+            - master
+    schedule:
+        - cron: '0 8 * * *'
+
+jobs:
+    test:
+        runs-on: ubuntu-latest
+        strategy:
+          matrix:
+            python-version: [3.8]
+            os: [ubuntu-20.04]
+        steps:
+            - name: Checkout Code
+              uses: actions/checkout@v2
+
+            - name: Set up Python ${{ matrix.python-version }}
+              uses: actions/setup-python@v1
+              with:
+                python-version: ${{ matrix.python-version }}
+            - name: install this package
+              run: |
+                  sudo apt install libboost-filesystem-dev libboost-serialization-dev -y
+                  pip3 install -e .
+                  echo "<<debug display shared dependency>>"
+                  echo "ldconfig -v | grep -v ^$'\t'"
+                  ldconfig -v | grep -v ^$'\t'
+                  echo "ldd $(pip3 show ompl-thin|grep Location|awk '{print $2}')/ompl/*.so"
+                  ldd $(pip3 show ompl-thin|grep Location|awk '{print $2}')/ompl/*.so
+
+            - name: pip install pytest and mypy
+              run: |
+                  pip3 install pytest
+                  pip3 install mypy
+
+            - name: pip install skrobot from source
+              run: |
+                  cd /tmp && git clone https://github.com/iory/scikit-robot.git && cd scikit-robot && pip3 install .
+
+            - name: Run Pytest
+              run: |
+                  pytest -v tests
+
+            - name: Run mypy
+              run: |
+                  mypy .

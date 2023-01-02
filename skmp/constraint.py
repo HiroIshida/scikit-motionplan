@@ -21,6 +21,7 @@ if importlib.find_loader("selcol") is not None:
     from selcol.runtime import OrtSelColInferencer
 else:
     SELCOL_FOUND = False
+    OrtSelColInferencer = None
 
 
 class AbstractConst(ABC):
