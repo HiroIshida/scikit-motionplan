@@ -90,16 +90,17 @@ class SQPBasedSolverConfig:
 
 
 @dataclass
-class SQPBasedSolver(AbstractSolver):
+class SQPBasedSolverResult:
+    traj: Optional[Trajectory]
+    time_elapsed: float
+    osqpsqp_raw_result: OsqpSqpResult
+
+
+@dataclass
+class SQPBasedSolver(AbstractSolver[SQPBasedSolverConfig, SQPBasedSolverResult]):
     solver: OsqpSqpSolver
     config: SQPBasedSolverConfig
     post_motion_step_validator: Optional[MotionStepInequalityConstraint]
-
-    @dataclass
-    class Result:
-        traj: Optional[Trajectory]
-        time_elapsed: float
-        osqpsqp_raw_result: OsqpSqpResult
 
     @classmethod
     def setup(cls, problem: Problem, config: SQPBasedSolverConfig) -> "SQPBasedSolver":  # type: ignore[override]
@@ -145,7 +146,7 @@ class SQPBasedSolver(AbstractSolver):
         )
         return cls(solver, config, post_motion_step_validator)
 
-    def solve(self, init_traj: Optional[Trajectory] = None) -> "SQPBasedSolver.Result":
+    def solve(self, init_traj: Optional[Trajectory] = None) -> "SQPBasedSolverResult":
         assert init_traj is not None  # TODO: remove this
         # TODO: add motion step constraint
         ts = time.time()
@@ -168,4 +169,4 @@ class SQPBasedSolver(AbstractSolver):
         if success:
             traj_solution = Trajectory(list(raw_result.x.reshape(self.config.n_wp, -1)))
 
-        return self.Result(traj_solution, time.time() - ts, raw_result)
+        return SQPBasedSolverResult(traj_solution, time.time() - ts, raw_result)

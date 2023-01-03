@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Optional, Protocol, Type, TypeVar, Union
+from typing import Generic, Optional, Protocol, Type, TypeVar, Union
 
 import numpy as np
 
@@ -13,6 +13,8 @@ GlobalIneqConstT = TypeVar("GlobalIneqConstT")
 GlobalEqConstT = TypeVar("GlobalEqConstT")
 SolverT = TypeVar("SolverT", bound="AbstractSolver")
 ProblemT = TypeVar("ProblemT", bound="Problem")
+ConfigT = TypeVar("ConfigT", bound="ConfigProtocol")
+ResultT = TypeVar("ResultT", bound="ResultProtocol")
 
 
 @dataclass
@@ -68,12 +70,12 @@ class ResultProtocol(Protocol):
     time_elapsed: float
 
 
-class AbstractSolver(ABC):
+class AbstractSolver(ABC, Generic[ConfigT, ResultT]):
     @classmethod
     @abstractmethod
-    def setup(cls: Type[SolverT], problem: Problem, config: ConfigProtocol) -> SolverT:
+    def setup(cls: Type[SolverT], config: ConfigT) -> SolverT:
         ...
 
     @abstractmethod
-    def solve(self, init_traj: Optional[Trajectory] = None) -> ResultProtocol:
+    def solve(self, init_traj: Optional[Trajectory] = None) -> ResultT:
         ...

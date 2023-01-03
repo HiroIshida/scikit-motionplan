@@ -17,19 +17,20 @@ class OMPLSolverConfig:
     algorithm: Algorithm = Algorithm.RRTConnect
 
 
+@dataclass
+class OMPLSolverResult:
+    traj: Optional[Trajectory]
+    time_elapsed: float
+
+
 OMPLSolverT = TypeVar("OMPLSolverT", bound="OMPLSolver")
 
 
 @dataclass
-class OMPLSolver(AbstractSolver):
+class OMPLSolver(AbstractSolver[OMPLSolverConfig, OMPLSolverResult]):
     problem: Problem
     config: OMPLSolverConfig
     planner: Planner
-
-    @dataclass
-    class Result:
-        traj: Optional[Trajectory]
-        time_elapsed: float
 
     @classmethod
     def setup(cls: Type[OMPLSolverT], problem: Problem, config: Optional[OMPLSolverConfig] = None) -> OMPLSolverT:  # type: ignore[override]
@@ -75,7 +76,7 @@ class OMPLSolver(AbstractSolver):
                 break
         assert result is not None
         if not result.success:
-            return self.Result(None, time.time() - ts)
+            return OMPLSolverResult(None, time.time() - ts)
         q_start = self.problem.start
         q_goal = result.q
         plan_result = self.planner.solve(q_start, q_goal)
@@ -83,4 +84,4 @@ class OMPLSolver(AbstractSolver):
             traj = Trajectory(plan_result)
         else:
             traj = None
-        return self.Result(traj, time.time() - ts)
+        return OMPLSolverResult(traj, time.time() - ts)
