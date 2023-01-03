@@ -35,7 +35,9 @@ class OMPLSolver(AbstractSolver[OMPLSolverConfig, OMPLSolverResult]):
     _n_call_dict: Dict[str, int]
 
     @classmethod
-    def setup(cls: Type[OMPLSolverT], problem: Problem, config: Optional[OMPLSolverConfig] = None) -> OMPLSolverT:  # type: ignore[override]
+    def setup(
+        cls: Type[OMPLSolverT], problem: Problem, config: Optional[OMPLSolverConfig] = None
+    ) -> OMPLSolverT:
 
         if config is None:
             config = OMPLSolverConfig()

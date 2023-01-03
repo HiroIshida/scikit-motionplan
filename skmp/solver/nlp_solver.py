@@ -104,7 +104,7 @@ class SQPBasedSolver(AbstractSolver[SQPBasedSolverConfig, SQPBasedSolverResult])
     post_motion_step_validator: Optional[MotionStepInequalityConstraint]
 
     @classmethod
-    def setup(cls, problem: Problem, config: SQPBasedSolverConfig) -> "SQPBasedSolver":  # type: ignore[override]
+    def setup(cls, problem: Problem, config: SQPBasedSolverConfig) -> "SQPBasedSolver":
         traj_eq_const, traj_ineq_const = translate(problem, config.n_wp)
         n_dof = len(problem.start)
         smooth_mat = smoothcost_fullmat(n_dof, config.n_wp)

@@ -12,7 +12,6 @@ GoalConstT = TypeVar("GoalConstT")
 GlobalIneqConstT = TypeVar("GlobalIneqConstT")
 GlobalEqConstT = TypeVar("GlobalEqConstT")
 SolverT = TypeVar("SolverT", bound="AbstractSolver")
-ProblemT = TypeVar("ProblemT", bound="Problem")
 ConfigT = TypeVar("ConfigT", bound="ConfigProtocol")
 ResultT = TypeVar("ResultT", bound="ResultProtocol")
 
@@ -74,7 +73,7 @@ class ResultProtocol(Protocol):
 class AbstractSolver(ABC, Generic[ConfigT, ResultT]):
     @classmethod
     @abstractmethod
-    def setup(cls: Type[SolverT], config: ConfigT) -> SolverT:
+    def setup(cls: Type[SolverT], poblem: Problem, config: ConfigT) -> SolverT:
         ...
 
     @abstractmethod
