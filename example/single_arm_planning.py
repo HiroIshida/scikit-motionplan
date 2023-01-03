@@ -73,7 +73,7 @@ if __name__ == "__main__":
     # construct problem
     problem = Problem(start, box_const, goal_eq_const, global_ineq_const, None)
 
-    ompl_config = OMPLSolverConfig(n_max_eval=50000, algorithm=Algorithm.RRT)
+    ompl_config = OMPLSolverConfig(n_max_call=50000, algorithm=Algorithm.RRT)
     ompl_solver = OMPLSolver.setup(problem, config=ompl_config)
     result = ompl_solver.solve()
     print(result.time_elapsed)

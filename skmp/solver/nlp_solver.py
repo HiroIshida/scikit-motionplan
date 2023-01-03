@@ -74,7 +74,7 @@ class SQPBasedSolverConfig:
     """
 
     n_wp: int
-    n_max_eval: int = 30
+    n_max_call: int = 30
     motion_step_satisfaction: Literal["implicit", "explicit", "post", "debug_ignore"] = "implicit"
     _osqpsqp_config: OsqpSqpConfig = OsqpSqpConfig()  # don't directly access this
 
@@ -85,7 +85,7 @@ class SQPBasedSolverConfig:
         #     has_same_attribute = f.name in self.__dict__
         #     if has_same_attribute:
         #         osqpsqp_config.__dict__[f.name] = self.__dict__[f.name]
-        osqpsqp_config.n_max_eval = self.n_max_eval
+        osqpsqp_config.n_max_eval = self.n_max_call
         return osqpsqp_config
 
 
@@ -93,6 +93,7 @@ class SQPBasedSolverConfig:
 class SQPBasedSolverResult:
     traj: Optional[Trajectory]
     time_elapsed: float
+    n_call: int
     osqpsqp_raw_result: OsqpSqpResult
 
 
@@ -169,4 +170,4 @@ class SQPBasedSolver(AbstractSolver[SQPBasedSolverConfig, SQPBasedSolverResult])
         if success:
             traj_solution = Trajectory(list(raw_result.x.reshape(self.config.n_wp, -1)))
 
-        return SQPBasedSolverResult(traj_solution, time.time() - ts, raw_result)
+        return SQPBasedSolverResult(traj_solution, time.time() - ts, raw_result.nit, raw_result)

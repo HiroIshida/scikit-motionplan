@@ -1,6 +1,6 @@
 import time
 from dataclasses import dataclass
-from typing import List, Optional, Type, TypeVar
+from typing import Dict, List, Optional, Type, TypeVar
 
 import numpy as np
 from ompl import Algorithm, Planner
@@ -12,7 +12,7 @@ from skmp.trajectory import Trajectory
 
 @dataclass
 class OMPLSolverConfig:
-    n_max_eval: int = 2000
+    n_max_call: int = 2000
     n_max_satisfaction_trial: int = 100
     algorithm: Algorithm = Algorithm.RRTConnect
 
@@ -21,6 +21,7 @@ class OMPLSolverConfig:
 class OMPLSolverResult:
     traj: Optional[Trajectory]
     time_elapsed: float
+    n_call: int
 
 
 OMPLSolverT = TypeVar("OMPLSolverT", bound="OMPLSolver")
@@ -31,6 +32,7 @@ class OMPLSolver(AbstractSolver[OMPLSolverConfig, OMPLSolverResult]):
     problem: Problem
     config: OMPLSolverConfig
     planner: Planner
+    _n_call_dict: Dict[str, int]
 
     @classmethod
     def setup(cls: Type[OMPLSolverT], problem: Problem, config: Optional[OMPLSolverConfig] = None) -> OMPLSolverT:  # type: ignore[override]
@@ -40,7 +42,10 @@ class OMPLSolver(AbstractSolver[OMPLSolverConfig, OMPLSolverResult]):
 
         assert not problem.is_constrained()
 
+        n_call_dict = {"count": 0}
+
         def is_valid(q_: List[float]) -> bool:
+            n_call_dict["count"] += 1
             q = np.array(q_)
             if problem.global_ineq_const is None:
                 return True
@@ -55,11 +60,11 @@ class OMPLSolver(AbstractSolver[OMPLSolverConfig, OMPLSolverResult]):
             lb,
             ub,
             is_valid,
-            config.n_max_eval,
+            config.n_max_call,
             validation_box=problem.motion_step_box,
             algo=config.algorithm,
         )
-        return cls(problem, config, planner)
+        return cls(problem, config, planner, n_call_dict)
 
     def solve(self, init_traj: Optional[Trajectory] = None):
         ts = time.time()
@@ -76,7 +81,8 @@ class OMPLSolver(AbstractSolver[OMPLSolverConfig, OMPLSolverResult]):
                 break
         assert result is not None
         if not result.success:
-            return OMPLSolverResult(None, time.time() - ts)
+            return OMPLSolverResult(None, time.time() - ts, -1)
+
         q_start = self.problem.start
         q_goal = result.q
         plan_result = self.planner.solve(q_start, q_goal)
@@ -84,4 +90,5 @@ class OMPLSolver(AbstractSolver[OMPLSolverConfig, OMPLSolverResult]):
             traj = Trajectory(plan_result)
         else:
             traj = None
-        return OMPLSolverResult(traj, time.time() - ts)
+        self._n_call_dict["count"] = 0
+        return OMPLSolverResult(traj, time.time() - ts, self._n_call_dict["count"])

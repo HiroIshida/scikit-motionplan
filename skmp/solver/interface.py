@@ -62,12 +62,13 @@ class Problem:
 
 
 class ConfigProtocol(Protocol):
-    n_max_eval: int
+    n_max_call: int
 
 
 class ResultProtocol(Protocol):
     traj: Optional[Trajectory]
     time_elapsed: float
+    n_call: int
 
 
 class AbstractSolver(ABC, Generic[ConfigT, ResultT]):

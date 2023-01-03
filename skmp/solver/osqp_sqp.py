@@ -45,7 +45,6 @@ class OsqpSqpExitMode(Enum):
 class OsqpSqpResult:
     x: np.ndarray
     nit: int
-    nfev: int
     fobj: float
     feq: np.ndarray
     fineq: np.ndarray
@@ -186,7 +185,7 @@ class OsqpSqpSolver:
                     )
                 )
 
-            result = OsqpSqpResult(x_guess, idx_iter, idx_iter, objective, val_eq, val_ineq)
+            result = OsqpSqpResult(x_guess, idx_iter, objective, val_eq, val_ineq)
 
             if eq_const_satisfied and ineq_const_satisfied:
                 diff_objective = val_objective_previous - objective
