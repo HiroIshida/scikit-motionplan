@@ -27,13 +27,7 @@ jobs:
                 python-version: ${{ matrix.python-version }}
             - name: install this package
               run: |
-                  sudo apt install libboost-filesystem-dev libboost-serialization-dev -y
                   pip3 install -e .
-                  echo "<<debug display shared dependency>>"
-                  echo "ldconfig -v | grep -v ^$'\t'"
-                  ldconfig -v | grep -v ^$'\t'
-                  echo "ldd $(pip3 show ompl-thin|grep Location|awk '{print $2}')/ompl/*.so"
-                  ldd $(pip3 show ompl-thin|grep Location|awk '{print $2}')/ompl/*.so
 
             - name: pip install pytest and mypy
               run: |
