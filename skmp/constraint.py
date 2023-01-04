@@ -15,7 +15,7 @@ from skmp.kinematics import (
 )
 from skmp.utils.urdf import URDF, JointLimit  # type: ignore
 
-if importlib.find_loader("selcol") is not None:
+if importlib.util.find_spec("selcol") is not None:
     SELCOL_FOUND = True
     from selcol.file import default_cache_basepath
     from selcol.runtime import OrtSelColInferencer
