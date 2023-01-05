@@ -1,5 +1,6 @@
 import time
 from dataclasses import dataclass
+from enum import Enum
 from typing import Dict, List, Optional, Type, TypeVar
 
 import numpy as np
@@ -17,11 +18,18 @@ class OMPLSolverConfig:
     algorithm: Algorithm = Algorithm.RRTConnect
 
 
+class TerminateState(Enum):
+    SUCCESS = 1
+    FAIL_SATISFACTION = 2
+    FAIL_PLANNING = 3
+
+
 @dataclass
 class OMPLSolverResult:
     traj: Optional[Trajectory]
     time_elapsed: float
     n_call: int
+    terminate_state: TerminateState
 
 
 OMPLSolverT = TypeVar("OMPLSolverT", bound="OMPLSolver")
@@ -83,14 +91,16 @@ class OMPLSolver(AbstractSolver[OMPLSolverConfig, OMPLSolverResult]):
                 break
         assert result is not None
         if not result.success:
-            return OMPLSolverResult(None, time.time() - ts, -1)
+            return OMPLSolverResult(None, time.time() - ts, -1, TerminateState.FAIL_SATISFACTION)
 
         q_start = self.problem.start
         q_goal = result.q
         plan_result = self.planner.solve(q_start, q_goal)
         if plan_result is not None:
             traj = Trajectory(plan_result)
+            terminate_state = TerminateState.SUCCESS
         else:
             traj = None
+            terminate_state = TerminateState.FAIL_PLANNING
         self._n_call_dict["count"] = 0
-        return OMPLSolverResult(traj, time.time() - ts, self._n_call_dict["count"])
+        return OMPLSolverResult(traj, time.time() - ts, self._n_call_dict["count"], terminate_state)
