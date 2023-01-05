@@ -152,7 +152,7 @@ class SQPBasedSolver(AbstractSolver[SQPBasedSolverConfig, SQPBasedSolverResult])
         # TODO: add motion step constraint
         ts = time.time()
 
-        x_init = init_traj.numpy().flatten()
+        x_init = init_traj.resample(self.config.n_wp).numpy().flatten()
         raw_result = self.solver.solve(x_init, config=self.config.osqpsqp_config)
 
         success = raw_result.success
