@@ -73,7 +73,7 @@ class ResultProtocol(Protocol):
 class AbstractSolver(ABC, Generic[ConfigT, ResultT]):
     @classmethod
     @abstractmethod
-    def setup(cls: Type[SolverT], poblem: Problem, config: ConfigT) -> SolverT:
+    def setup(cls: Type[SolverT], problem: Problem, config: ConfigT) -> SolverT:
         ...
 
     @abstractmethod
