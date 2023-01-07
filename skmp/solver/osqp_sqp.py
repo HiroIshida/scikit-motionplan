@@ -141,7 +141,6 @@ class OsqpSqpSolver:
 
         result: Optional[OsqpSqpResult] = None
         for idx_iter in range(config.n_max_eval):
-            print(idx_iter)
             if config.verbose:
                 print("iteration num: {}".format(idx_iter))
             # equality
@@ -161,6 +160,7 @@ class OsqpSqpSolver:
             ineq_const_satisfied = np.all(val_ineq > -config.ctol_ineq)
             objective = self.P.dot(x_guess).dot(x_guess)
             if config.verbose:
+                print("iter: {}".format(idx_iter))
 
                 def to_exp_notation(val: float) -> str:
                     return np.format_float_scientific(val, precision=3, exp_digits=2)
