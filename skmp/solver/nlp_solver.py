@@ -76,16 +76,14 @@ class SQPBasedSolverConfig:
     n_wp: int
     n_max_call: int = 30
     motion_step_satisfaction: Literal["implicit", "explicit", "post", "debug_ignore"] = "implicit"
+    force_deterministic: bool = False
     _osqpsqp_config: OsqpSqpConfig = OsqpSqpConfig()  # don't directly access this
 
     @property
     def osqpsqp_config(self) -> OsqpSqpConfig:
         osqpsqp_config = copy.deepcopy(self._osqpsqp_config)
-        # for f in fields(OsqpSqpConfig):
-        #     has_same_attribute = f.name in self.__dict__
-        #     if has_same_attribute:
-        #         osqpsqp_config.__dict__[f.name] = self.__dict__[f.name]
         osqpsqp_config.n_max_eval = self.n_max_call
+        osqpsqp_config.force_deterministic = self.force_deterministic
         return osqpsqp_config
 
 

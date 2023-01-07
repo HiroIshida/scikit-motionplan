@@ -32,6 +32,7 @@ class OsqpSqpConfig:
     osqp_verbose: bool = False
     verbose: bool = False
     relax_step_convex: float = 0.1
+    force_deterministic: bool = False
 
 
 class OsqpSqpExitMode(Enum):
@@ -82,7 +83,18 @@ class OsqpSqpSolver:
         max_relax: int,
         verbose: bool,
         osqp_verbose: bool,
+        force_deterministic: bool = False,
     ) -> Optional[np.ndarray]:
+
+        if force_deterministic:
+            # see here:
+            # https://osqp.discourse.group/t/what-settings-to-choose-to-ensure-reproducibility/64/4
+            # but I'm not sure how this parameter affects the performance
+            # so, this option is supposed to be used in test and debugging
+            osqp_kwargs = {"adaptive_rho_interval": 25}
+        else:
+            osqp_kwargs = {}
+
         success_status = osqp.constant("OSQP_SOLVED")
         dim_codomain_ineq = len(eval_cache.val_ineq)
         dim_x = eval_cache.J_eq.shape[1]
@@ -114,7 +126,16 @@ class OsqpSqpSolver:
 
             if prob is None:
                 prob = osqp.OSQP()
-                prob.setup(P=self.P, q=None, l=l, u=u, A=A, warm_start=True, verbose=osqp_verbose)
+                prob.setup(
+                    P=self.P,
+                    q=None,
+                    l=l,
+                    u=u,
+                    A=A,
+                    warm_start=True,
+                    verbose=osqp_verbose,
+                    **osqp_kwargs
+                )
             else:
                 prob.update(l=l - relax_step_now, u=u + relax_step_now)
             prob.warm_start(x=x_guess)
@@ -204,6 +225,7 @@ class OsqpSqpSolver:
                     config.maxrelax,
                     config.verbose,
                     config.osqp_verbose,
+                    config.force_deterministic,
                 )
             else:
                 subproblem_result = self.solve_convex_subproblem(
@@ -213,6 +235,7 @@ class OsqpSqpSolver:
                     0,
                     config.verbose,
                     config.osqp_verbose,
+                    config.force_deterministic,
                 )
 
             if subproblem_result is None:
