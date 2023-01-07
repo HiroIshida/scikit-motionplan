@@ -69,8 +69,8 @@ def satisfy_by_optimization(
 
         def fun_ineq(q: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
             val, jac = ineq_const.evaluate_single(q, with_jacobian=True)  # type: ignore[union-attr]
-            margin_numerical = 1e-7
-            return val + margin_numerical, jac
+            margin_numerical = 1e-6
+            return val - margin_numerical, jac
 
         ineq_const_scipy, ineq_const_jac_scipy = scipinize(fun_ineq)
         ineq_dict = {"type": "ineq", "fun": ineq_const_scipy, "jac": ineq_const_jac_scipy}
