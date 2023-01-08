@@ -6,7 +6,7 @@ from utils import create_standard_problem
 
 from skmp.satisfy import satisfy_by_optimization
 from skmp.solver.nlp_solver import SQPBasedSolver, SQPBasedSolverConfig, translate
-from skmp.solver.ompl_solver import OMPLSolver
+from skmp.solver.ompl_solver import OMPLSolver, OMPLSolverConfig
 from skmp.solver.trajectory_constraint import TrajectoryConstraint
 from skmp.trajectory import Trajectory
 
@@ -56,7 +56,8 @@ def test_sqp_based_solver():
 
     np.random.seed(0)
     set_ompl_random_seed(1)
-    ompl_solver = OMPLSolver.setup(problem)
+    ompl_solver = OMPLSolver.init(OMPLSolverConfig())
+    ompl_solver.setup(problem)
     init_traj = ompl_solver.solve().traj
     assert init_traj is not None
     # q_goal_cand = np.array([-0.78, 0.055, -1.37, -0.59, -0.494, -0.20, 1.87])
@@ -66,13 +67,15 @@ def test_sqp_based_solver():
     config1 = SQPBasedSolverConfig(n_wp=30, motion_step_satisfaction="implicit")
     config2 = SQPBasedSolverConfig(n_wp=50, motion_step_satisfaction="explicit")
     for config in [config1, config2]:
-        solver = SQPBasedSolver.setup(problem, config)
+        solver = SQPBasedSolver.init(config)
+        solver.setup(problem)
         result = solver.solve(init_traj.resample(config.n_wp))
         assert result.traj is not None
         assert problem.is_satisfied(result.traj)
 
     config3 = SQPBasedSolverConfig(n_wp=15, motion_step_satisfaction="post")
-    solver = SQPBasedSolver.setup(problem, config3)
+    solver = SQPBasedSolver.init(config3)
+    solver.setup(problem)
     result = solver.solve(init_traj.resample(config3.n_wp))
     # internal solver supposed to report "solved"
     # but, the solver will report not solved because n_wp = 15 is too small

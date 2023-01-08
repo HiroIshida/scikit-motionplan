@@ -1,6 +1,7 @@
 import copy
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Literal, Optional, Tuple
 
 import numpy as np
@@ -97,12 +98,18 @@ class SQPBasedSolverResult:
 
 @dataclass
 class SQPBasedSolver(AbstractSolver[SQPBasedSolverConfig, SQPBasedSolverResult]):
-    solver: OsqpSqpSolver
     config: SQPBasedSolverConfig
+    solver: Optional[OsqpSqpSolver]
     post_motion_step_validator: Optional[MotionStepInequalityConstraint]
 
     @classmethod
-    def setup(cls, problem: Problem, config: SQPBasedSolverConfig) -> "SQPBasedSolver":
+    def init(
+        cls, config: SQPBasedSolverConfig, data_path: Optional[Path] = None
+    ) -> "SQPBasedSolver":
+        return cls(config, None, None)
+
+    def setup(self, problem: Problem) -> None:
+        config = self.config
         traj_eq_const, traj_ineq_const = translate(problem, config.n_wp)
         n_dof = len(problem.start)
         smooth_mat = smoothcost_fullmat(n_dof, config.n_wp)
@@ -143,10 +150,12 @@ class SQPBasedSolver(AbstractSolver[SQPBasedSolverConfig, SQPBasedSolverResult])
             lb_stacked,
             ub_stacked,
         )
-        return cls(solver, config, post_motion_step_validator)
+        self.solver = solver
+        self.post_motion_step_validator = post_motion_step_validator
 
     def solve(self, init_traj: Optional[Trajectory] = None) -> "SQPBasedSolverResult":
         assert init_traj is not None  # TODO: remove this
+        assert self.solver is not None, "setup is not called yet"
         # TODO: add motion step constraint
         ts = time.time()
 

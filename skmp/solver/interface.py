@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Generic, Optional, Protocol, Type, TypeVar, Union
 
 import numpy as np
@@ -73,9 +74,16 @@ class ResultProtocol(Protocol):
 class AbstractSolver(ABC, Generic[ConfigT, ResultT]):
     @classmethod
     @abstractmethod
-    def setup(cls: Type[SolverT], problem: Problem, config: ConfigT) -> SolverT:
+    def init(cls: Type[SolverT], config: ConfigT, data_path: Optional[Path] = None) -> SolverT:
+        """common interface of constructor"""
+        ...
+
+    @abstractmethod
+    def setup(self, problem: Problem) -> None:
+        """setup solver for a paticular problem"""
         ...
 
     @abstractmethod
     def solve(self, init_traj: Optional[Trajectory] = None) -> ResultT:
+        """solve problem with maybe a solution guess"""
         ...

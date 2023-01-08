@@ -74,14 +74,16 @@ if __name__ == "__main__":
     problem = Problem(start, box_const, goal_eq_const, global_ineq_const, None)
 
     ompl_config = OMPLSolverConfig(n_max_call=50000, algorithm=Algorithm.RRT)
-    ompl_solver = OMPLSolver.setup(problem, config=ompl_config)
+    ompl_solver = OMPLSolver.init(ompl_config)
+    ompl_solver.setup(problem)
     result = ompl_solver.solve()
     print(result.time_elapsed)
     assert result.traj is not None
 
     n_wp = 30
     sqp_config = SQPBasedSolverConfig(n_wp=n_wp)
-    nlp_solver = SQPBasedSolver.setup(problem, sqp_config)
+    nlp_solver = SQPBasedSolver.init(sqp_config)
+    nlp_solver.setup(problem)
     result = nlp_solver.solve(result.traj.resample(n_wp))
     print(result.time_elapsed)
     assert result.traj is not None

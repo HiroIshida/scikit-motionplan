@@ -1,7 +1,8 @@
 import time
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, List, Optional, Type, TypeVar
+from pathlib import Path
+from typing import Dict, List, Optional, TypeVar
 
 import numpy as np
 from ompl import Algorithm, Planner
@@ -37,25 +38,22 @@ OMPLSolverT = TypeVar("OMPLSolverT", bound="OMPLSolver")
 
 @dataclass
 class OMPLSolver(AbstractSolver[OMPLSolverConfig, OMPLSolverResult]):
-    problem: Problem
     config: OMPLSolverConfig
-    planner: Planner
+    problem: Optional[Problem]
+    planner: Optional[Planner]
     _n_call_dict: Dict[str, int]
 
     @classmethod
-    def setup(
-        cls: Type[OMPLSolverT], problem: Problem, config: Optional[OMPLSolverConfig] = None
-    ) -> OMPLSolverT:
-
-        if config is None:
-            config = OMPLSolverConfig()
-
-        assert not problem.is_constrained()
-
+    def init(cls, config: OMPLSolverConfig, data_path: Optional[Path] = None) -> "OMPLSolver":
         n_call_dict = {"count": 0}
+        return cls(config, None, None, n_call_dict)
+
+    def setup(self, problem: Problem) -> None:
+        assert not problem.is_constrained(), "current limitation"
+        self._n_call_dict["count"] = 0  # reset count
 
         def is_valid(q_: List[float]) -> bool:
-            n_call_dict["count"] += 1
+            self._n_call_dict["count"] += 1
             q = np.array(q_)
             if problem.global_ineq_const is None:
                 return True
@@ -70,13 +68,16 @@ class OMPLSolver(AbstractSolver[OMPLSolverConfig, OMPLSolverResult]):
             lb,
             ub,
             is_valid,
-            config.n_max_call,
+            self.config.n_max_call,
             validation_box=problem.motion_step_box,
-            algo=config.algorithm,
+            algo=self.config.algorithm,
         )
-        return cls(problem, config, planner, n_call_dict)
+        self.problem = problem
+        self.planner = planner
 
     def solve(self, init_traj: Optional[Trajectory] = None):
+        assert self.problem is not None, "setup is not called yet"
+        assert self.planner is not None
         ts = time.time()
 
         result: Optional[SatisfactionResult] = None
