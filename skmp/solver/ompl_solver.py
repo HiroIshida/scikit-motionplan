@@ -1,14 +1,13 @@
 import time
 from dataclasses import dataclass
 from enum import Enum
-from pathlib import Path
-from typing import Dict, List, Optional, TypeVar
+from typing import Any, Dict, List, Optional, TypeVar
 
 import numpy as np
 from ompl import Algorithm, Planner
 
 from skmp.satisfy import SatisfactionResult, satisfy_by_optimization
-from skmp.solver.interface import AbstractSolver, Problem
+from skmp.solver.interface import AbstractScratchSolver, Problem
 from skmp.trajectory import Trajectory
 
 
@@ -37,14 +36,14 @@ OMPLSolverT = TypeVar("OMPLSolverT", bound="OMPLSolver")
 
 
 @dataclass
-class OMPLSolver(AbstractSolver[OMPLSolverConfig, OMPLSolverResult]):
+class OMPLSolver(AbstractScratchSolver[OMPLSolverConfig, OMPLSolverResult]):
     config: OMPLSolverConfig
     problem: Optional[Problem]
     planner: Optional[Planner]
     _n_call_dict: Dict[str, int]
 
     @classmethod
-    def init(cls, config: OMPLSolverConfig, data_path: Optional[Path] = None) -> "OMPLSolver":
+    def init(cls, config: OMPLSolverConfig, data_path: Optional[Any] = None) -> "OMPLSolver":
         n_call_dict = {"count": 0}
         return cls(config, None, None, n_call_dict)
 

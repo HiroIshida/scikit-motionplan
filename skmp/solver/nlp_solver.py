@@ -1,13 +1,12 @@
 import copy
 import time
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Literal, Optional, Tuple
+from typing import Any, Literal, Optional, Tuple
 
 import numpy as np
 
 from skmp.constraint import ConfigPointConst
-from skmp.solver.interface import AbstractSolver, Problem
+from skmp.solver.interface import AbstractScratchSolver, Problem
 from skmp.solver.osqp_sqp import OsqpSqpConfig, OsqpSqpResult, OsqpSqpSolver
 from skmp.solver.trajectory_constraint import (
     MotionStepInequalityConstraint,
@@ -97,14 +96,14 @@ class SQPBasedSolverResult:
 
 
 @dataclass
-class SQPBasedSolver(AbstractSolver[SQPBasedSolverConfig, SQPBasedSolverResult]):
+class SQPBasedSolver(AbstractScratchSolver[SQPBasedSolverConfig, SQPBasedSolverResult]):
     config: SQPBasedSolverConfig
     solver: Optional[OsqpSqpSolver]
     post_motion_step_validator: Optional[MotionStepInequalityConstraint]
 
     @classmethod
     def init(
-        cls, config: SQPBasedSolverConfig, data_path: Optional[Path] = None
+        cls, config: SQPBasedSolverConfig, data_path: Optional[Any] = None
     ) -> "SQPBasedSolver":
         return cls(config, None, None)
 

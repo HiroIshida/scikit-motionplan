@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Generic, Optional, Protocol, Type, TypeVar, Union
 
 import numpy as np
@@ -15,6 +14,7 @@ GlobalEqConstT = TypeVar("GlobalEqConstT")
 SolverT = TypeVar("SolverT", bound="AbstractSolver")
 ConfigT = TypeVar("ConfigT", bound="ConfigProtocol")
 ResultT = TypeVar("ResultT", bound="ResultProtocol")
+DataLikeT = TypeVar("DataLikeT")
 
 
 @dataclass
@@ -72,12 +72,6 @@ class ResultProtocol(Protocol):
 
 
 class AbstractSolver(ABC, Generic[ConfigT, ResultT]):
-    @classmethod
-    @abstractmethod
-    def init(cls: Type[SolverT], config: ConfigT, data_path: Optional[Path] = None) -> SolverT:
-        """common interface of constructor"""
-        ...
-
     @abstractmethod
     def setup(self, problem: Problem) -> None:
         """setup solver for a paticular problem"""
@@ -86,4 +80,22 @@ class AbstractSolver(ABC, Generic[ConfigT, ResultT]):
     @abstractmethod
     def solve(self, init_traj: Optional[Trajectory] = None) -> ResultT:
         """solve problem with maybe a solution guess"""
+        ...
+
+
+class AbstractScratchSolver(AbstractSolver[ConfigT, ResultT]):
+    @classmethod
+    @abstractmethod
+    def init(cls: Type[SolverT], config: ConfigT) -> SolverT:
+        """common interface of constructor"""
+        ...
+
+
+class AbstractDataDrivenSolver(
+    AbstractSolver[ConfigT, ResultT], Generic[ConfigT, ResultT, DataLikeT]
+):
+    @classmethod
+    @abstractmethod
+    def init(cls: Type[SolverT], config: ConfigT, data_like: DataLikeT) -> SolverT:
+        """common interface of constructor"""
         ...
