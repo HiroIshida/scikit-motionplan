@@ -1,6 +1,11 @@
 from utils import create_standard_problem
 
-from skmp.solver import OMPLSolver, OMPLSolverConfig
+from skmp.solver.ompl_solver import (
+    LightningDB,
+    LightningSolver,
+    OMPLSolver,
+    OMPLSolverConfig,
+)
 
 
 def test_ompl_solver():  # noqa
@@ -13,5 +18,23 @@ def test_ompl_solver():  # noqa
     assert problem.is_satisfied(result.traj)
 
 
+def test_lightning_solver():
+    problem = create_standard_problem()
+    solcon = OMPLSolverConfig()
+    solver = OMPLSolver.init(solcon)
+    solver.setup(problem)
+    result = solver.solve()
+    assert result.traj is not None
+
+    dof = len(problem.start)
+    db = LightningDB(dof)
+    db.add_experience(list(result.traj.numpy()))
+
+    lightning = LightningSolver.init(solcon, db)
+    lightning.setup(problem)
+    lightning_result = lightning.solve()
+    assert lightning_result.traj is not None
+
+
 if __name__ == "__main__":
-    test_ompl_solver()
+    test_lightning_solver()
