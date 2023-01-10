@@ -1,7 +1,7 @@
 import copy
 import time
 from dataclasses import dataclass
-from typing import Any, Literal, Optional, Tuple
+from typing import Any, Literal, Optional, Tuple, Type
 
 import numpy as np
 
@@ -107,6 +107,10 @@ class SQPBasedSolver(AbstractScratchSolver[SQPBasedSolverConfig, SQPBasedSolverR
     solver: Optional[OsqpSqpSolver]
     problem: Optional[Problem]
     post_motion_step_validator: Optional[MotionStepInequalityConstraint]
+
+    @classmethod
+    def get_result_type(cls) -> Type[SQPBasedSolverResult]:
+        return SQPBasedSolverResult
 
     @classmethod
     def init(

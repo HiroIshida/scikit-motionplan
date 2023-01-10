@@ -2,7 +2,7 @@ import time
 from abc import abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, List, Optional, TypeVar
+from typing import Dict, List, Optional, Type, TypeVar
 
 import numpy as np
 from ompl import Algorithm, LightningDB, LightningPlanner, Planner, _OMPLPlannerBase
@@ -51,6 +51,10 @@ class OMPLSolverBase(AbstractSolver[OMPLSolverConfig, OMPLSolverResult]):
     problem: Optional[Problem]
     planner: Optional[_OMPLPlannerBase]
     _n_call_dict: Dict[str, int]
+
+    @classmethod
+    def get_result_type(cls) -> Type[OMPLSolverResult]:
+        return OMPLSolverResult
 
     def setup(self, problem: Problem) -> None:
         assert not problem.is_constrained(), "current limitation"
