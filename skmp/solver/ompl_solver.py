@@ -111,7 +111,7 @@ class OMPLSolverBase(AbstractSolver[OMPLSolverConfig, OMPLSolverResult]):
         return OMPLSolverResult(traj, time.time() - ts, self._n_call_dict["count"], terminate_state)
 
 
-class OMPLSolver(AbstractScratchSolver, OMPLSolverBase):
+class OMPLSolver(AbstractScratchSolver[OMPLSolverConfig, OMPLSolverResult], OMPLSolverBase):
     @classmethod
     def init(cls, config: OMPLSolverConfig) -> "OMPLSolver":
         n_call_dict = {"count": 0}
