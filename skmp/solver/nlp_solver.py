@@ -96,6 +96,10 @@ class SQPBasedSolverResult:
     n_call: int
     osqpsqp_raw_result: Optional[OsqpSqpResult]
 
+    @classmethod
+    def abnormal(cls, time_elapsed: float) -> "SQPBasedSolverResult":
+        return cls(None, time_elapsed, -1, None)
+
 
 @dataclass
 class SQPBasedSolver(AbstractScratchSolver[SQPBasedSolverConfig, SQPBasedSolverResult]):

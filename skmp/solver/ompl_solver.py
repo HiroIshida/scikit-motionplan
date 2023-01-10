@@ -37,6 +37,10 @@ class OMPLSolverResult:
     n_call: int
     terminate_state: TerminateState
 
+    @classmethod
+    def abnormal(cls, time_elapsed: float) -> "OMPLSolverResult":
+        return cls(None, time_elapsed, -1, TerminateState.FAIL_SATISFACTION)
+
 
 OMPLSolverT = TypeVar("OMPLSolverT", bound="OMPLSolver")
 

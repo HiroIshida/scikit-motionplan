@@ -70,6 +70,12 @@ class ResultProtocol(Protocol):
     time_elapsed: float
     n_call: int
 
+    @classmethod
+    def abnormal(cls: Type[ResultT], time_elapsed: float) -> ResultT:
+        """create result when solver failed without calling the core-solver
+        and could not get n_call and other stuff"""
+        ...
+
 
 class AbstractSolver(ABC, Generic[ConfigT, ResultT]):
     @abstractmethod
