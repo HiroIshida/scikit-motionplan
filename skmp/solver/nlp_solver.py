@@ -6,6 +6,7 @@ from typing import Any, Literal, Optional, Tuple
 import numpy as np
 
 from skmp.constraint import ConfigPointConst
+from skmp.satisfy import SatisfactionResult, satisfy_by_optimization
 from skmp.solver.interface import AbstractScratchSolver, Problem
 from skmp.solver.osqp_sqp import OsqpSqpConfig, OsqpSqpResult, OsqpSqpSolver
 from skmp.solver.trajectory_constraint import (
@@ -77,6 +78,7 @@ class SQPBasedSolverConfig:
     n_max_call: int = 30
     motion_step_satisfaction: Literal["implicit", "explicit", "post", "debug_ignore"] = "implicit"
     force_deterministic: bool = False
+    n_max_satisfaction_trial: int = 100  # only used if init traj is not satisfied
     _osqpsqp_config: OsqpSqpConfig = OsqpSqpConfig()  # don't directly access this
 
     @property
@@ -92,20 +94,21 @@ class SQPBasedSolverResult:
     traj: Optional[Trajectory]
     time_elapsed: float
     n_call: int
-    osqpsqp_raw_result: OsqpSqpResult
+    osqpsqp_raw_result: Optional[OsqpSqpResult]
 
 
 @dataclass
 class SQPBasedSolver(AbstractScratchSolver[SQPBasedSolverConfig, SQPBasedSolverResult]):
     config: SQPBasedSolverConfig
     solver: Optional[OsqpSqpSolver]
+    problem: Optional[Problem]
     post_motion_step_validator: Optional[MotionStepInequalityConstraint]
 
     @classmethod
     def init(
         cls, config: SQPBasedSolverConfig, data_path: Optional[Any] = None
     ) -> "SQPBasedSolver":
-        return cls(config, None, None)
+        return cls(config, None, None, None)
 
     def setup(self, problem: Problem) -> None:
         config = self.config
@@ -151,12 +154,32 @@ class SQPBasedSolver(AbstractScratchSolver[SQPBasedSolverConfig, SQPBasedSolverR
         )
         self.solver = solver
         self.post_motion_step_validator = post_motion_step_validator
+        self.problem = problem
 
     def solve(self, init_traj: Optional[Trajectory] = None) -> "SQPBasedSolverResult":
-        assert init_traj is not None  # TODO: remove this
         assert self.solver is not None, "setup is not called yet"
+        assert self.problem is not None
         # TODO: add motion step constraint
         ts = time.time()
+
+        if init_traj is None:
+
+            satisfy_result: Optional[SatisfactionResult] = None
+            for _ in range(self.config.n_max_satisfaction_trial):
+                satisfy_result = satisfy_by_optimization(
+                    self.problem.goal_const,
+                    self.problem.box_const,
+                    self.problem.global_ineq_const,
+                    None,
+                )
+                if satisfy_result.success:
+                    break
+            assert satisfy_result is not None
+            if not satisfy_result.success:
+                return SQPBasedSolverResult(None, time.time() - ts, -1, None)
+
+            q_goal = satisfy_result.q
+            init_traj = Trajectory.from_two_points(self.problem.start, q_goal, self.config.n_wp)
 
         x_init = init_traj.resample(self.config.n_wp).numpy().flatten()
         raw_result = self.solver.solve(x_init, config=self.config.osqpsqp_config)

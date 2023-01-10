@@ -8,7 +8,7 @@ from skmp.robot.pr2 import PR2Config
 from skmp.solver import Problem
 
 
-def create_standard_problem() -> Problem:
+def create_standard_problem(easy: bool = False) -> Problem:
     # setup kinematics
     pr2 = PR2()
     pr2.reset_manip_pose()
@@ -25,7 +25,10 @@ def create_standard_problem() -> Problem:
     goal_eq_const = PoseConstraint.from_skrobot_coords([target], efkin, pr2)
 
     # global ineq
-    obstacle = Box(extents=[0.7, 0.5, 1.2], with_sdf=True)
+    if easy:
+        obstacle = Box(extents=[0.3, 0.1, 0.3], with_sdf=True)
+    else:
+        obstacle = Box(extents=[0.7, 0.5, 1.2], with_sdf=True)
     obstacle.translate(np.array([0.85, -0.2, 0.9]))
     assert obstacle.sdf is not None
     global_ienq_const = CollFreeConst(colkin, obstacle.sdf, pr2)

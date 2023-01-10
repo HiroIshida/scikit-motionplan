@@ -60,9 +60,6 @@ def test_sqp_based_solver():
     ompl_solver.setup(problem)
     init_traj = ompl_solver.solve().traj
     assert init_traj is not None
-    # q_goal_cand = np.array([-0.78, 0.055, -1.37, -0.59, -0.494, -0.20, 1.87])
-    # init_traj = Trajectory.from_two_points(problem.start, q_goal_cand, n_wp)
-    # assert not problem.is_satisfied(init_traj)
 
     config1 = SQPBasedSolverConfig(n_wp=30, motion_step_satisfaction="implicit")
     config2 = SQPBasedSolverConfig(n_wp=50, motion_step_satisfaction="explicit")
@@ -80,8 +77,18 @@ def test_sqp_based_solver():
     # internal solver supposed to report "solved"
     # but, the solver will report not solved because n_wp = 15 is too small
     # to satisfy the motion_step constraint
+    assert result.osqpsqp_raw_result is not None
     assert result.osqpsqp_raw_result.success
     assert result.traj is None
+
+
+def test_sqp_based_solver_without_init():
+    problem = create_standard_problem(easy=True)
+    config = SQPBasedSolverConfig(n_wp=30, motion_step_satisfaction="implicit")
+    solver = SQPBasedSolver.init(config)
+    solver.setup(problem)
+    res = solver.solve()
+    assert res.traj is not None
 
 
 if __name__ == "__main__":
