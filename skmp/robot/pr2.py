@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Literal
 
 import numpy as np
 from skrobot.models import PR2
@@ -19,12 +19,6 @@ from skmp.kinematics import (
 )
 
 
-class ControlArm(Enum):
-    RARM = 0
-    LARM = 1
-    DUAL = 2
-
-
 class CollisionMode(Enum):
     DEFAULT = 0
     RARM = 1
@@ -35,7 +29,7 @@ class CollisionMode(Enum):
 
 @dataclass
 class PR2Config:
-    control_arm: ControlArm = ControlArm.RARM
+    control_arm: Literal["rarm", "larm", "dual"] = "rarm"
     collision_mode: CollisionMode = CollisionMode.DEFAULT
     with_base: bool = False
 
@@ -135,22 +129,22 @@ class PR2Config:
         return ["base_link"]
 
     def _get_control_joint_names(self) -> List[str]:
-        if self.control_arm == ControlArm.RARM:
+        if self.control_arm == "rarm":
             joint_names = self.rarm_joint_names()
-        elif self.control_arm == ControlArm.LARM:
+        elif self.control_arm == "larm":
             joint_names = self.larm_joint_names()
-        elif self.control_arm == ControlArm.DUAL:
+        elif self.control_arm == "dual":
             joint_names = self.rarm_joint_names() + self.larm_joint_names()
         else:
             assert False
         return joint_names
 
     def _get_endeffector_names(self) -> List[str]:
-        if self.control_arm == ControlArm.RARM:
+        if self.control_arm == "rarm":
             endeffector_names = ["r_gripper_tool_frame"]
-        elif self.control_arm == ControlArm.LARM:
+        elif self.control_arm == "larm":
             endeffector_names = ["l_gripper_tool_frame"]
-        elif self.control_arm == ControlArm.DUAL:
+        elif self.control_arm == "dual":
             endeffector_names = ["r_gripper_tool_frame", "l_gripper_tool_frame"]
         else:
             assert False
