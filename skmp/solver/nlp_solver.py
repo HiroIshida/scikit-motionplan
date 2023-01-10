@@ -78,6 +78,8 @@ class SQPBasedSolverConfig:
     n_max_call: int = 30
     motion_step_satisfaction: Literal["implicit", "explicit", "post", "debug_ignore"] = "implicit"
     force_deterministic: bool = False
+    osqp_verbose: bool = False
+    verbose: bool = False
     n_max_satisfaction_trial: int = 100  # only used if init traj is not satisfied
     _osqpsqp_config: OsqpSqpConfig = OsqpSqpConfig()  # don't directly access this
 
@@ -86,6 +88,8 @@ class SQPBasedSolverConfig:
         osqpsqp_config = copy.deepcopy(self._osqpsqp_config)
         osqpsqp_config.n_max_eval = self.n_max_call
         osqpsqp_config.force_deterministic = self.force_deterministic
+        osqpsqp_config.verbose = self.verbose
+        osqpsqp_config.osqp_verbose = self.osqp_verbose
         return osqpsqp_config
 
 
