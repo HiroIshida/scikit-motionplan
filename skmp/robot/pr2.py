@@ -261,5 +261,5 @@ class PR2Config:
 
     def get_neural_selcol_const(self, robot_model: PR2) -> NeuralSelfCollFreeConst:
         return NeuralSelfCollFreeConst.load(
-            self.urdf_path(), self._get_control_joint_names(), robot_model
+            self.urdf_path(), self._get_control_joint_names(), robot_model, self.with_base
         )

@@ -397,22 +397,28 @@ class PairWiseSelfCollFreeConst(AbstractIneqConst):
 
 class NeuralSelfCollFreeConst(AbstractIneqConst):
     model: OrtSelColInferencer  # type: ignore
+    with_base: bool
     threshold: float = 0.5
 
-    def __init__(self, infer_model: OrtSelColInferencer, robot_Model: RobotModel) -> None:  # type: ignore
+    def __init__(self, infer_model: OrtSelColInferencer, robot_Model: RobotModel, with_base: bool) -> None:  # type: ignore
         self.model = infer_model  # type: ignore
+        self.with_base = with_base
         self.reflect_skrobot_model(robot_Model)
 
     @classmethod
     def load(
-        cls, urdf_path: Path, control_joint_names: List[str], robot_model: RobotModel
+        cls,
+        urdf_path: Path,
+        control_joint_names: List[str],
+        robot_model: RobotModel,
+        with_base: bool,
     ) -> "NeuralSelfCollFreeConst":
         assert SELCOL_FOUND
         cache_basepath = default_cache_basepath()
         model = OrtSelColInferencer.load(
             cache_basepath, urdf_path=urdf_path, eval_joint_names=control_joint_names
         )
-        return cls(model, robot_model)
+        return cls(model, robot_model, with_base)
 
     def _evaluate(
         self, qs: np.ndarray, with_jacobian: bool = False
@@ -422,8 +428,12 @@ class NeuralSelfCollFreeConst(AbstractIneqConst):
         val_list = []
         grad_list = []
         for q in qs:
+            if self.with_base:
+                q = q[:-3]  # because base pose is irrelevant to self collision
             val, grad = self.model.infer(q, with_grad=with_jacobian)
             val_list.append(self.threshold - val)
+            if self.with_base:
+                grad = np.hstack((grad, np.zeros(3)))
             grad_list.append(-grad)
 
         valss = np.array(val_list).reshape(n_point, 1)
