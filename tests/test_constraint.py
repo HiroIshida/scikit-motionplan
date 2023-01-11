@@ -12,6 +12,7 @@ from skmp.constraint import (
     IneqCompositeConst,
     PairWiseSelfCollFreeConst,
     PoseConstraint,
+    RelativePoseConstraint,
 )
 from skmp.robot.pr2 import PR2Config
 
@@ -92,6 +93,21 @@ def test_pose_const():
     check_jacobian(const, 7)
 
 
+def test_realtive_pose_const():
+    config = PR2Config(with_base=False, control_arm="dual")
+    efkin = config.get_endeffector_kin()
+    relconst = RelativePoseConstraint(np.ones(3) * 0.1, efkin, PR2())
+
+    check_jacobian(relconst, 14)
+
+    # inside relconst constructor, efkin is copied and
+    # modified to add a new feature point.
+    # this test that, efkin is properly copied and the
+    # original one does not change
+    assert efkin.n_feature == 2
+    assert len(efkin.tinyfk_feature_ids) == 2
+
+
 def test_pair_wise_selfcollfree_cost():
     config = PR2Config(with_base=False)
     colkin = config.get_collision_kin()
@@ -122,9 +138,10 @@ def test_composite_constraint():
 
 
 if __name__ == "__main__":
-    test_box_const()
-    test_collfree_const()
-    test_neural_collfree_const()
-    test_configpoint_const()
-    test_pose_const()
-    test_composite_constraint()
+    # test_box_const()
+    # test_collfree_const()
+    # test_neural_collfree_const()
+    # test_configpoint_const()
+    # test_pose_const()
+    # test_composite_constraint()
+    test_realtive_pose_const()

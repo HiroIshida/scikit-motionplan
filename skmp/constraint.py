@@ -273,6 +273,7 @@ class PoseConstraint(AbstractEqConst):
         efkin: ArticulatedEndEffectorKinematicsMap,
         robot_model: RobotModel,
     ) -> None:
+        assert len(desired_poses) == efkin.n_feature
         self.desired_poses = desired_poses
         self.efkin = efkin
         self.reflect_skrobot_model(robot_model)
@@ -305,6 +306,56 @@ class PoseConstraint(AbstractEqConst):
             vector = np.hstack([pos, rpy])
             vector_list.append(vector)
         return cls(vector_list, efkin, robot_model)
+
+    def _reflect_skrobot_model(self, robot_model: Optional[RobotModel]) -> None:
+        assert robot_model is not None
+        self.efkin.reflect_skrobot_model(robot_model)
+
+
+class RelativePoseConstraint(AbstractEqConst):
+    desired_relative_position: np.ndarray  # todo: extend this to pose
+    efkin: ArticulatedEndEffectorKinematicsMap
+
+    def __init__(
+        self,
+        desired_relative_position: np.ndarray,
+        efkin: ArticulatedEndEffectorKinematicsMap,
+        robot_model: RobotModel,
+    ):
+
+        efkin = copy.deepcopy(efkin)
+
+        # we consider relative pose from feature-1 to feature-2
+        assert efkin.n_feature == 2
+        feature_1_id = efkin.tinyfk_feature_ids[0]
+        efkin.add_new_feature_point(feature_1_id, desired_relative_position, None)
+
+        # now we have feature-3 which is relative transformed pose from feature-1
+        # and we are going to try to match feature 2 and feature 3
+        assert efkin.n_feature == 3
+
+        self.desired_relative_position = desired_relative_position
+        self.efkin = efkin
+        self.reflect_skrobot_model(robot_model)
+
+    def _evaluate(self, qs: np.ndarray, with_jacobian: bool) -> Tuple[np.ndarray, np.ndarray]:
+        n_point, n_dim = qs.shape
+        xs, jacs = self.efkin.map(
+            qs
+        )  # xs: R^(n_point, n_task), jacs: R^(n_point, n_feature, n_task, n_dof)
+
+        points_feature2 = xs[:, 1, :]
+        points_feature3 = xs[:, 2, :]
+
+        diffs = points_feature2 - points_feature3  # R^(n_point, n_task)
+
+        if not with_jacobian:
+            return diffs, self.dummy_jacobian()
+        else:
+            jacs_feature2 = jacs[:, 1, :, :]
+            jacs_feature3 = jacs[:, 2, :, :]
+            jacs_diff = jacs_feature2 - jacs_feature3  # R^(n_point, n_task, n_dof)
+            return diffs, jacs_diff
 
     def _reflect_skrobot_model(self, robot_model: Optional[RobotModel]) -> None:
         assert robot_model is not None

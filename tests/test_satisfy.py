@@ -1,16 +1,24 @@
+import time
 from typing import Optional
 
 import numpy as np
 from skrobot.coordinates import Coordinates
 from skrobot.model.primitives import Box
 from skrobot.models import PR2
+from skrobot.viewers import TrimeshSceneViewer
 
-from skmp.constraint import CollFreeConst, ConfigPointConst, PoseConstraint
+from skmp.constraint import (
+    CollFreeConst,
+    ConfigPointConst,
+    PoseConstraint,
+    RelativePoseConstraint,
+)
 from skmp.robot.pr2 import PR2Config
+from skmp.robot.utils import set_robot_state
 from skmp.satisfy import SatisfactionResult, satisfy_by_optimization
 
 
-def test_satisfy_by_optimization():
+def test_satisfy_by_optimization_pose_const():
     pr2 = PR2()
     pr2.reset_manip_pose()
     config = PR2Config(with_base=False)
@@ -43,5 +51,29 @@ def test_satisfy_by_optimization():
         assert np.all(ineq_val > 0)
 
 
+def test_satisfy_by_optimization_relative_pose_const(debug: bool = False):
+    pr2 = PR2(use_tight_joint_limit=False)
+    pr2.reset_manip_pose()
+    config = PR2Config(with_base=False, control_arm="dual")
+    efkin = config.get_endeffector_kin()
+    box_const = config.get_box_const()
+
+    relconst = RelativePoseConstraint(np.array([0.0, 0.0, -0.2]), efkin, pr2)
+    result: Optional[SatisfactionResult] = None
+    for _ in range(30):
+        result = satisfy_by_optimization(relconst, box_const, None, None)
+        if result.success:
+            break
+    assert result is not None
+    assert result.success
+
+    if debug:
+        set_robot_state(pr2, efkin.control_joint_names, result.q)
+        viewer = TrimeshSceneViewer()
+        viewer.add(pr2)
+        viewer.show()
+        time.sleep(10)
+
+
 if __name__ == "__main__":
-    test_satisfy_by_optimization()
+    test_satisfy_by_optimization_relative_pose_const(debug=True)

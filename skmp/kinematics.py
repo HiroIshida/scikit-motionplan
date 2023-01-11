@@ -1,6 +1,7 @@
+import uuid
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Protocol, Tuple
+from typing import Callable, Dict, List, Optional, Protocol, Tuple, Union
 
 import numpy as np
 import tinyfk
@@ -27,8 +28,8 @@ class KinematicsMapProtocol(Protocol):
 
     def map(self, points_cspace: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """maps points in C-space to points in the task space.
-        points_cspace: R^(n_points, n_config)
-        return: R^(n_points, n_feature, n_task), R^(n_points, n_feature, n_task, n_config)
+        points_cspace: R^(n_points, n_feature)
+        return: R^(n_points, n_feature, n_task), R^(n_points, n_feature, n_task, n_dof)
         """
         ...
 
@@ -138,6 +139,24 @@ class ArticulatedKinematicsMapBase:
         else:
             base_pose = None
         self.update_joint_angles(table, base_pose)
+
+    def add_new_feature_point(
+        self,
+        link_like: Union[str, int],
+        position: np.ndarray,
+        rotation: Optional[np.ndarray] = None,
+    ) -> None:
+        """add relative point to specified link as a new feature point"""
+        if isinstance(link_like, str):
+            parent_link_id = self.fksolver.get_link_ids([link_like])[0]
+        else:
+            parent_link_id = link_like
+        new_link_name = "new_feature_{}".format(uuid.uuid4())
+        self.fksolver.add_new_link(new_link_name, parent_link_id, position, rotation)
+
+        new_feature_id = self.fksolver.get_link_ids([new_link_name])[0]
+        self.tinyfk_feature_ids.append(new_feature_id)
+        self.n_feature += 1
 
 
 class ArticulatedEndEffectorKinematicsMap(ArticulatedKinematicsMapBase):
