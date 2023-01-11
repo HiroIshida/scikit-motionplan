@@ -10,7 +10,7 @@ install_requires = [
     "robot_descriptions",
     "scikit-robot",
     "osqp",
-    "ompl-thin>=0.0.8",
+    "ompl-thin>=0.0.11",
     "selcol>=0.0.3.2",
 ]
 

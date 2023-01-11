@@ -5,7 +5,14 @@ from enum import Enum
 from typing import Dict, List, Optional, Type, TypeVar
 
 import numpy as np
-from ompl import Algorithm, LightningDB, LightningPlanner, Planner, _OMPLPlannerBase
+from ompl import (
+    Algorithm,
+    ConstrainedPlanner,
+    LightningDB,
+    LightningPlanner,
+    Planner,
+    _OMPLPlannerBase,
+)
 
 from skmp.satisfy import SatisfactionResult, satisfy_by_optimization
 from skmp.solver.interface import (
@@ -74,6 +81,7 @@ class OMPLSolverBase(AbstractSolver[OMPLSolverConfig, OMPLSolverResult]):
         ub = problem.box_const.ub
 
         planner = self.create_planner(
+            eq_const=problem.global_eq_const,
             lb=lb,
             ub=ub,
             is_valid=is_valid,
@@ -130,7 +138,10 @@ class OMPLSolver(AbstractScratchSolver[OMPLSolverConfig, OMPLSolverResult], OMPL
         return cls(config, None, None, n_call_dict)
 
     def create_planner(self, **kwargs) -> _OMPLPlannerBase:
-        return Planner(**kwargs)
+        if kwargs["eq_const"] is None:
+            return Planner(**kwargs)
+        else:
+            return ConstrainedPlanner(**kwargs)
 
 
 def create_lightning_db(trajs: List[Trajectory]) -> LightningDB:
@@ -153,5 +164,7 @@ class LightningSolver(
         return cls(config, None, None, n_call_dict, data_like)
 
     def create_planner(self, **kwargs) -> _OMPLPlannerBase:
+        if kwargs["eq_const"] is None:
+            raise RuntimeError("lightning does not support global equality constraint")
         kwargs["db"] = self.db
         return LightningPlanner(**kwargs)
