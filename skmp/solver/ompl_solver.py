@@ -5,14 +5,7 @@ from enum import Enum
 from typing import Dict, List, Optional, Type, TypeVar
 
 import numpy as np
-from ompl import (
-    Algorithm,
-    LightningDB,
-    LightningPlanner,
-    PathSimplifier,
-    Planner,
-    _OMPLPlannerBase,
-)
+from ompl import Algorithm, LightningDB, LightningPlanner, Planner, _OMPLPlannerBase
 
 from skmp.satisfy import SatisfactionResult, satisfy_by_optimization
 from skmp.solver.interface import (
@@ -58,7 +51,6 @@ class OMPLSolverBase(AbstractSolver[OMPLSolverConfig, OMPLSolverResult]):
     config: OMPLSolverConfig
     problem: Optional[Problem]
     planner: Optional[_OMPLPlannerBase]
-    simplifier: Optional[PathSimplifier]
     _n_call_dict: Dict[str, int]
 
     @classmethod
@@ -118,20 +110,9 @@ class OMPLSolverBase(AbstractSolver[OMPLSolverConfig, OMPLSolverResult]):
 
         q_start = self.problem.start
         q_goal = result.q
-        plan_result = self.planner.solve(q_start, q_goal)
+        plan_result = self.planner.solve(q_start, q_goal, self.config.simplify)
         if plan_result is not None:
             terminate_state = TerminateState.SUCCESS
-            if self.config.simplify:
-                box = self.problem.box_const
-                n_call_remain = self.config.n_max_call - self._n_call_dict["count"]
-                simplifier = PathSimplifier(
-                    box.lb,
-                    box.ub,
-                    self.planner._is_valid,
-                    n_call_remain,
-                    self.problem.motion_step_box,
-                )
-                plan_result = simplifier.simplify(plan_result)
             traj = Trajectory(plan_result)
         else:
             terminate_state = TerminateState.FAIL_PLANNING
@@ -146,7 +127,7 @@ class OMPLSolver(AbstractScratchSolver[OMPLSolverConfig, OMPLSolverResult], OMPL
     @classmethod
     def init(cls, config: OMPLSolverConfig) -> "OMPLSolver":
         n_call_dict = {"count": 0}
-        return cls(config, None, None, None, n_call_dict)
+        return cls(config, None, None, n_call_dict)
 
     def create_planner(self, **kwargs) -> _OMPLPlannerBase:
         return Planner(**kwargs)
@@ -169,7 +150,7 @@ class LightningSolver(
     @classmethod
     def init(cls, config: OMPLSolverConfig, data_like: LightningDB) -> "LightningSolver":
         n_call_dict = {"count": 0}
-        return cls(config, None, None, None, n_call_dict, data_like)
+        return cls(config, None, None, n_call_dict, data_like)
 
     def create_planner(self, **kwargs) -> _OMPLPlannerBase:
         kwargs["db"] = self.db
