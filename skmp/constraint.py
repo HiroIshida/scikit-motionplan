@@ -1,11 +1,12 @@
 import copy
-import importlib
 import itertools
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Callable, List, Optional, Tuple, TypeVar
 
 import numpy as np
+from selcol.file import default_pretrained_basepath
+from selcol.runtime import OrtSelColInferencer
 from skrobot.coordinates import Coordinates, rpy_angle
 from skrobot.model import RobotModel
 
@@ -14,14 +15,6 @@ from skmp.kinematics import (
     ArticulatedEndEffectorKinematicsMap,
 )
 from skmp.utils.urdf import URDF, JointLimit  # type: ignore
-
-if importlib.util.find_spec("selcol") is not None:  # type: ignore[attr-defined]
-    SELCOL_FOUND = True
-    from selcol.file import default_pretrained_basepath
-    from selcol.runtime import OrtSelColInferencer
-else:
-    SELCOL_FOUND = False
-    OrtSelColInferencer = None
 
 
 class AbstractConst(ABC):
@@ -413,7 +406,6 @@ class NeuralSelfCollFreeConst(AbstractIneqConst):
         robot_model: RobotModel,
         with_base: bool,
     ) -> "NeuralSelfCollFreeConst":
-        assert SELCOL_FOUND
         cache_basepath = default_pretrained_basepath()
         model = OrtSelColInferencer.load(
             cache_basepath, urdf_path=urdf_path, eval_joint_names=control_joint_names

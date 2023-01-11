@@ -6,7 +6,6 @@ from skrobot.model.primitives import Box
 from skrobot.models import PR2
 
 from skmp.constraint import (
-    SELCOL_FOUND,
     AbstractConst,
     CollFreeConst,
     ConfigPointConst,
@@ -64,9 +63,6 @@ def test_collfree_const():
 
 
 def test_neural_collfree_const():
-    if not SELCOL_FOUND:
-        return
-
     pr2 = PR2()
     pr2.reset_manip_pose()
 
