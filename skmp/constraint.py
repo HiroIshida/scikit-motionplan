@@ -17,7 +17,7 @@ from skmp.utils.urdf import URDF, JointLimit  # type: ignore
 
 if importlib.util.find_spec("selcol") is not None:  # type: ignore[attr-defined]
     SELCOL_FOUND = True
-    from selcol.file import default_cache_basepath
+    from selcol.file import default_pretrained_basepath
     from selcol.runtime import OrtSelColInferencer
 else:
     SELCOL_FOUND = False
@@ -414,7 +414,7 @@ class NeuralSelfCollFreeConst(AbstractIneqConst):
         with_base: bool,
     ) -> "NeuralSelfCollFreeConst":
         assert SELCOL_FOUND
-        cache_basepath = default_cache_basepath()
+        cache_basepath = default_pretrained_basepath()
         model = OrtSelColInferencer.load(
             cache_basepath, urdf_path=urdf_path, eval_joint_names=control_joint_names
         )

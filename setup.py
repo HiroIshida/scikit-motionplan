@@ -21,6 +21,6 @@ setup(
     author_email="h-ishida@jsk.imi.i.u-tokyo.ac.jp",
     license="MIT",
     install_requires=install_requires,
-    extras_require={"experimental": ["selcol"]},
+    extras_require={"experimental": ["selcol>=0.0.3"]},
     package_data={"skmp": ["py.typed"]},
 )
