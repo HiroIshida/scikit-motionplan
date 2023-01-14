@@ -5,7 +5,14 @@ from enum import Enum
 from typing import Dict, List, Optional, Type, TypeVar
 
 import numpy as np
-from ompl import Algorithm, LightningDB, LightningPlanner, Planner, _OMPLPlannerBase
+from ompl import (
+    Algorithm,
+    ConstrainedPlanner,
+    LightningDB,
+    LightningPlanner,
+    Planner,
+    _OMPLPlannerBase,
+)
 
 from skmp.satisfy import SatisfactionResult, satisfy_by_optimization
 from skmp.solver.interface import (
@@ -22,6 +29,7 @@ class OMPLSolverConfig:
     n_max_call: int = 2000
     n_max_satisfaction_trial: int = 100
     algorithm: Algorithm = Algorithm.RRTConnect
+    algorithm_range: Optional[float] = None
     simplify: bool = False
 
 
@@ -58,7 +66,6 @@ class OMPLSolverBase(AbstractSolver[OMPLSolverConfig, OMPLSolverResult]):
         return OMPLSolverResult
 
     def setup(self, problem: Problem) -> None:
-        assert not problem.is_constrained(), "current limitation"
         self._n_call_dict["count"] = 0  # reset count
 
         def is_valid(q_: List[float]) -> bool:
@@ -74,12 +81,14 @@ class OMPLSolverBase(AbstractSolver[OMPLSolverConfig, OMPLSolverResult]):
         ub = problem.box_const.ub
 
         planner = self.create_planner(
+            eq_const=problem.global_eq_const,
             lb=lb,
             ub=ub,
             is_valid=is_valid,
             n_max_is_valid=self.config.n_max_call,
             validation_box=problem.motion_step_box,
             algo=self.config.algorithm,
+            algo_range=self.config.algorithm_range,
         )
 
         self.problem = problem
@@ -130,7 +139,19 @@ class OMPLSolver(AbstractScratchSolver[OMPLSolverConfig, OMPLSolverResult], OMPL
         return cls(config, None, None, n_call_dict)
 
     def create_planner(self, **kwargs) -> _OMPLPlannerBase:
-        return Planner(**kwargs)
+        if kwargs["eq_const"] is None:
+            kwargs.pop("eq_const")
+            return Planner(**kwargs)
+        else:
+            f = kwargs["eq_const"]
+
+            def eq_const(x: List[float]):
+                np_x = np.array(x)
+                return f.evaluate_single(np_x, True)
+
+            kwargs["eq_const"] = eq_const
+
+            return ConstrainedPlanner(**kwargs)
 
 
 def create_lightning_db(trajs: List[Trajectory]) -> LightningDB:
@@ -153,5 +174,8 @@ class LightningSolver(
         return cls(config, None, None, n_call_dict, data_like)
 
     def create_planner(self, **kwargs) -> _OMPLPlannerBase:
+        if kwargs["eq_const"] is not None:
+            raise RuntimeError("lightning does not support global equality constraint")
+        kwargs.pop("eq_const")
         kwargs["db"] = self.db
         return LightningPlanner(**kwargs)

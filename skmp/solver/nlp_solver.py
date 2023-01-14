@@ -22,12 +22,20 @@ def translate(
 ) -> Tuple[TrajectoryEqualityConstraint, TrajectoryInequalityConstraint]:
     n_dof = len(problem.start)
 
+    # equality
     traj_eq_const = TrajectoryEqualityConstraint(n_dof, n_wp, {}, [])
+
     init_const = ConfigPointConst(problem.start)
     init_const.reflect_skrobot_model(None)
+
     traj_eq_const.add(0, init_const)
     traj_eq_const.add_goal_constraint(problem.goal_const)
 
+    if problem.global_eq_const is not None:
+        for i in range(n_wp):
+            traj_eq_const.add(i, problem.global_eq_const)
+
+    # inequality
     traj_ineq_const = TrajectoryInequalityConstraint.create_homogeneous(
         n_wp, n_dof, problem.global_ineq_const
     )
@@ -81,6 +89,8 @@ class SQPBasedSolverConfig:
     osqp_verbose: bool = False
     verbose: bool = False
     n_max_satisfaction_trial: int = 100  # only used if init traj is not satisfied
+    ctol_eq: float = 1e-4
+    ctol_ineq: float = 1e-3
     _osqpsqp_config: OsqpSqpConfig = OsqpSqpConfig()  # don't directly access this
 
     @property
@@ -90,6 +100,8 @@ class SQPBasedSolverConfig:
         osqpsqp_config.force_deterministic = self.force_deterministic
         osqpsqp_config.verbose = self.verbose
         osqpsqp_config.osqp_verbose = self.osqp_verbose
+        osqpsqp_config.ctol_eq = self.ctol_eq
+        osqpsqp_config.ctol_ineq = self.ctol_ineq
         return osqpsqp_config
 
 

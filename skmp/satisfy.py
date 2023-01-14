@@ -105,3 +105,19 @@ def satisfy_by_optimization(
     elapsed_time = time.time() - ts
 
     return SatisfactionResult(res.x, elapsed_time, res.success)
+
+
+def satisfy_by_optimization_with_budget(
+    eq_const: AbstractEqConst,
+    box_const: BoxConst,
+    ineq_const: Optional[AbstractIneqConst],
+    q_seed: Optional[np.ndarray],
+    config: Optional[SatisfactionConfig] = None,
+    n_trial_budget: int = 20,
+) -> SatisfactionResult:
+    # a util function
+    for _ in range(n_trial_budget):
+        res = satisfy_by_optimization(eq_const, box_const, ineq_const, q_seed, config=config)
+        if res.success:
+            return res
+    assert False, "satisfaction fail"

@@ -50,6 +50,18 @@ class Trajectory:
             point_new_list.append(point_new)
         return Trajectory(point_new_list)
 
+    def get_duplicate_removed(self) -> "Trajectory":
+        point_new_list: List[np.ndarray] = []
+        eps = 1e-4
+        for point in self._points:
+            if len(point_new_list) == 0:
+                point_new_list.append(point)
+            else:
+                diff_from_prev = self._points[-1] - point
+                if np.all(np.abs(diff_from_prev) > eps):
+                    point_new_list.append(point)
+        return Trajectory(point_new_list)
+
     def numpy(self):
         return np.array(self._points)
 

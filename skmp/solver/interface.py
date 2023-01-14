@@ -52,8 +52,9 @@ class Problem:
                 return False
 
         # check motion step box
-        if self.global_ineq_const is not None or self.global_eq_const is not None:
-            assert self.global_eq_const is None, "currently not implemented yet"
+        if self.global_ineq_const is not None:
+            # note: we will not check eqality constraint because checking requires
+            # traversing on manifold and its bit difficult to implement
             for i in range(len(traj) - 1):
                 q1, q2 = traj[i], traj[i + 1]
                 if not is_valid_motion_step(self.motion_step_box, q1, q2, self.global_ineq_const):  # type: ignore[arg-type]

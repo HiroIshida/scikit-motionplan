@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from collections.abc import Mapping
 from dataclasses import dataclass
 from functools import cached_property
@@ -16,7 +17,13 @@ from typing import (
 import numpy as np
 from scipy.linalg import block_diag
 
-from skmp.constraint import AbstractEqConst, AbstractIneqConst, ConstraintT
+from skmp.constraint import (
+    AbstractEqConst,
+    AbstractIneqConst,
+    ConstraintT,
+    EqCompositeConst,
+    IneqCompositeConst,
+)
 from skmp.solver.motion_step_box import interpolate_fractions
 
 
@@ -26,7 +33,7 @@ class GlobalConstraintProtocol(Protocol):
 
 
 @dataclass
-class TrajectoryConstraint(Mapping, Generic[ConstraintT]):
+class TrajectoryConstraint(ABC, Mapping, Generic[ConstraintT]):
     n_dof: int
     n_wp: int
     local_constraint_table: MutableMapping[int, ConstraintT]  # constraint on sigle waypoint
@@ -35,15 +42,21 @@ class TrajectoryConstraint(Mapping, Generic[ConstraintT]):
     def add(self, idx: int, constraint: ConstraintT, force: bool = False) -> None:
         assert idx > -1
 
-        if idx in self.local_constraint_table and not force:
-            message = "constraint is already registed to index {}".format(idx)
-            raise ValueError(message)
-
         if idx > self.n_wp - 1:
             message = "index {} exceeds the waypoint number {}".format(idx, self.n_wp)
             raise ValueError(message)
 
-        self.local_constraint_table[idx] = constraint
+        if idx not in self.local_constraint_table:
+            self.local_constraint_table[idx] = constraint
+        else:
+            if force:
+                self.local_constraint_table[idx] = constraint  # overwrite
+            else:
+                self.composite(idx, constraint)
+
+    @abstractmethod
+    def composite(self, idx: int, constraint: ConstraintT) -> None:
+        ...
 
     def add_goal_constraint(self, constraint: ConstraintT):
         self.local_constraint_table[self.n_wp - 1] = constraint
@@ -130,7 +143,9 @@ class TrajectoryConstraint(Mapping, Generic[ConstraintT]):
 
 @dataclass
 class TrajectoryEqualityConstraint(TrajectoryConstraint[AbstractEqConst]):
-    ...
+    def composite(self, idx: int, constraint: AbstractEqConst) -> None:
+        c_new = EqCompositeConst([self.local_constraint_table[idx], constraint])
+        self.local_constraint_table[idx] = c_new
 
 
 @dataclass
@@ -139,6 +154,10 @@ class TrajectoryInequalityConstraint(TrajectoryConstraint[AbstractIneqConst]):
 
     def __post_init__(self):
         assert self.is_homogeneous()  # temporary limitation
+
+    def composite(self, idx: int, constraint: AbstractIneqConst) -> None:
+        c_new = IneqCompositeConst([self.local_constraint_table[idx], constraint])
+        self.local_constraint_table[idx] = c_new
 
     @classmethod
     def create_homogeneous(
