@@ -51,7 +51,7 @@ class Trajectory:
         return Trajectory(point_new_list)
 
     def get_duplicate_removed(self) -> "Trajectory":
-        point_new_list = []
+        point_new_list: List[np.ndarray] = []
         eps = 1e-4
         for point in self._points:
             if len(point_new_list) == 0:

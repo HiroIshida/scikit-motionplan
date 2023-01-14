@@ -146,8 +146,8 @@ class OMPLSolver(AbstractScratchSolver[OMPLSolverConfig, OMPLSolverResult], OMPL
             f = kwargs["eq_const"]
 
             def eq_const(x: List[float]):
-                x = np.array(x)
-                return f.evaluate_single(x, True)
+                np_x = np.array(x)
+                return f.evaluate_single(np_x, True)
 
             kwargs["eq_const"] = eq_const
 
