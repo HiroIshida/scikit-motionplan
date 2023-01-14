@@ -66,7 +66,6 @@ class OMPLSolverBase(AbstractSolver[OMPLSolverConfig, OMPLSolverResult]):
         return OMPLSolverResult
 
     def setup(self, problem: Problem) -> None:
-        assert not problem.is_constrained(), "current limitation"
         self._n_call_dict["count"] = 0  # reset count
 
         def is_valid(q_: List[float]) -> bool:
@@ -141,8 +140,17 @@ class OMPLSolver(AbstractScratchSolver[OMPLSolverConfig, OMPLSolverResult], OMPL
 
     def create_planner(self, **kwargs) -> _OMPLPlannerBase:
         if kwargs["eq_const"] is None:
+            kwargs.pop("eq_const")
             return Planner(**kwargs)
         else:
+            f = kwargs["eq_const"]
+
+            def eq_const(x: List[float]):
+                x = np.array(x)
+                return f.evaluate_single(x, True)
+
+            kwargs["eq_const"] = eq_const
+
             return ConstrainedPlanner(**kwargs)
 
 
