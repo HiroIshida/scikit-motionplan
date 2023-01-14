@@ -29,6 +29,7 @@ class OMPLSolverConfig:
     n_max_call: int = 2000
     n_max_satisfaction_trial: int = 100
     algorithm: Algorithm = Algorithm.RRTConnect
+    algorithm_range: Optional[float] = None
     simplify: bool = False
 
 
@@ -88,6 +89,7 @@ class OMPLSolverBase(AbstractSolver[OMPLSolverConfig, OMPLSolverResult]):
             n_max_is_valid=self.config.n_max_call,
             validation_box=problem.motion_step_box,
             algo=self.config.algorithm,
+            algo_range=self.config.algorithm_range,
         )
 
         self.problem = problem
@@ -164,7 +166,8 @@ class LightningSolver(
         return cls(config, None, None, n_call_dict, data_like)
 
     def create_planner(self, **kwargs) -> _OMPLPlannerBase:
-        if kwargs["eq_const"] is None:
+        if kwargs["eq_const"] is not None:
             raise RuntimeError("lightning does not support global equality constraint")
+        kwargs.pop("eq_const")
         kwargs["db"] = self.db
         return LightningPlanner(**kwargs)
