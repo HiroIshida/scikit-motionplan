@@ -89,6 +89,8 @@ class SQPBasedSolverConfig:
     osqp_verbose: bool = False
     verbose: bool = False
     n_max_satisfaction_trial: int = 100  # only used if init traj is not satisfied
+    ctol_eq: float = 1e-4
+    ctol_ineq: float = 1e-3
     _osqpsqp_config: OsqpSqpConfig = OsqpSqpConfig()  # don't directly access this
 
     @property
@@ -98,6 +100,8 @@ class SQPBasedSolverConfig:
         osqpsqp_config.force_deterministic = self.force_deterministic
         osqpsqp_config.verbose = self.verbose
         osqpsqp_config.osqp_verbose = self.osqp_verbose
+        osqpsqp_config.ctol_eq = self.ctol_eq
+        osqpsqp_config.ctol_ineq = self.ctol_ineq
         return osqpsqp_config
 
 
