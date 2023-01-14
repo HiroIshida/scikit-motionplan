@@ -22,12 +22,20 @@ def translate(
 ) -> Tuple[TrajectoryEqualityConstraint, TrajectoryInequalityConstraint]:
     n_dof = len(problem.start)
 
+    # equality
     traj_eq_const = TrajectoryEqualityConstraint(n_dof, n_wp, {}, [])
+
     init_const = ConfigPointConst(problem.start)
     init_const.reflect_skrobot_model(None)
+
     traj_eq_const.add(0, init_const)
     traj_eq_const.add_goal_constraint(problem.goal_const)
 
+    if problem.global_eq_const is not None:
+        for i in range(n_wp):
+            traj_eq_const.add(i, problem.global_eq_const)
+
+    # inequality
     traj_ineq_const = TrajectoryInequalityConstraint.create_homogeneous(
         n_wp, n_dof, problem.global_ineq_const
     )
