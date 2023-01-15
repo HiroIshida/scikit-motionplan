@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Generic, Optional, Protocol, Type, TypeVar, Union
+from typing import Generic, List, Optional, Protocol, Type, TypeVar, Union
 
 import numpy as np
 
@@ -12,6 +12,7 @@ GoalConstT = TypeVar("GoalConstT")
 GlobalIneqConstT = TypeVar("GlobalIneqConstT")
 GlobalEqConstT = TypeVar("GlobalEqConstT")
 SolverT = TypeVar("SolverT", bound="AbstractSolver")
+DataDrivenSolverT = TypeVar("DataDrivenSolverT", bound="AbstractDataDrivenSolver")
 ConfigT = TypeVar("ConfigT", bound="ConfigProtocol")
 ResultT = TypeVar("ResultT", bound="ResultProtocol")
 DataLikeT = TypeVar("DataLikeT")
@@ -103,11 +104,9 @@ class AbstractScratchSolver(AbstractSolver[ConfigT, ResultT]):
         ...
 
 
-class AbstractDataDrivenSolver(
-    AbstractSolver[ConfigT, ResultT], Generic[ConfigT, ResultT, DataLikeT]
-):
+class AbstractDataDrivenSolver(AbstractSolver[ConfigT, ResultT]):
     @classmethod
     @abstractmethod
-    def init(cls: Type[SolverT], config: ConfigT, data_like: DataLikeT) -> SolverT:
+    def init(cls: Type[SolverT], config: ConfigT, trajectories: List[Trajectory]) -> SolverT:
         """common interface of constructor"""
         ...

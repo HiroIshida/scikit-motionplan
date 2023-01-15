@@ -154,24 +154,20 @@ class OMPLSolver(AbstractScratchSolver[OMPLSolverConfig, OMPLSolverResult], OMPL
             return ConstrainedPlanner(**kwargs)
 
 
-def create_lightning_db(trajs: List[Trajectory]) -> LightningDB:
-    dim = len(trajs[0][0])
-    db = LightningDB(dim)
-    for traj in trajs:
-        db.add_experience(list(traj.numpy()))
-    return db
-
-
 @dataclass
-class LightningSolver(
-    AbstractDataDrivenSolver[OMPLSolverConfig, OMPLSolverResult, LightningDB], OMPLSolverBase
-):
+class LightningSolver(AbstractDataDrivenSolver[OMPLSolverConfig, OMPLSolverResult], OMPLSolverBase):
     db: LightningDB
 
     @classmethod
-    def init(cls, config: OMPLSolverConfig, data_like: LightningDB) -> "LightningSolver":
+    def init(cls, config: OMPLSolverConfig, trajectories: List[Trajectory]) -> "LightningSolver":
         n_call_dict = {"count": 0}
-        return cls(config, None, None, n_call_dict, data_like)
+
+        dim = len(trajectories[0][0])
+        db = LightningDB(dim)
+        for traj in trajectories:
+            db.add_experience(list(traj.numpy()))
+
+        return cls(config, None, None, n_call_dict, db)
 
     def create_planner(self, **kwargs) -> _OMPLPlannerBase:
         if kwargs["eq_const"] is not None:
