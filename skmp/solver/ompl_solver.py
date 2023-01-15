@@ -2,7 +2,7 @@ import time
 from abc import abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, List, Optional, Type, TypeVar
+from typing import Dict, List, Optional, Tuple, Type, TypeVar
 
 import numpy as np
 from ompl import (
@@ -159,8 +159,12 @@ class LightningSolver(AbstractDataDrivenSolver[OMPLSolverConfig, OMPLSolverResul
     db: LightningDB
 
     @classmethod
-    def init(cls, config: OMPLSolverConfig, trajectories: List[Trajectory]) -> "LightningSolver":
+    def init(
+        cls, config: OMPLSolverConfig, dataset: List[Tuple[Problem, Trajectory]]
+    ) -> "LightningSolver":
         n_call_dict = {"count": 0}
+
+        trajectories = [pair[1] for pair in dataset]
 
         dim = len(trajectories[0][0])
         db = LightningDB(dim)

@@ -114,7 +114,7 @@ def test_memmo_solvers():
     solver.setup(problem)
     res = solver.solve()
     assert res.traj is not None
-    dataset = [res.traj]  # dataset with only one element
+    dataset = [(problem, res.traj)]  # dataset with only one element
 
     for solver_type in [NnMemmoSolver, StraightLineMemmoSolver, GprMemmoSolver]:
         solver_type.init(config, dataset)

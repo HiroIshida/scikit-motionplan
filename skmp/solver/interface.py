@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Generic, List, Optional, Protocol, Type, TypeVar, Union
+from typing import Generic, List, Optional, Protocol, Tuple, Type, TypeVar, Union
 
 import numpy as np
 
@@ -107,6 +107,8 @@ class AbstractScratchSolver(AbstractSolver[ConfigT, ResultT]):
 class AbstractDataDrivenSolver(AbstractSolver[ConfigT, ResultT]):
     @classmethod
     @abstractmethod
-    def init(cls: Type[SolverT], config: ConfigT, trajectories: List[Trajectory]) -> SolverT:
+    def init(
+        cls: Type[SolverT], config: ConfigT, dataset: List[Tuple[Problem, Trajectory]]
+    ) -> SolverT:
         """common interface of constructor"""
         ...

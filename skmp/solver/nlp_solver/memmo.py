@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import List, Optional, Type, TypeVar, Union
+from typing import List, Optional, Tuple, Type, TypeVar, Union
 
 import GPy
 import numpy as np
@@ -19,15 +19,24 @@ RegressorT = TypeVar("RegressorT", bound="Regressor")
 MemmoSolverT = TypeVar("MemmoSolverT", bound="AbstractMemmoSolver")
 
 
+def get_memmo_problem_description(problem: Problem) -> np.ndarray:
+    """get vector-form description of a problem"""
+    start_desc = problem.start
+    assert isinstance(problem.goal_const, VectorDescriptable)
+    goal_desc = problem.goal_const.get_description()
+    return np.hstack([start_desc, goal_desc])
+
+
 class Regressor(ABC):
     @classmethod
-    def fit_from_trajectories(cls: Type[RegressorT], traj_list: List[Trajectory]) -> RegressorT:
+    def fit_from_dataset(
+        cls: Type[RegressorT], dataset: List[Tuple[Problem, Trajectory]]
+    ) -> RegressorT:
         x_list = []
         y_list = []
-        for traj in traj_list:
-            start, goal = traj[0], traj[-1]
-            x = np.hstack([start, goal])
-            y = traj.numpy()
+        for problem, trajectory in dataset:
+            x = get_memmo_problem_description(problem)
+            y = trajectory.numpy()
             x_list.append(x)
             y_list.append(y)
         X = np.array(x_list)
@@ -142,11 +151,13 @@ class AbstractMemmoSolver(AbstractDataDrivenSolver[SQPBasedSolverConfig, SQPBase
 
     @classmethod
     def init(
-        cls: Type[MemmoSolverT], config: SQPBasedSolverConfig, trajectories: List[Trajectory]
+        cls: Type[MemmoSolverT],
+        config: SQPBasedSolverConfig,
+        dataset: List[Tuple[Problem, Trajectory]],
     ) -> MemmoSolverT:
         solver = SQPBasedSolver.init(config)
         regressor_type = cls.get_regressor_type()
-        regressor = regressor_type.fit_from_trajectories(trajectories)
+        regressor = regressor_type.fit_from_dataset(dataset)
         return cls(solver, regressor, None)
 
     @classmethod
@@ -155,13 +166,7 @@ class AbstractMemmoSolver(AbstractDataDrivenSolver[SQPBasedSolverConfig, SQPBase
 
     def setup(self, problem: Problem) -> None:
         self.solver.setup(problem)
-        goal_const = problem.goal_const
-        assert isinstance(goal_const, VectorDescriptable)
-        goal_decription = goal_const.get_description()
-
-        # NOTE: memmo encode only start and goal constraint
-        problem_vector_description = np.hstack((problem.start, goal_decription))
-        self.problem_vector_description = problem_vector_description
+        self.problem_vector_description = get_memmo_problem_description(problem)
 
     def solve(self, init_traj: Optional[Trajectory] = None) -> SQPBasedSolverResult:
         if not init_traj:

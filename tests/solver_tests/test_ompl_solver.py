@@ -21,7 +21,7 @@ def test_lightning_solver():
     result = solver.solve()
     assert result.traj is not None
 
-    lightning = LightningSolver.init(solcon, [result.traj])
+    lightning = LightningSolver.init(solcon, [(problem, result.traj)])
     lightning.setup(problem)
     lightning_result = lightning.solve()
     assert lightning_result.traj is not None
