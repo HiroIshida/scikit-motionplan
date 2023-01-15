@@ -1,18 +1,41 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Optional, Type, TypeVar, Union
+from typing import List, Optional, Type, TypeVar, Union
 
 import GPy
 import numpy as np
 from sklearn.decomposition import PCA
 
+from skmp.solver.interface import AbstractDataDrivenSolver, Problem
+from skmp.solver.nlp_solver import (
+    SQPBasedSolver,
+    SQPBasedSolverConfig,
+    SQPBasedSolverResult,
+)
+from skmp.trajectory import Trajectory
+
 RegressorT = TypeVar("RegressorT", bound="Regressor")
+MemmoSolverT = TypeVar("MemmoSolverT", bound="AbstractMemmoSolver")
 
 
 class Regressor(ABC):
     @classmethod
+    def fit_from_trajectories(cls: Type[RegressorT], traj_list: List[Trajectory]) -> RegressorT:
+        x_list = []
+        y_list = []
+        for traj in traj_list:
+            start, goal = traj[0], traj[-1]
+            x = np.hstack([start, goal])
+            y = traj.numpy()
+            x_list.append(x)
+            y_list.append(y)
+        X = np.array(x_list)
+        Y = np.array(y_list)
+        return cls.fit(X, Y)
+
+    @classmethod
     @abstractmethod
-    def fit(cls: Type[RegressorT], X: np.ndarray, Y: np.ndarray, **kwargs) -> RegressorT:
+    def fit(cls: Type[RegressorT], X: np.ndarray, Y: np.ndarray) -> RegressorT:
         ...
 
     @abstractmethod
@@ -53,12 +76,12 @@ class StraightRegressor(Regressor):
 
 
 @dataclass(frozen=True)
-class GPRRegressor(Regressor):
+class GPRRegressorBase(Regressor):
     gp: Union[GPy.models.GPRegression, GPy.models.SparseGPRegression]
     pca: Optional[PCA] = None
 
     @classmethod
-    def fit(cls, X: np.ndarray, Y: np.ndarray, pca_dim: Optional[int] = None) -> "GPRRegressor":  # type: ignore[override]
+    def _fit(cls, X: np.ndarray, Y: np.ndarray, pca_dim: Optional[int] = None):
         n_data, n_input_dim = X.shape
         Y_flatten = Y.reshape(n_data, -1)
 
@@ -81,10 +104,81 @@ class GPRRegressor(Regressor):
             Z = X[:100]
             gp = GPy.models.SparseGPRegression(X, Y_flatten, Z=Z)
             gp.optimize("bfgs")
-        return cls(gp, pca)
+        return gp, pca
 
     def predict(self, x: np.ndarray):
         y, cov = self.gp.predict(np.expand_dims(x, axis=0))
         if self.pca is not None:
             y = self.pca.inverse_transform(np.expand_dims(y, axis=0))[0]
         return
+
+
+@dataclass(frozen=True)
+class GPRRegressor(GPRRegressorBase):
+    @classmethod
+    def fit(cls, X: np.ndarray, Y: np.ndarray) -> "GPRRegressor":
+        return cls(*cls._fit(X, Y, None))
+
+
+@dataclass(frozen=True)
+class PCAGPRRegressor(GPRRegressorBase):
+    @classmethod
+    def fit(cls, X: np.ndarray, Y: np.ndarray) -> "PCAGPRRegressor":
+        dim_pca = 50  # same as the paper
+        return cls(*cls._fit(X, Y, dim_pca))
+
+
+@dataclass
+class AbstractMemmoSolver(AbstractDataDrivenSolver[SQPBasedSolverConfig, SQPBasedSolverResult]):
+    solver: SQPBasedSolver
+    regressor: Regressor
+
+    @classmethod
+    @abstractmethod
+    def get_regressor_type(cls) -> Type[Regressor]:
+        ...
+
+    @classmethod
+    def init(
+        cls: Type[MemmoSolverT], config: SQPBasedSolverConfig, trajectories: List[Trajectory]
+    ) -> MemmoSolverT:
+        solver = SQPBasedSolver.init(config)
+        regressor_type = cls.get_regressor_type()
+        regressor = regressor_type.fit_from_trajectories(trajectories)
+        return cls(solver, regressor)
+
+    @classmethod
+    def get_result_type(cls) -> Type[SQPBasedSolverResult]:
+        return SQPBasedSolverResult
+
+    def setup(self, problem: Problem) -> None:
+        self.solver.setup(problem)
+
+    def solve(self, init_traj: Optional[Trajectory] = None) -> SQPBasedSolverResult:
+        if not init_traj:
+            pass
+        return self.solver.solve(init_traj)
+
+
+class NnMemmoSolver(AbstractMemmoSolver):
+    @classmethod
+    def get_regressor_type(cls) -> Type[NNRegressor]:
+        return NNRegressor
+
+
+class StraightLineMemmoSolver(AbstractMemmoSolver):
+    @classmethod
+    def get_regressor_type(cls) -> Type[StraightRegressor]:
+        return StraightRegressor
+
+
+class GprMemmoSolver(AbstractMemmoSolver):
+    @classmethod
+    def get_regressor_type(cls) -> Type[GPRRegressor]:
+        return GPRRegressor
+
+
+class PcaGprMemmoSolver(AbstractMemmoSolver):
+    @classmethod
+    def get_regressor_type(cls) -> Type[PCAGPRRegressor]:
+        return PCAGPRRegressor
