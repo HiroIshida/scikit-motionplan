@@ -10,8 +10,8 @@ from skmp.solver.nlp_solver.sqp_based_solver import (
     SQPBasedSolverResult,
 )
 
-_GPY_INSTALLED = importlib.util.find_spec("GPy") is not None  # type: ignore[attr-defined]
-if _GPY_INSTALLED:
+GPY_INSTALLED = importlib.util.find_spec("GPy") is not None  # type: ignore[attr-defined]
+if GPY_INSTALLED:
     import numpy
 
     _NUMPY_COMPATIBLE = version.parse(numpy.__version__) <= version.parse("1.23")

@@ -6,6 +6,7 @@ import GPy
 import numpy as np
 from sklearn.decomposition import PCA
 
+from skmp.constraint import VectorDescriptable
 from skmp.solver.interface import AbstractDataDrivenSolver, Problem
 from skmp.solver.nlp_solver import (
     SQPBasedSolver,
@@ -132,6 +133,7 @@ class PCAGPRRegressor(GPRRegressorBase):
 class AbstractMemmoSolver(AbstractDataDrivenSolver[SQPBasedSolverConfig, SQPBasedSolverResult]):
     solver: SQPBasedSolver
     regressor: Regressor
+    problem_vector_description: Optional[np.ndarray]
 
     @classmethod
     @abstractmethod
@@ -145,7 +147,7 @@ class AbstractMemmoSolver(AbstractDataDrivenSolver[SQPBasedSolverConfig, SQPBase
         solver = SQPBasedSolver.init(config)
         regressor_type = cls.get_regressor_type()
         regressor = regressor_type.fit_from_trajectories(trajectories)
-        return cls(solver, regressor)
+        return cls(solver, regressor, None)
 
     @classmethod
     def get_result_type(cls) -> Type[SQPBasedSolverResult]:
@@ -153,6 +155,13 @@ class AbstractMemmoSolver(AbstractDataDrivenSolver[SQPBasedSolverConfig, SQPBase
 
     def setup(self, problem: Problem) -> None:
         self.solver.setup(problem)
+        goal_const = problem.goal_const
+        assert isinstance(goal_const, VectorDescriptable)
+        goal_decription = goal_const.get_description()
+
+        # NOTE: memmo encode only start and goal constraint
+        problem_vector_description = np.hstack((problem.start, goal_decription))
+        self.problem_vector_description = problem_vector_description
 
     def solve(self, init_traj: Optional[Trajectory] = None) -> SQPBasedSolverResult:
         if not init_traj:

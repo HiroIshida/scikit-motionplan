@@ -2,7 +2,7 @@ import copy
 import itertools
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Callable, List, Optional, Tuple, TypeVar
+from typing import Callable, List, Optional, Protocol, Tuple, TypeVar, runtime_checkable
 
 import numpy as np
 from selcol.file import default_pretrained_basepath
@@ -73,6 +73,12 @@ class AbstractEqConst(AbstractConst):
     @classmethod
     def is_equality(cls) -> bool:
         return True
+
+
+@runtime_checkable
+class VectorDescriptable(Protocol):
+    def get_description(self) -> np.ndarray:
+        ...
 
 
 CompositeConstT = TypeVar("CompositeConstT", bound="_CompositeConst")
@@ -262,6 +268,9 @@ class ConfigPointConst(AbstractEqConst):
     def _reflect_skrobot_model(self, robot_model: Optional[RobotModel]) -> None:
         pass
 
+    def get_description(self) -> np.ndarray:
+        return self.desired_angles
+
 
 class PoseConstraint(AbstractEqConst):
     efkin: ArticulatedEndEffectorKinematicsMap
@@ -310,6 +319,9 @@ class PoseConstraint(AbstractEqConst):
     def _reflect_skrobot_model(self, robot_model: Optional[RobotModel]) -> None:
         assert robot_model is not None
         self.efkin.reflect_skrobot_model(robot_model)
+
+    def get_description(self) -> np.ndarray:
+        return np.hstack(self.desired_poses)
 
 
 class RelativePoseConstraint(AbstractEqConst):

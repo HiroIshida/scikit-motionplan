@@ -95,5 +95,32 @@ def test_sqp_based_solver_without_init():
     assert res.traj is not None
 
 
+def test_memmo_solvers():
+    from skmp.solver.nlp_solver import GPY_INSTALLED
+
+    if not GPY_INSTALLED:
+        return
+
+    from skmp.solver.nlp_solver import (
+        GprMemmoSolver,
+        NnMemmoSolver,
+        StraightLineMemmoSolver,
+    )
+
+    # solve easy problem and create dataset
+    problem = create_standard_problem(easy=True)
+    config = SQPBasedSolverConfig(n_wp=30, motion_step_satisfaction="implicit")
+    solver = SQPBasedSolver.init(config)
+    solver.setup(problem)
+    res = solver.solve()
+    assert res.traj is not None
+    dataset = [res.traj]  # dataset with only one element
+
+    for solver_type in [NnMemmoSolver, StraightLineMemmoSolver, GprMemmoSolver]:
+        solver_type.init(config, dataset)
+        solver.setup(problem)
+        solver.solve()  # dont care if it can solve now
+
+
 if __name__ == "__main__":
     test_sqp_based_solver()
