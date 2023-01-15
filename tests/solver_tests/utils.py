@@ -5,7 +5,7 @@ from skrobot.models import PR2
 
 from skmp.constraint import CollFreeConst, PoseConstraint
 from skmp.robot.pr2 import PR2Config
-from skmp.solver import Problem
+from skmp.solver.interface import Problem
 
 
 def create_standard_problem(easy: bool = False) -> Problem:

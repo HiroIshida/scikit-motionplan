@@ -16,13 +16,9 @@ from skmp.constraint import (
 )
 from skmp.robot.pr2 import PR2Config
 from skmp.robot.utils import set_robot_state
-from skmp.solver import (
-    OMPLSolver,
-    OMPLSolverConfig,
-    Problem,
-    SQPBasedSolver,
-    SQPBasedSolverConfig,
-)
+from skmp.solver.interface import Problem
+from skmp.solver.nlp_solver import SQPBasedSolver, SQPBasedSolverConfig
+from skmp.solver.ompl_solver import OMPLSolver, OMPLSolverConfig
 from skmp.visualization import CollisionSphereVisualizationManager
 
 np.random.seed(0)

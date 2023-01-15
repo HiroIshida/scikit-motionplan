@@ -4,7 +4,7 @@ import numpy as np
 from skrobot.model import RobotModel
 
 from skmp.constraint import AbstractIneqConst
-from skmp.solver.trajectory_constraint import TrajectoryInequalityConstraint
+from skmp.solver.nlp_solver.trajectory_constraint import TrajectoryInequalityConstraint
 
 
 class CircleConstraint(AbstractIneqConst):

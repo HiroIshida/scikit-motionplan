@@ -5,9 +5,13 @@ from ompl import set_ompl_random_seed
 from utils import create_standard_problem
 
 from skmp.satisfy import satisfy_by_optimization
-from skmp.solver.nlp_solver import SQPBasedSolver, SQPBasedSolverConfig, translate
+from skmp.solver.nlp_solver.sqp_based_solver import (
+    SQPBasedSolver,
+    SQPBasedSolverConfig,
+    translate,
+)
+from skmp.solver.nlp_solver.trajectory_constraint import TrajectoryConstraint
 from skmp.solver.ompl_solver import OMPLSolver, OMPLSolverConfig
-from skmp.solver.trajectory_constraint import TrajectoryConstraint
 from skmp.trajectory import Trajectory
 
 

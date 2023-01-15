@@ -8,8 +8,8 @@ import numpy as np
 from skmp.constraint import ConfigPointConst
 from skmp.satisfy import SatisfactionResult, satisfy_by_optimization
 from skmp.solver.interface import AbstractScratchSolver, Problem
-from skmp.solver.osqp_sqp import OsqpSqpConfig, OsqpSqpResult, OsqpSqpSolver
-from skmp.solver.trajectory_constraint import (
+from skmp.solver.nlp_solver.osqp_sqp import OsqpSqpConfig, OsqpSqpResult, OsqpSqpSolver
+from skmp.solver.nlp_solver.trajectory_constraint import (
     MotionStepInequalityConstraint,
     TrajectoryEqualityConstraint,
     TrajectoryInequalityConstraint,
