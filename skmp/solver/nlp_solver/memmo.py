@@ -27,7 +27,10 @@ def get_memmo_problem_description(problem: Problem) -> np.ndarray:
     return np.hstack([start_desc, goal_desc])
 
 
+@dataclass(frozen=True)
 class Regressor(ABC):
+    n_dim: int
+
     @classmethod
     def fit_from_dataset(
         cls: Type[RegressorT], dataset: List[Tuple[Problem, Trajectory]]
@@ -48,8 +51,13 @@ class Regressor(ABC):
     def fit(cls: Type[RegressorT], X: np.ndarray, Y: np.ndarray) -> RegressorT:
         ...
 
+    def predict(self, x: np.ndarray) -> Trajectory:
+        y = self._predict(x)
+        points = list(y.reshape((-1, self.n_dim)))
+        return Trajectory(points)
+
     @abstractmethod
-    def predict(self, x: np.ndarray) -> np.ndarray:
+    def _predict(self, x: np.ndarray) -> np.ndarray:
         ...
 
 
@@ -60,9 +68,10 @@ class NNRegressor(Regressor):
 
     @classmethod
     def fit(cls, X: np.ndarray, Y: np.ndarray) -> "NNRegressor":  # type: ignore[override]
-        return cls(X, Y)
+        n_data, n_wp, n_dim = Y.shape
+        return cls(n_dim, X, Y)
 
-    def predict(self, x: np.ndarray) -> np.ndarray:
+    def _predict(self, x: np.ndarray) -> np.ndarray:
         dists = np.sqrt(np.sum((self.X - x) ** 2, axis=1))
         idx = np.argmin(dists)
         return self.Y[idx]
@@ -74,10 +83,10 @@ class StraightRegressor(Regressor):
 
     @classmethod
     def fit(cls, X: np.ndarray, Y: np.ndarray) -> "StraightRegressor":  # type: ignore[override]
-        _, n_wp, _ = Y.shape
-        return cls(n_wp)
+        n_data, n_wp, n_dim = Y.shape
+        return cls(n_dim, n_wp)
 
-    def predict(self, x: np.ndarray) -> np.ndarray:
+    def _predict(self, x: np.ndarray) -> np.ndarray:
         # assume that x is composed of q_init and q_goal
         q_init, q_goal = x.reshape(2, -1)
         width = (q_goal - q_init) / (self.n_wp - 1)
@@ -92,6 +101,7 @@ class GPRRegressorBase(Regressor):
 
     @classmethod
     def _fit(cls, X: np.ndarray, Y: np.ndarray, pca_dim: Optional[int] = None):
+        n_data, n_wp, n_dim = Y.shape
         n_data, n_input_dim = X.shape
         Y_flatten = Y.reshape(n_data, -1)
 
@@ -114,9 +124,9 @@ class GPRRegressorBase(Regressor):
             Z = X[:100]
             gp = GPy.models.SparseGPRegression(X, Y_flatten, Z=Z)
             gp.optimize("bfgs")
-        return gp, pca
+        return n_dim, gp, pca
 
-    def predict(self, x: np.ndarray):
+    def _predict(self, x: np.ndarray):
         y, cov = self.gp.predict(np.expand_dims(x, axis=0))
         if self.pca is not None:
             y = self.pca.inverse_transform(np.expand_dims(y, axis=0))[0]
@@ -170,7 +180,8 @@ class AbstractMemmoSolver(AbstractDataDrivenSolver[SQPBasedSolverConfig, SQPBase
 
     def solve(self, init_traj: Optional[Trajectory] = None) -> SQPBasedSolverResult:
         if not init_traj:
-            pass
+            assert self.problem_vector_description is not None
+            init_traj = self.regressor.predict(self.problem_vector_description)
         return self.solver.solve(init_traj)
 
 
