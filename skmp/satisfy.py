@@ -116,8 +116,11 @@ def satisfy_by_optimization_with_budget(
     n_trial_budget: int = 20,
 ) -> SatisfactionResult:
     # a util function
-    for _ in range(n_trial_budget):
+    for i in range(n_trial_budget):
         res = satisfy_by_optimization(eq_const, box_const, ineq_const, q_seed, config=config)
         if res.success:
             return res
+        q_seed = (
+            None  # if specified seed was not effective, we invalidate it and will use random seed
+        )
     assert False, "satisfaction fail"
