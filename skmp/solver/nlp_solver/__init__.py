@@ -21,5 +21,4 @@ if GPY_INSTALLED:
         GprMemmoSolver,
         NnMemmoSolver,
         PcaGprMemmoSolver,
-        StraightLineMemmoSolver,
     )

@@ -191,12 +191,6 @@ class NnMemmoSolver(AbstractMemmoSolver):
         return NNRegressor
 
 
-class StraightLineMemmoSolver(AbstractMemmoSolver):
-    @classmethod
-    def get_regressor_type(cls) -> Type[StraightRegressor]:
-        return StraightRegressor
-
-
 class GprMemmoSolver(AbstractMemmoSolver):
     @classmethod
     def get_regressor_type(cls) -> Type[GPRRegressor]:

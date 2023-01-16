@@ -101,11 +101,7 @@ def test_memmo_solvers():
     if not GPY_INSTALLED:
         return
 
-    from skmp.solver.nlp_solver import (
-        GprMemmoSolver,
-        NnMemmoSolver,
-        StraightLineMemmoSolver,
-    )
+    from skmp.solver.nlp_solver import GprMemmoSolver, NnMemmoSolver
 
     # solve easy problem and create dataset
     problem = create_standard_problem(easy=True)
@@ -116,7 +112,7 @@ def test_memmo_solvers():
     assert res.traj is not None
     dataset = [(problem, res.traj)]  # dataset with only one element
 
-    for solver_type in [NnMemmoSolver, StraightLineMemmoSolver, GprMemmoSolver]:
+    for solver_type in [NnMemmoSolver, GprMemmoSolver]:
         solver_type.init(config, dataset)
         solver.setup(problem)
         solver.solve()  # dont care if it can solve now
