@@ -206,7 +206,7 @@ class CollFreeConst(AbstractIneqConst):
     def _evaluate(self, qs: np.ndarray, with_jacobian: bool) -> Tuple[np.ndarray, np.ndarray]:
         """compute signed distance of feature points and its jacobian
         input:
-            qs: R^{n_point, dim_cspace}
+            qs: R^{n_point, n_feature}
         output:
             fss: R^{n_point, n_feature}
             Jss: R^{n_point, n_feature, dim_cspace}
@@ -217,7 +217,7 @@ class CollFreeConst(AbstractIneqConst):
         dim_tspace = self.colkin.dim_tspace
 
         # xss: R^{n_point, n_feature * dim_tspace}
-        # jss: R^{n_point, n_feature, dim_tspace, dim_cspace}
+        # jacss: R^{n_point, n_feature, dim_tspace, dim_cspace}
         xss, jacss = self.colkin.map(qs)  # ss refere to points of points
 
         xs_stacked = xss.reshape((n_point * n_feature, dim_tspace))
@@ -247,6 +247,34 @@ class CollFreeConst(AbstractIneqConst):
     def _reflect_skrobot_model(self, robot_model: Optional[RobotModel]) -> None:
         assert robot_model, "robot_model must not be None"
         self.colkin.reflect_skrobot_model(robot_model)
+
+
+class ReducedCollisionFreeConst(CollFreeConst):
+    def _evaluate(self, qs: np.ndarray, with_jacobian: bool) -> Tuple[np.ndarray, np.ndarray]:
+        fss, jss = super()._evaluate(qs, with_jacobian)
+
+        fss_new_tmp = []
+        jss_new_tmp = []
+
+        for fs, js in zip(fss, jss):
+            # fs: R^{n_feature}, js: R^{n_feature, n_cspace}
+            idx_closest_feature = np.argmin(fs)
+            fs_min = fs[idx_closest_feature]
+            fs_new = np.array([fs_min])
+            fss_new_tmp.append(fs_new)
+
+            if with_jacobian:
+                jac_min = js[idx_closest_feature]  # grad
+                jac_new = np.expand_dims(jac_min, axis=0)
+                jss_new_tmp.append(jac_new)
+
+        fss_new = np.array(fss_new_tmp)
+
+        if with_jacobian:
+            jss_new = np.array(jss_new_tmp)
+            return fss_new, jss_new
+        else:
+            return fss_new, self.dummy_jacobian()
 
 
 class ConfigPointConst(AbstractEqConst):

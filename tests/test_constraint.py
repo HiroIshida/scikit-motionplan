@@ -12,6 +12,7 @@ from skmp.constraint import (
     IneqCompositeConst,
     PairWiseSelfCollFreeConst,
     PoseConstraint,
+    ReducedCollisionFreeConst,
     RelativePoseConstraint,
 )
 from skmp.robot.pr2 import PR2Config
@@ -60,6 +61,16 @@ def test_collfree_const():
     box.translate(np.array([0.85, -0.2, 0.9]))
     assert box.sdf is not None
     collfree_const = CollFreeConst(colkin, box.sdf, PR2())
+    check_jacobian(collfree_const, 7)
+
+
+def test_reduced_collfree_const():
+    config = PR2Config(with_base=False)
+    colkin = config.get_collision_kin()
+    box = Box(extents=[0.7, 0.5, 1.2], with_sdf=True)
+    box.translate(np.array([0.85, -0.2, 0.9]))
+    assert box.sdf is not None
+    collfree_const = ReducedCollisionFreeConst(colkin, box.sdf, PR2())
     check_jacobian(collfree_const, 7)
 
 
