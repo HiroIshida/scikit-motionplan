@@ -11,6 +11,7 @@ from ompl import (
     LightningDB,
     LightningPlanner,
     Planner,
+    RepairPlanner,
     _OMPLPlannerBase,
 )
 
@@ -59,6 +60,7 @@ class OMPLSolverBase(AbstractSolver[OMPLSolverConfig, OMPLSolverResult]):
     config: OMPLSolverConfig
     problem: Optional[Problem]
     planner: Optional[_OMPLPlannerBase]
+    repair_planner: Optional[RepairPlanner]  # used when init trajectory is given
     _n_call_dict: Dict[str, int]
 
     @classmethod
@@ -94,6 +96,22 @@ class OMPLSolverBase(AbstractSolver[OMPLSolverConfig, OMPLSolverResult]):
         self.problem = problem
         self.planner = planner
 
+        if self.problem.global_eq_const is None:
+            # NOTE: lightning repair planner can handle only
+            # planning in euclidean space
+            repair_planner = RepairPlanner(
+                lb,
+                ub,
+                is_valid,
+                self.config.n_max_call,
+                problem.motion_step_box,
+                algo=self.config.algorithm,
+                algo_range=self.config.algorithm_range,
+            )
+            self.repair_planner = repair_planner
+        else:
+            self.repair_planner = None
+
     @abstractmethod
     def create_planner(self, **kwargs) -> _OMPLPlannerBase:
         ...
@@ -101,6 +119,7 @@ class OMPLSolverBase(AbstractSolver[OMPLSolverConfig, OMPLSolverResult]):
     def solve(self, init_traj: Optional[Trajectory] = None):
         assert self.problem is not None, "setup is not called yet"
         assert self.planner is not None
+
         ts = time.time()
 
         result: Optional[SatisfactionResult] = None
@@ -117,9 +136,18 @@ class OMPLSolverBase(AbstractSolver[OMPLSolverConfig, OMPLSolverResult]):
         if not result.success:
             return OMPLSolverResult(None, time.time() - ts, -1, TerminateState.FAIL_SATISFACTION)
 
+        planner: _OMPLPlannerBase
+        if init_traj is not None:
+            message = "replanner could not be defind for this problem."
+            assert self.repair_planner is not None, message
+            planner = self.repair_planner
+            planner.set_heuristic(init_traj.numpy())
+        else:
+            planner = self.planner
+
         q_start = self.problem.start
         q_goal = result.q
-        plan_result = self.planner.solve(q_start, q_goal, self.config.simplify)
+        plan_result = planner.solve(q_start, q_goal, self.config.simplify)
         if plan_result is not None:
             terminate_state = TerminateState.SUCCESS
             traj = Trajectory(plan_result)
@@ -136,7 +164,7 @@ class OMPLSolver(AbstractScratchSolver[OMPLSolverConfig, OMPLSolverResult], OMPL
     @classmethod
     def init(cls, config: OMPLSolverConfig) -> "OMPLSolver":
         n_call_dict = {"count": 0}
-        return cls(config, None, None, n_call_dict)
+        return cls(config, None, None, None, n_call_dict)
 
     def create_planner(self, **kwargs) -> _OMPLPlannerBase:
         if kwargs["eq_const"] is None:
@@ -171,7 +199,7 @@ class LightningSolver(AbstractDataDrivenSolver[OMPLSolverConfig, OMPLSolverResul
         for traj in trajectories:
             db.add_experience(list(traj.numpy()))
 
-        return cls(config, None, None, n_call_dict, db)
+        return cls(config, None, None, None, n_call_dict, db)
 
     def create_planner(self, **kwargs) -> _OMPLPlannerBase:
         if kwargs["eq_const"] is not None:
