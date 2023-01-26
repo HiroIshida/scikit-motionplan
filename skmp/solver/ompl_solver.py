@@ -169,9 +169,10 @@ class OMPLSolverBase(AbstractSolver[OMPLSolverConfig, OMPLSolverResult]):
             terminate_state = TerminateState.FAIL_PLANNING
             traj = None
 
+        valid_func_call_count = self._n_call_dict["count"]
         self._n_call_dict["count"] = 0
         self.problem = None
-        return OMPLSolverResult(traj, time.time() - ts, self._n_call_dict["count"], terminate_state)
+        return OMPLSolverResult(traj, time.time() - ts, valid_func_call_count, terminate_state)
 
 
 class OMPLSolver(AbstractScratchSolver[OMPLSolverConfig, OMPLSolverResult], OMPLSolverBase):

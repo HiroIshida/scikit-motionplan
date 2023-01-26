@@ -17,6 +17,7 @@ def test_ompl_solver():  # noqa
     solver.setup(problem)
     result_with_guess = solver.solve(result.traj)
     assert result_with_guess.time_elapsed < result.time_elapsed
+    assert result_with_guess.n_call < result.n_call
 
 
 def test_lightning_solver():
