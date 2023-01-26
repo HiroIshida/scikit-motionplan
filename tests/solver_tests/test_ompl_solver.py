@@ -11,6 +11,12 @@ def test_ompl_solver():  # noqa
     assert result.traj is not None
 
     assert problem.is_satisfied(result.traj)
+    # test with initial guess
+
+    solver = OMPLSolver.init(OMPLSolverConfig())
+    solver.setup(problem)
+    result_with_guess = solver.solve(result.traj)
+    assert result_with_guess.time_elapsed < result.time_elapsed
 
 
 def test_lightning_solver():
@@ -28,4 +34,5 @@ def test_lightning_solver():
 
 
 if __name__ == "__main__":
-    test_lightning_solver()
+    # test_lightning_solver()
+    test_ompl_solver()
