@@ -277,6 +277,32 @@ class ReducedCollisionFreeConst(CollFreeConst):
             return fss_new, self.dummy_jacobian()
 
 
+class PointCollFreeConst(AbstractIneqConst):
+    """
+    Collision free constraint for point-shaped robot
+    """
+
+    sdf: Callable[[np.ndarray], np.ndarray]
+    eps: float = 1e-6
+
+    def __init__(self, sdf: Callable[[np.ndarray], np.ndarray]):
+        self.sdf = sdf
+        self.reflect_skrobot_model(None)
+
+    def _evaluate(self, qs: np.ndarray, with_jacobian: bool) -> Tuple[np.ndarray, np.ndarray]:
+        n_point, n_dim = qs.shape
+        jacs_stacked = np.zeros((n_point, 1, n_dim))
+        fs = self.sdf(qs)
+        for i in range(n_dim):
+            qs1 = copy.deepcopy(qs)
+            qs1[:, i] += self.eps
+            jacs_stacked[:, :, i] = (self.sdf(qs1) - fs) / self.eps
+        return fs.reshape(-1, 1), jacs_stacked
+
+    def _reflect_skrobot_model(self, robot_model: Optional[RobotModel]) -> None:
+        return None
+
+
 class ConfigPointConst(AbstractEqConst):
     desired_angles: np.ndarray
 
