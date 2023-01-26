@@ -26,15 +26,15 @@ class Problem:
     global_ineq_const: Optional[AbstractIneqConst]
     global_eq_const: Optional[AbstractEqConst]
     eqconst_admissible_mse: float = 1e-6
-    _motion_step_box: Union[float, np.ndarray] = 0.1
+    motion_step_box_: Union[float, np.ndarray] = 0.1
 
     @property
     def motion_step_box(self) -> np.ndarray:
-        if isinstance(self._motion_step_box, np.ndarray):
-            return self._motion_step_box
+        if isinstance(self.motion_step_box_, np.ndarray):
+            return self.motion_step_box_
 
         n_dim = len(self.start)
-        motion_step_box = np.ones(n_dim) * self._motion_step_box
+        motion_step_box = np.ones(n_dim) * self.motion_step_box_
         return motion_step_box
 
     def is_constrained(self) -> bool:
