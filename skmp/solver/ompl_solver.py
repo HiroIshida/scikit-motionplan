@@ -125,24 +125,17 @@ class OMPLSolverBase(AbstractSolver[OMPLSolverConfig, OMPLSolverResult]):
 
         planner: _OMPLPlannerBase
         satisfy_result: Optional[SatisfactionResult] = None
-        if init_traj is not None:
-            message = "replanner could not be defind for this problem."
-            assert self.repair_planner is not None, message
 
+        if init_traj is not None:
             # use the trajectory last element as the guess
             q_ik_guess = init_traj.numpy()[-1]
-
             satisfy_result = satisfy_by_optimization(
                 self.problem.goal_const,
                 self.problem.box_const,
                 self.problem.global_ineq_const,
                 q_seed=q_ik_guess,
             )
-
-            planner = self.repair_planner
-            planner.set_heuristic(init_traj.numpy())
         else:
-            # solve IK without initial guess
             for _ in range(self.config.n_max_satisfaction_trial):
                 satisfy_result = satisfy_by_optimization(
                     self.problem.goal_const,
@@ -153,11 +146,16 @@ class OMPLSolverBase(AbstractSolver[OMPLSolverConfig, OMPLSolverResult]):
                 if satisfy_result.success:
                     break
             assert satisfy_result is not None
-            if not satisfy_result.success:
-                return OMPLSolverResult(
-                    None, time.time() - ts, -1, TerminateState.FAIL_SATISFACTION
-                )
 
+        if not satisfy_result.success:
+            return OMPLSolverResult(None, time.time() - ts, -1, TerminateState.FAIL_SATISFACTION)
+
+        if init_traj is not None:
+            message = "replanner could not be defind for this problem."
+            assert self.repair_planner is not None, message
+            planner = self.repair_planner
+            planner.set_heuristic(init_traj.numpy())
+        else:
             planner = self.planner
 
         q_start = self.problem.start
