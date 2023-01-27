@@ -8,6 +8,7 @@ import numpy as np
 from ompl import (
     Algorithm,
     ConstrainedPlanner,
+    InvalidProblemError,
     LightningDB,
     LightningPlanner,
     Planner,
@@ -161,7 +162,12 @@ class OMPLSolverBase(AbstractSolver[OMPLSolverConfig, OMPLSolverResult]):
 
         q_start = self.problem.start
         q_goal = satisfy_result.q
-        plan_result = planner.solve(q_start, q_goal, self.config.simplify)
+        try:
+            plan_result = planner.solve(q_start, q_goal, self.config.simplify)
+        except InvalidProblemError:
+            # TODO: this should not happen...
+            return OMPLSolverResult(None, time.time() - ts, -1, TerminateState.FAIL_SATISFACTION)
+
         if plan_result is not None:
             terminate_state = TerminateState.SUCCESS
             traj = Trajectory(plan_result)
