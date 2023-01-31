@@ -2,12 +2,13 @@ import time
 from abc import abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, List, Optional, Tuple, Type, TypeVar
+from typing import Dict, List, Literal, Optional, Tuple, Type, TypeVar, Union
 
 import numpy as np
 from ompl import (
     Algorithm,
     ConstrainedPlanner,
+    ERTConnectPlanner,
     InvalidProblemError,
     LightningDB,
     LightningPlanner,
@@ -33,6 +34,7 @@ class OMPLSolverConfig:
     algorithm: Algorithm = Algorithm.RRTConnect
     algorithm_range: Optional[float] = None
     simplify: bool = False
+    expbased_planner_backend: Literal["ertconnect", "lightning"] = "lightning"
 
 
 class TerminateState(Enum):
@@ -62,7 +64,9 @@ class OMPLSolverBase(AbstractSolver[OMPLSolverConfig, OMPLSolverResult]):
     config: OMPLSolverConfig
     problem: Optional[Problem]
     planner: Optional[_OMPLPlannerBase]
-    repair_planner: Optional[RepairPlanner]  # used when init trajectory is given
+    expbased_planner: Optional[
+        Union[ERTConnectPlanner, RepairPlanner]
+    ]  # used when init trajectory is given
     _n_call_dict: Dict[str, int]
 
     @classmethod
@@ -101,7 +105,13 @@ class OMPLSolverBase(AbstractSolver[OMPLSolverConfig, OMPLSolverResult]):
         if self.problem.global_eq_const is None:
             # NOTE: lightning repair planner can handle only
             # planning in euclidean space
-            repair_planner = RepairPlanner(
+            if self.config.expbased_planner_backend == "ertconnect":
+                expbased_planner_t = ERTConnectPlanner
+            elif self.config.expbased_planner_backend == "lightning":
+                expbased_planner_t = RepairPlanner  # type: ignore
+            else:
+                assert False
+            expbased_planner = expbased_planner_t(
                 lb,
                 ub,
                 is_valid,
@@ -110,9 +120,9 @@ class OMPLSolverBase(AbstractSolver[OMPLSolverConfig, OMPLSolverResult]):
                 algo=self.config.algorithm,
                 algo_range=self.config.algorithm_range,
             )
-            self.repair_planner = repair_planner
+            self.expbased_planner = expbased_planner
         else:
-            self.repair_planner = None
+            self.expbased_planner = None
 
     @abstractmethod
     def create_planner(self, **kwargs) -> _OMPLPlannerBase:
@@ -153,8 +163,8 @@ class OMPLSolverBase(AbstractSolver[OMPLSolverConfig, OMPLSolverResult]):
 
         if init_traj is not None:
             message = "replanner could not be defind for this problem."
-            assert self.repair_planner is not None, message
-            planner = self.repair_planner
+            assert self.expbased_planner is not None, message
+            planner = self.expbased_planner
             planner.set_heuristic(init_traj.numpy())
         else:
             planner = self.planner

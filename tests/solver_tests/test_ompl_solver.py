@@ -13,11 +13,15 @@ def test_ompl_solver():  # noqa
     assert problem.is_satisfied(result.traj)
     # test with initial guess
 
-    solver = OMPLSolver.init(OMPLSolverConfig())
-    solver.setup(problem)
-    result_with_guess = solver.solve(result.traj)
-    assert result_with_guess.time_elapsed < result.time_elapsed
-    assert result_with_guess.n_call < result.n_call
+    conf1 = OMPLSolverConfig(expbased_planner_backend="lightning")
+    conf2 = OMPLSolverConfig(expbased_planner_backend="ertconnect")
+
+    for conf in [conf1, conf2]:
+        solver = OMPLSolver.init(conf)
+        solver.setup(problem)
+        result_with_guess = solver.solve(result.traj)
+        assert result_with_guess.time_elapsed < result.time_elapsed
+        assert result_with_guess.n_call < result.n_call
 
 
 def test_lightning_solver():
