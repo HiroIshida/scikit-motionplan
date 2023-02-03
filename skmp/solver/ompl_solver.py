@@ -35,6 +35,7 @@ class OMPLSolverConfig:
     algorithm_range: Optional[float] = None
     simplify: bool = False
     expbased_planner_backend: Literal["ertconnect", "lightning"] = "lightning"
+    ertconnect_eps: float = 5.0  # used only when ertconnect is selected
 
 
 class TerminateState(Enum):
@@ -120,6 +121,10 @@ class OMPLSolverBase(AbstractSolver[OMPLSolverConfig, OMPLSolverResult]):
                 algo=self.config.algorithm,
                 algo_range=self.config.algorithm_range,
             )
+
+            if self.config.expbased_planner_backend == "ertconnect":
+                expbased_planner.set_parameters(eps=self.config.ertconnect_eps)
+
             self.expbased_planner = expbased_planner
         else:
             self.expbased_planner = None
