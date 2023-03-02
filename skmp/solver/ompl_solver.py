@@ -133,7 +133,7 @@ class OMPLSolverBase(AbstractSolver[OMPLSolverConfig, OMPLSolverResult]):
     def create_planner(self, **kwargs) -> _OMPLPlannerBase:
         ...
 
-    def solve(self, init_traj: Optional[Trajectory] = None):
+    def solve(self, init_traj: Optional[Trajectory] = None) -> OMPLSolverResult:
         assert self.problem is not None, "setup is not called yet"
         assert self.planner is not None
 
