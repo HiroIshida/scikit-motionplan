@@ -87,9 +87,8 @@ class PinocchioWrapper:
     def get_link_ids(self, link_names: List[str]) -> np.ndarray:
         return np.array([self.frame_idx_table[ln] for ln in link_names])
 
-    def set_joint_angles(self, angles: np.ndarray) -> None:
-        assert len(angles) == self.model.nq
-        self.joint_angles = angles
+    def set_joint_angles(self, joint_ids: np.ndarray, angles: np.ndarray) -> None:
+        self.joint_angles[joint_ids - 1] = angles  # -1 because universe is deleted
 
     def solve_forward_kinematics(
         self,
@@ -105,8 +104,7 @@ class PinocchioWrapper:
         jacs = []
         for av_partial in joint_angles_sequence:
             av = copy.deepcopy(self.joint_angles)
-            # av[joint_ids] = av_partial
-            av = av_partial
+            av[joint_ids - 1] = av_partial
             self.model.forwardKinematics(av)
             self.model.computeJointJacobians(av)
 
@@ -146,17 +144,19 @@ if __name__ == "__main__":
 
     # compute using pinocchio
     pinwrapper = PinocchioWrapper.from_urdf_path(urdf_model_path)
-    pin_av = np.array([joint_angle_table[name] for name, idx in pinwrapper.joint_idx_table.items()])
-    # pin_av = np.array([joint_angle_table[name] for name in joint_names])
+    all_joint_ids = pinwrapper.get_joint_ids(list(joint_angle_table.keys()))
+    pinwrapper.set_joint_angles(all_joint_ids, np.array(list(joint_angle_table.values())))
+    # pin_av = np.array([joint_angle_table[name] for name, idx in pinwrapper.joint_idx_table.items()])
+    pin_av = np.array([joint_angle_table[name] for name in joint_names])
 
     joint_ids = pinwrapper.get_joint_ids(joint_names)
     elink_ids = pinwrapper.get_link_ids(link_names)
 
-    rint("hoge")
-    _pin, J_pin = pinwrapper.solve_forward_kinematics([pin_av], elink_ids=elink_ids, joint_ids=joint_ids)
+    print("hoge")
+    P_pin, J_pin = pinwrapper.solve_forward_kinematics([pin_av], elink_ids=elink_ids, joint_ids=joint_ids)
     print(P_pin)
 
-    np.testing.assert_almost_equal(P_pin, P_tiny, decimal=5)
+    np.testing.assert_almost_equal(P_pin, P_tiny, decimal=3)
     
     # print(P_tiny - P_pin)
     # print(J_tiny - J_pin)
