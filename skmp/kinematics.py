@@ -106,7 +106,7 @@ class ArticulatedKinematicsMapBase:
             points_cspace,
             self.tinyfk_feature_ids,
             self.tinyfk_joint_ids,
-            with_base=self.with_base,
+            with_3dof_base=self.with_base,
             with_jacobian=True,
             with_rot=self.with_rpy,
         )

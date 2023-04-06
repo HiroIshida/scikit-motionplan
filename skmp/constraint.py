@@ -454,7 +454,7 @@ class PairWiseSelfCollFreeConst(AbstractIneqConst):
         # compute inter-sphere distances when q = np.zeros(n_dof)
         q_init = np.zeros(colkin.dim_cspace)
         sqdists, _ = colkin.fksolver.compute_inter_link_sqdists(
-            [q_init], all_index_pairs, colkin.tinyfk_joint_ids, with_base=colkin.with_base
+            [q_init], all_index_pairs, colkin.tinyfk_joint_ids, with_3dof_base=colkin.with_base
         )
         dists = np.sqrt(sqdists)
 
@@ -488,7 +488,7 @@ class PairWiseSelfCollFreeConst(AbstractIneqConst):
             qs,
             self.check_sphere_id_pairs,
             self.colkin.tinyfk_joint_ids,
-            with_base=self.colkin.with_base,
+            with_3dof_base=self.colkin.with_base,
             with_jacobian=with_jacobian,
         )
         sqdistss = sqdists_stacked.reshape(n_sample, -1)
