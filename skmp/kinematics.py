@@ -125,14 +125,14 @@ class ArticulatedKinematicsMapBase:
         av_joint = np.array([j.joint_angle() for j in joint_list])
         if self.base_type == BaseType.PLANER:
             x, y, _ = robot_model.translation
-            rpy = rpy_angle(robot_model.rotation)[0]
-            theta = rpy[0]
+            ypr = rpy_angle(robot_model.rotation)[0]
+            theta = ypr[0]
             np.hstack((av_joint, [x, y, theta]))
             av_whole = np.hstack((av_joint, [x, y, theta]))
         elif self.base_type == BaseType.FLOATING:
             x, y, z = robot_model.translation
-            rpy = rpy_angle(robot_model.rotation)[0]
-            av_whole = np.hstack((av_joint, [x, y, z], rpy))
+            ypr = rpy_angle(robot_model.rotation)[0]
+            av_whole = np.hstack((av_joint, [x, y, z], np.flip(ypr)))
         elif self.base_type == BaseType.FIXED:
             av_whole = av_joint
         else:
@@ -149,8 +149,8 @@ class ArticulatedKinematicsMapBase:
             base_pose = np.array([x, y, theta])
         elif self.base_type == BaseType.FLOATING:
             xyz = robot_model.translation
-            rpy = rpy_angle(robot_model.rotation)[0]
-            base_pose = np.hstack([xyz, rpy])
+            ypr = rpy_angle(robot_model.rotation)[0]
+            base_pose = np.hstack([xyz, np.flip(ypr)])
         elif self.base_type == BaseType.FIXED:
             base_pose = None
         else:
