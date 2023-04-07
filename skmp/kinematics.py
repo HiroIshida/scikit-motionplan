@@ -7,6 +7,7 @@ import numpy as np
 import tinyfk
 from skrobot.coordinates.math import rpy_angle
 from skrobot.model import RobotModel
+from tinyfk import BaseType
 from trimesh import Trimesh
 
 from skmp.collision import SphereCollection, create_sphere_collection
@@ -82,7 +83,7 @@ class ArticulatedKinematicsMapBase:
     tinyfk_feature_ids: List[int]
     control_joint_names: List[str]
     with_rpy: bool
-    with_base: bool
+    base_type: BaseType
     _map_cache: Optional[Tuple[np.ndarray, np.ndarray]] = None
 
     def update_joint_angles(
@@ -93,8 +94,12 @@ class ArticulatedKinematicsMapBase:
         angles = list(joint_name_to_angle_table.values())
         joint_ids = self.fksolver.get_joint_ids(joint_names)
 
-        if base_pose is not None:
-            assert len(base_pose) == 3  # x, y, yaw
+        if self.base_type != BaseType.FIXED:
+            assert base_pose is not None
+            if self.base_type == BaseType.PLANER:
+                assert len(base_pose) == 3
+            if self.base_type == BaseType.FLOATING:
+                assert len(base_pose) == 6
             angles = angles + list(base_pose)
 
         self.fksolver.set_joint_angles(joint_ids, angles)
@@ -106,7 +111,7 @@ class ArticulatedKinematicsMapBase:
             points_cspace,
             self.tinyfk_feature_ids,
             self.tinyfk_joint_ids,
-            with_3dof_base=self.with_base,
+            base_type=self.base_type,
             with_jacobian=True,
             with_rot=self.with_rpy,
         )
@@ -118,26 +123,38 @@ class ArticulatedKinematicsMapBase:
     def map_skrobot_model(self, robot_model: RobotModel) -> Tuple[np.ndarray, np.ndarray]:
         joint_list = [robot_model.__dict__[name] for name in self.control_joint_names]
         av_joint = np.array([j.joint_angle() for j in joint_list])
-        if self.with_base:
+        if self.base_type == BaseType.PLANER:
             x, y, _ = robot_model.translation
             rpy = rpy_angle(robot_model.rotation)[0]
             theta = rpy[0]
             np.hstack((av_joint, [x, y, theta]))
             av_whole = np.hstack((av_joint, [x, y, theta]))
-        else:
+        elif self.base_type == BaseType.FLOATING:
+            x, y, z = robot_model.translation
+            rpy = rpy_angle(robot_model.rotation)[0]
+            av_whole = np.hstack((av_joint, [x, y, z], rpy))
+        elif self.base_type == BaseType.FIXED:
             av_whole = av_joint
+        else:
+            assert False
         return self.map(np.expand_dims(av_whole, axis=0))
 
     def reflect_skrobot_model(self, robot_model: RobotModel):
         """reflecting skrobot model configuratin to tinyfk solver configuration"""
         table = {name: robot_model.__dict__[name].joint_angle() for name in robot_model.joint_names}
-        if self.with_base:
+        if self.base_type == BaseType.PLANER:
             x, y, _ = robot_model.translation
             rpy = rpy_angle(robot_model.rotation)[0]
             theta = rpy[0]
             base_pose = np.array([x, y, theta])
-        else:
+        elif self.base_type == BaseType.FLOATING:
+            xyz = robot_model.translation
+            rpy = rpy_angle(robot_model.rotation)[0]
+            base_pose = np.hstack([xyz, rpy])
+        elif self.base_type == BaseType.FIXED:
             base_pose = None
+        else:
+            assert False
         self.update_joint_angles(table, base_pose)
 
     def add_new_feature_point(
@@ -165,10 +182,14 @@ class ArticulatedEndEffectorKinematicsMap(ArticulatedKinematicsMapBase):
         urdfpath: Path,
         joint_names: List[str],
         end_effector_names: List[str],
-        with_base: bool = False,
+        base_type: BaseType = BaseType.FIXED,
     ):
 
-        dim_cspace = len(joint_names) + with_base * 3
+        dim_cspace = (
+            len(joint_names)
+            + (base_type == BaseType.PLANER) * 3
+            + (base_type == BaseType.FLOATING) * 6
+        )
         dim_tspace = 6
 
         urdfpath_str = str(urdfpath.expanduser())
@@ -184,7 +205,7 @@ class ArticulatedEndEffectorKinematicsMap(ArticulatedKinematicsMapBase):
         self.fksolver = fksolver
         self.tinyfk_joint_ids = tinyfk_joint_ids
         self.control_joint_names = joint_names
-        self.with_base = with_base
+        self.base_type = base_type
         self.with_rpy = True
         self.tinyfk_feature_ids = tinyfk_ef_ids
 
@@ -199,7 +220,7 @@ class ArticulatedCollisionKinematicsMap(ArticulatedKinematicsMapBase):
         urdfpath: Path,
         joint_names: List[str],
         collision_link_names: List[str],
-        with_base: bool = False,
+        base_type: BaseType = BaseType.FIXED,
         link_wise_sphere_creator: Optional[Dict[str, Callable[[Trimesh], SphereCollection]]] = None,
     ):
         if link_wise_sphere_creator is None:
@@ -208,7 +229,11 @@ class ArticulatedCollisionKinematicsMap(ArticulatedKinematicsMapBase):
             if ln not in link_wise_sphere_creator:
                 link_wise_sphere_creator[ln] = create_sphere_collection
 
-        dim_cspace = len(joint_names) + with_base * 3
+        dim_cspace = (
+            len(joint_names)
+            + (base_type == BaseType.PLANER) * 3
+            + (base_type == BaseType.FLOATING) * 6
+        )
         dim_tspace = 3
 
         urdfpath_str = str(urdfpath.expanduser())
@@ -251,5 +276,5 @@ class ArticulatedCollisionKinematicsMap(ArticulatedKinematicsMapBase):
         self.tinyfk_joint_ids = tinyfk_joint_ids
         self.control_joint_names = joint_names
         self.fksolver = fksolver
-        self.with_base = with_base
+        self.base_type = base_type
         self.with_rpy = False

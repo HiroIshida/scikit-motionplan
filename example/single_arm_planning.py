@@ -6,6 +6,7 @@ from ompl import Algorithm, set_ompl_random_seed
 from skrobot.model.primitives import Axis, Box
 from skrobot.models import PR2
 from skrobot.viewers import TrimeshSceneViewer
+from tinyfk import BaseType
 
 from skmp.constraint import (
     CollFreeConst,
@@ -29,7 +30,7 @@ if __name__ == "__main__":
     pr2.reset_manip_pose()
     pr2.torso_lift_joint.joint_angle(0.1)
 
-    robot_config = PR2Config(with_base=False)
+    robot_config = PR2Config(base_type=BaseType.FIXED)
     colkin = robot_config.get_collision_kin()
     efkin = robot_config.get_endeffector_kin()
     efkin.reflect_skrobot_model(pr2)

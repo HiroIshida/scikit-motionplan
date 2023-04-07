@@ -29,8 +29,6 @@ if __name__ == "__main__":
     pr2.reset_manip_pose()
     pr2.torso_lift_joint.joint_angle(0.1)
 
-    with_base = True
-
     robot_config = PR2Config(control_arm="dual", with_base=with_base)
     colkin = robot_config.get_collision_kin()
     efkin = robot_config.get_endeffector_kin()
