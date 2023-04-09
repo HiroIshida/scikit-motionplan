@@ -2,6 +2,7 @@ import numpy as np
 from skrobot.coordinates import Coordinates
 from skrobot.model.primitives import Box
 from skrobot.models import PR2
+from tinyfk import BaseType
 
 from skmp.constraint import CollFreeConst, PoseConstraint
 from skmp.robot.pr2 import PR2Config
@@ -12,7 +13,7 @@ def create_standard_problem(easy: bool = False) -> Problem:
     # setup kinematics
     pr2 = PR2()
     pr2.reset_manip_pose()
-    config = PR2Config(with_base=False)
+    config = PR2Config(base_type=BaseType.FIXED)
     colkin = config.get_collision_kin()
     efkin = config.get_endeffector_kin()
 

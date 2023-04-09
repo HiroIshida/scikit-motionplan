@@ -5,6 +5,7 @@ from typing import Dict, List, Literal
 
 import numpy as np
 from skrobot.models import PR2
+from tinyfk import BaseType
 from trimesh import Trimesh
 
 from skmp.collision import (
@@ -31,7 +32,7 @@ class CollisionMode(Enum):
 class PR2Config:
     control_arm: Literal["rarm", "larm", "dual"] = "rarm"
     collision_mode: CollisionMode = CollisionMode.DEFAULT
-    with_base: bool = False
+    base_type: BaseType = BaseType.FIXED
 
     @classmethod
     def urdf_path(cls) -> Path:
@@ -155,13 +156,15 @@ class PR2Config:
             self.urdf_path(),
             self._get_control_joint_names(),
             self._get_endeffector_names(),
-            with_base=self.with_base,
+            base_type=self.base_type,
         )
         return kinmap
 
     def get_box_const(self) -> BoxConst:
-        if self.with_base:
+        if self.base_type == BaseType.PLANER:
             base_bounds = np.array([-0.5, -1.0, -1.0]), np.array([0.5, 1.0, 1.0])
+        elif self.base_type == BaseType.FLOATING:
+            base_bounds = -np.ones(6), np.ones(6)
         else:
             base_bounds = None
 
@@ -255,11 +258,11 @@ class PR2Config:
             control_joint_names,
             collision_link_names,
             link_wise_sphere_creator=link_wise_sphere_creator,
-            with_base=self.with_base,
+            base_type=self.base_type,
         )
         return kinmap
 
     def get_neural_selcol_const(self, robot_model: PR2) -> NeuralSelfCollFreeConst:
         return NeuralSelfCollFreeConst.load(
-            self.urdf_path(), self._get_control_joint_names(), robot_model, self.with_base
+            self.urdf_path(), self._get_control_joint_names(), robot_model, self.base_type
         )

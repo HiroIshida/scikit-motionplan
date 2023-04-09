@@ -9,6 +9,7 @@ from selcol.file import default_pretrained_basepath
 from selcol.runtime import OrtSelColInferencer
 from skrobot.coordinates import Coordinates, rpy_angle
 from skrobot.model import RobotModel
+from tinyfk import BaseType
 
 from skmp.kinematics import (
     ArticulatedCollisionKinematicsMap,
@@ -163,7 +164,9 @@ class BoxConst(AbstractIneqConst):
 
         if base_bounds is not None:
             lb, ub = base_bounds
-            for i in range(3):
+            n_dof_base = len(lb)
+            assert n_dof_base in (3, 6)
+            for i in range(n_dof_base):
                 b_min.append(lb[i])
                 b_max.append(ub[i])
 
@@ -454,7 +457,7 @@ class PairWiseSelfCollFreeConst(AbstractIneqConst):
         # compute inter-sphere distances when q = np.zeros(n_dof)
         q_init = np.zeros(colkin.dim_cspace)
         sqdists, _ = colkin.fksolver.compute_inter_link_sqdists(
-            [q_init], all_index_pairs, colkin.tinyfk_joint_ids, with_base=colkin.with_base
+            [q_init], all_index_pairs, colkin.tinyfk_joint_ids, base_type=colkin.base_type
         )
         dists = np.sqrt(sqdists)
 
@@ -488,7 +491,7 @@ class PairWiseSelfCollFreeConst(AbstractIneqConst):
             qs,
             self.check_sphere_id_pairs,
             self.colkin.tinyfk_joint_ids,
-            with_base=self.colkin.with_base,
+            base_type=self.colkin.base_type,
             with_jacobian=with_jacobian,
         )
         sqdistss = sqdists_stacked.reshape(n_sample, -1)
@@ -507,12 +510,12 @@ class PairWiseSelfCollFreeConst(AbstractIneqConst):
 
 class NeuralSelfCollFreeConst(AbstractIneqConst):
     model: OrtSelColInferencer  # type: ignore
-    with_base: bool
+    base_type: BaseType
     threshold: float = 0.5
 
-    def __init__(self, infer_model: OrtSelColInferencer, robot_Model: RobotModel, with_base: bool) -> None:  # type: ignore
+    def __init__(self, infer_model: OrtSelColInferencer, robot_Model: RobotModel, base_type: BaseType) -> None:  # type: ignore
         self.model = infer_model  # type: ignore
-        self.with_base = with_base
+        self.base_type = base_type
         self.reflect_skrobot_model(robot_Model)
 
     @classmethod
@@ -521,13 +524,13 @@ class NeuralSelfCollFreeConst(AbstractIneqConst):
         urdf_path: Path,
         control_joint_names: List[str],
         robot_model: RobotModel,
-        with_base: bool,
+        base_type: BaseType,
     ) -> "NeuralSelfCollFreeConst":
         cache_basepath = default_pretrained_basepath()
         model = OrtSelColInferencer.load(
             cache_basepath, urdf_path=urdf_path, eval_joint_names=control_joint_names
         )
-        return cls(model, robot_model, with_base)
+        return cls(model, robot_model, base_type)
 
     def _evaluate(
         self, qs: np.ndarray, with_jacobian: bool = False
@@ -537,12 +540,17 @@ class NeuralSelfCollFreeConst(AbstractIneqConst):
         val_list = []
         grad_list = []
         for q in qs:
-            if self.with_base:
+            if self.base_type == BaseType.PLANER:
                 q = q[:-3]  # because base pose is irrelevant to self collision
+            if self.base_type == BaseType.FLOATING:
+                q = q[:-6]  # because base pose is irrelevant to self collision
+
             val, grad = self.model.infer(q, with_grad=with_jacobian)
             val_list.append(self.threshold - val)
-            if self.with_base:
+            if self.base_type == BaseType.PLANER:
                 grad = np.hstack((grad, np.zeros(3)))
+            if self.base_type == BaseType.FLOATING:
+                grad = np.hstack((grad, np.zeros(6)))
             grad_list.append(-grad)
 
         valss = np.array(val_list).reshape(n_point, 1)

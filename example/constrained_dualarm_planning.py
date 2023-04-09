@@ -5,6 +5,7 @@ from ompl import Algorithm, set_ompl_random_seed
 from skrobot.model.primitives import Axis, Box
 from skrobot.models import PR2
 from skrobot.viewers import TrimeshSceneViewer
+from tinyfk import BaseType
 
 from skmp.constraint import (
     CollFreeConst,
@@ -29,9 +30,8 @@ if __name__ == "__main__":
     pr2.reset_manip_pose()
     pr2.torso_lift_joint.joint_angle(0.1)
 
-    with_base = True
-
-    robot_config = PR2Config(control_arm="dual", with_base=with_base)
+    base_type = BaseType.PLANER
+    robot_config = PR2Config(control_arm="dual", base_type=base_type)
     colkin = robot_config.get_collision_kin()
     efkin = robot_config.get_endeffector_kin()
     efkin.reflect_skrobot_model(pr2)
@@ -103,7 +103,7 @@ if __name__ == "__main__":
     viewer.show()
 
     for q in nlp_result.traj:
-        set_robot_state(pr2, robot_config._get_control_joint_names(), q, with_base)
+        set_robot_state(pr2, robot_config._get_control_joint_names(), q, base_type=base_type)
         viewer.redraw()
         time.sleep(1.0)
 

@@ -4,6 +4,7 @@ import numpy as np
 from skrobot.coordinates import Coordinates
 from skrobot.model.primitives import Box
 from skrobot.models import PR2
+from tinyfk import BaseType
 
 from skmp.constraint import (
     AbstractConst,
@@ -49,13 +50,13 @@ def check_jacobian(const: AbstractConst, dim: int, eps: float = 1e-7, decimal: i
 
 
 def test_box_const():
-    config = PR2Config(with_base=False)
+    config = PR2Config(base_type=BaseType.FIXED)
     box_const = config.get_box_const()
     check_jacobian(box_const, 7)
 
 
 def test_collfree_const():
-    config = PR2Config(with_base=False)
+    config = PR2Config(base_type=BaseType.FIXED)
     colkin = config.get_collision_kin()
     box = Box(extents=[0.7, 0.5, 1.2], with_sdf=True)
     box.translate(np.array([0.85, -0.2, 0.9]))
@@ -65,7 +66,7 @@ def test_collfree_const():
 
 
 def test_reduced_collfree_const():
-    config = PR2Config(with_base=False)
+    config = PR2Config(base_type=BaseType.FIXED)
     colkin = config.get_collision_kin()
     box = Box(extents=[0.7, 0.5, 1.2], with_sdf=True)
     box.translate(np.array([0.85, -0.2, 0.9]))
@@ -78,14 +79,14 @@ def test_neural_collfree_const():
     pr2 = PR2()
     pr2.reset_manip_pose()
 
-    config = PR2Config(with_base=False)
+    config = PR2Config(base_type=BaseType.FIXED)
     selcol_const = config.get_neural_selcol_const(pr2)
 
     # NOTE: selcol model uses float32. So, larger eps is required
     check_jacobian(selcol_const, 7, eps=1e-4, decimal=2)
 
     # test with base
-    config = PR2Config(with_base=True)
+    config = PR2Config(base_type=BaseType.PLANER)
     selcol_const = config.get_neural_selcol_const(pr2)
     check_jacobian(selcol_const, 10, eps=1e-4, decimal=2)
 
@@ -96,7 +97,7 @@ def test_configpoint_const():
 
 
 def test_pose_const():
-    config = PR2Config(with_base=False)
+    config = PR2Config(base_type=BaseType.FIXED)
     efkin = config.get_endeffector_kin()
 
     target = Coordinates(pos=[0.8, -0.6, 1.1])
@@ -105,7 +106,7 @@ def test_pose_const():
 
 
 def test_realtive_pose_const():
-    config = PR2Config(with_base=False, control_arm="dual")
+    config = PR2Config(base_type=BaseType.FIXED, control_arm="dual")
     efkin = config.get_endeffector_kin()
     relconst = RelativePoseConstraint(np.ones(3) * 0.1, efkin, PR2())
 
@@ -120,7 +121,7 @@ def test_realtive_pose_const():
 
 
 def test_pair_wise_selfcollfree_cost():
-    config = PR2Config(with_base=False)
+    config = PR2Config(base_type=BaseType.FIXED)
     colkin = config.get_collision_kin()
     const = PairWiseSelfCollFreeConst(colkin, PR2())
     check_jacobian(const, 7)
@@ -134,7 +135,7 @@ def test_composite_constraint():
     pr2 = PR2()
     pr2.reset_manip_pose()
 
-    config = PR2Config(with_base=False)
+    config = PR2Config(base_type=BaseType.FIXED)
 
     colkin = config.get_collision_kin()
     box = Box(extents=[0.7, 0.5, 1.2], with_sdf=True)

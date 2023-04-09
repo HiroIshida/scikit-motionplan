@@ -6,6 +6,7 @@ from skrobot.coordinates import Coordinates
 from skrobot.model.primitives import Box
 from skrobot.models import PR2
 from skrobot.viewers import TrimeshSceneViewer
+from tinyfk import BaseType
 
 from skmp.constraint import (
     CollFreeConst,
@@ -21,7 +22,7 @@ from skmp.satisfy import SatisfactionResult, satisfy_by_optimization
 def test_satisfy_by_optimization_pose_const():
     pr2 = PR2()
     pr2.reset_manip_pose()
-    config = PR2Config(with_base=False)
+    config = PR2Config(base_type=BaseType.FIXED)
     colkin = config.get_collision_kin()
     efkin = config.get_endeffector_kin()
 
@@ -54,7 +55,7 @@ def test_satisfy_by_optimization_pose_const():
 def test_satisfy_by_optimization_relative_pose_const(debug: bool = False):
     pr2 = PR2(use_tight_joint_limit=False)
     pr2.reset_manip_pose()
-    config = PR2Config(with_base=False, control_arm="dual")
+    config = PR2Config(base_type=BaseType.FIXED, control_arm="dual")
     efkin = config.get_endeffector_kin()
     box_const = config.get_box_const()
 

@@ -6,6 +6,7 @@ from ompl import Algorithm, set_ompl_random_seed
 from skrobot.model.primitives import Axis, Box
 from skrobot.models import PR2
 from skrobot.viewers import TrimeshSceneViewer
+from tinyfk import BaseType
 
 from skmp.constraint import (
     CollFreeConst,
@@ -25,11 +26,13 @@ np.random.seed(0)
 set_ompl_random_seed(0)
 
 if __name__ == "__main__":
-    pr2 = PR2(use_tight_joint_limit=True)
+    base_type = BaseType.FLOATING
+
+    pr2 = PR2(use_tight_joint_limit=False)
     pr2.reset_manip_pose()
     pr2.torso_lift_joint.joint_angle(0.1)
 
-    robot_config = PR2Config(with_base=False)
+    robot_config = PR2Config(base_type=base_type)
     colkin = robot_config.get_collision_kin()
     efkin = robot_config.get_endeffector_kin()
     efkin.reflect_skrobot_model(pr2)
@@ -37,8 +40,13 @@ if __name__ == "__main__":
 
     use_pose_constraint = True
     neural_selcol = False
+    smooth_by_nlp = False
 
     start = np.array([0.564, 0.35, -0.74, -0.7, -0.7, -0.17, -0.63])
+    if base_type == BaseType.PLANER:
+        start = np.hstack([start, np.zeros(3)])
+    elif base_type == BaseType.FLOATING:
+        start = np.hstack([start, np.zeros(6)])
     box_const = robot_config.get_box_const()
 
     # create equality constraint
@@ -50,6 +58,10 @@ if __name__ == "__main__":
     else:
         target = None
         goal = np.array([-0.78, 0.055, -1.37, -0.59, -0.494, -0.20, 1.87])
+        if base_type == BaseType.PLANER:
+            goal = np.hstack([goal, np.zeros(3)])
+        elif base_type == BaseType.FLOATING:
+            goal = np.hstack([goal, np.zeros(6)])
         goal_eq_const = ConfigPointConst(goal)  # type: ignore[assignment]
 
     # create inequality constraint
@@ -77,12 +89,13 @@ if __name__ == "__main__":
     assert result.traj is not None
 
     n_wp = 30
-    sqp_config = SQPBasedSolverConfig(n_wp=n_wp)
-    nlp_solver = SQPBasedSolver.init(sqp_config)
-    nlp_solver.setup(problem)
-    result = nlp_solver.solve(result.traj.resample(n_wp))
-    print(result.time_elapsed)
-    assert result.traj is not None
+    if smooth_by_nlp:
+        sqp_config = SQPBasedSolverConfig(n_wp=n_wp)
+        nlp_solver = SQPBasedSolver.init(sqp_config)
+        nlp_solver.setup(problem)
+        result = nlp_solver.solve(result.traj.resample(n_wp))  # type: ignore
+        print(result.time_elapsed)
+        assert result.traj is not None
 
     viewer = TrimeshSceneViewer(resolution=(640, 480))
     colvis = CollisionSphereVisualizationManager(colkin, viewer)
@@ -93,8 +106,9 @@ if __name__ == "__main__":
 
     viewer.show()
     time.sleep(1.0)
+    assert result.traj is not None
     for q in result.traj.resample(n_wp):
-        set_robot_state(pr2, robot_config._get_control_joint_names(), q)
+        set_robot_state(pr2, robot_config._get_control_joint_names(), q, base_type=base_type)
         colvis.update(pr2, obstacle.sdf)
         viewer.redraw()
         time.sleep(0.6)
