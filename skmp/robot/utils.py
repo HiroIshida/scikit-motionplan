@@ -22,8 +22,8 @@ def set_robot_state(
     elif base_type == BaseType.FLOATING:
         assert len(joint_names) + 6 == len(angles)
         av_joint, av_base = angles[:-6], angles[-6:]
-        x, y, z, r, p, y = av_base
-        co = Coordinates(pos=[x, y, z], rot=rpy_matrix(y, p, r))
+        xyz, rpy = av_base[:3], av_base[3:]
+        co = Coordinates(pos=xyz, rot=rpy_matrix(*np.flip(rpy)))
         robot_model.newcoords(co)
     else:
         assert len(joint_names) == len(angles)
