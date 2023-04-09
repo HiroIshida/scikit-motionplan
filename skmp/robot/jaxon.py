@@ -9,7 +9,7 @@ from skrobot.coordinates.math import rotation_matrix, rpy_angle
 from skrobot.models.urdf import RobotModelFromURDF
 from tinyfk import BaseType, RobotModel
 
-from skmp.constraint import BoxConst
+from skmp.constraint import BoxConst, NeuralSelfCollFreeConst
 from skmp.kinematics import ArticulatedEndEffectorKinematicsMap
 
 
@@ -71,15 +71,23 @@ class JaxonConfig:
             joint_names.append("CHEST_JOINT{}".format(i))
         return joint_names
 
-    def _get_endeffector_names(self) -> List[str]:
-        return ["rleg_end_coords", "lleg_end_coords", "rarm_end_coords", "larm_end_coords"]
-        # return ["rleg_end_coords", "lleg_end_coords"]
+    def get_endeffector_kin(
+        self, rleg: bool = True, lleg: bool = True, rarm: bool = True, larm: bool = True
+    ):
+        endeffector_names = []
+        if rleg:
+            endeffector_names.append("rleg_end_coords")
+        if lleg:
+            endeffector_names.append("lleg_end_coords")
+        if rarm:
+            endeffector_names.append("rarm_end_coords")
+        if larm:
+            endeffector_names.append("larm_end_coords")
 
-    def get_endeffector_kin(self):
         kinmap = ArticulatedEndEffectorKinematicsMap(
             self.urdf_path(),
             self._get_control_joint_names(),
-            self._get_endeffector_names(),
+            endeffector_names,
             base_type=BaseType.FLOATING,
             fksolver_init_hook=self.add_end_coords,
         )
@@ -93,3 +101,8 @@ class JaxonConfig:
             self.urdf_path(), self._get_control_joint_names(), base_bounds=base_bounds
         )
         return bounds
+
+    def get_neural_selcol_const(self, robot_model: Jaxon) -> NeuralSelfCollFreeConst:
+        return NeuralSelfCollFreeConst.load(
+            self.urdf_path(), self._get_control_joint_names(), robot_model, BaseType.FLOATING
+        )

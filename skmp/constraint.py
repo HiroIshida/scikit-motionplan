@@ -511,7 +511,7 @@ class PairWiseSelfCollFreeConst(AbstractIneqConst):
 class NeuralSelfCollFreeConst(AbstractIneqConst):
     model: OrtSelColInferencer  # type: ignore
     base_type: BaseType
-    threshold: float = 0.5
+    threshold: float = 0.98
 
     def __init__(self, infer_model: OrtSelColInferencer, robot_Model: RobotModel, base_type: BaseType) -> None:  # type: ignore
         self.model = infer_model  # type: ignore

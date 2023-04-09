@@ -1,14 +1,16 @@
 import time
 
 import numpy as np
-from skrobot.model.primitives import Axis
+from ompl import Algorithm
 from skrobot.viewers import TrimeshSceneViewer
 from tinyfk import BaseType
 
-from skmp.constraint import PoseConstraint
+from skmp.constraint import ConfigPointConst, PoseConstraint
 from skmp.robot.jaxon import Jaxon, JaxonConfig
 from skmp.robot.utils import set_robot_state
 from skmp.satisfy import satisfy_by_optimization
+from skmp.solver.interface import Problem
+from skmp.solver.ompl_solver import OMPLSolver, OMPLSolverConfig
 
 np.random.seed(0)
 
@@ -17,28 +19,61 @@ efkin = config.get_endeffector_kin()
 bounds = config.get_box_const()
 jaxon = Jaxon()
 
-coords_list = [
+start_coords_list = [
     np.array([0.0, -0.3, 0.0, 0, 0, 0]),
     np.array([0.0, +0.3, 0.0, 0, 0, 0]),
-    np.array([0.5, -0.3, 0.0, 0, 0, 0]),
-    np.array([0.5, +0.3, 0.0, 0, 0, 0]),
+    np.array([0.6, -0.3, 0.0, 0, 0, 0]),
+    np.array([0.6, +0.3, 0.0, 0, 0, 0]),
 ]
 
-efkin = PoseConstraint(coords_list, efkin, jaxon)
-res = satisfy_by_optimization(efkin, bounds, None, None)
+goal_coords_list = [
+    np.array([0.0, -0.3, 0.0, 0, 0, 0]),
+    np.array([0.0, +0.3, 0.0, 0, 0, 0]),
+    np.array([0.9, -0.3, 0.0, 0, 0, 0]),
+    np.array([0.6, +0.3, 0.0, 0, 0, 0]),
+]
 
-set_robot_state(jaxon, config._get_control_joint_names(), res.q, base_type=BaseType.FLOATING)
+eq_const = PoseConstraint(start_coords_list, efkin, jaxon)
+res_start = satisfy_by_optimization(eq_const, bounds, None, None)
+assert res_start.success
 
-ax1 = Axis.from_coords(jaxon.rarm_end_coords.copy_worldcoords())
-ax2 = Axis.from_coords(jaxon.larm_end_coords.copy_worldcoords())
-ax3 = Axis.from_coords(jaxon.rleg_end_coords.copy_worldcoords())
-ax4 = Axis.from_coords(jaxon.lleg_end_coords.copy_worldcoords())
+eq_const = PoseConstraint(goal_coords_list, efkin, jaxon)
+res_goal = satisfy_by_optimization(eq_const, bounds, None, None)
+assert res_goal.success
+
+const_coords_list = [
+    np.array([0.0, -0.3, 0.0, 0, 0, 0]),
+    np.array([0.0, +0.3, 0.0, 0, 0, 0]),
+    np.array([0.6, +0.3, 0.0, 0, 0, 0]),
+]
+efkin_swing = config.get_endeffector_kin(rarm=False)
+eq_const_global = PoseConstraint(const_coords_list, efkin_swing, jaxon)
+
+print("start solving")
+problem = Problem(res_start.q, bounds, ConfigPointConst(res_goal.q), None, eq_const_global)
+solver = OMPLSolver.init(
+    OMPLSolverConfig(
+        n_max_call=10000, simplify=True, algorithm=Algorithm.KPIECE1, algorithm_range=0.1
+    )
+)
+solver.setup(problem)
+res = solver.solve()
+assert res.traj is not None
+np.testing.assert_almost_equal(res.traj[0], res_start.q)
+np.testing.assert_almost_equal(res.traj[-1], res_goal.q)
+
+traj = res.traj.resample(30)
+np.testing.assert_almost_equal(traj[0], res_start.q)
+np.testing.assert_almost_equal(traj[-1], res_goal.q)
 
 vis = TrimeshSceneViewer()
 vis.add(jaxon)
-vis.add(ax1)
-vis.add(ax2)
-vis.add(ax3)
-vis.add(ax4)
 vis.show()
-time.sleep(100)
+time.sleep(15)
+
+for q in traj:
+    print("hoge!")
+    set_robot_state(jaxon, config._get_control_joint_names(), q, base_type=BaseType.FLOATING)
+    vis.redraw()
+    time.sleep(1)
+time.sleep(20)
