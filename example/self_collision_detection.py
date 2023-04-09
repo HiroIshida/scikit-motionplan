@@ -14,7 +14,7 @@ viewer = TrimeshSceneViewer()
 viewer.add(robot)
 viewer.show()
 
-conf = PR2Config(with_base=False)
+conf = PR2Config()
 colkin = conf.get_collision_kin()
 
 const = PairWiseSelfCollFreeConst(colkin, robot)
