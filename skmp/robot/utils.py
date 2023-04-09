@@ -2,7 +2,7 @@ from typing import List
 
 import numpy as np
 from skrobot.coordinates import Coordinates
-from skrobot.coordinates.math import rpy_matrix
+from skrobot.coordinates.math import rpy_angle, rpy_matrix
 from skrobot.model import RobotModel
 from tinyfk import BaseType
 
@@ -31,3 +31,22 @@ def set_robot_state(
 
     for joint_name, angle in zip(joint_names, av_joint):
         robot_model.__dict__[joint_name].joint_angle(angle)
+
+
+def get_robot_state(
+    robot_model: RobotModel, joint_names: List[str], base_type: BaseType = BaseType.FIXED
+) -> np.ndarray:
+    av_joint = np.array([robot_model.__dict__[jn].joint_angle() for jn in joint_names])
+    if base_type == BaseType.PLANER:
+        x, y, _ = robot_model.translation
+        rpy = rpy_angle(robot_model.rotation)[0]
+        theta = rpy[0]
+        base_pose_vec = np.array([x, y, theta])
+    elif base_type == BaseType.FLOATING:
+        xyz = robot_model.translation
+        rpy = np.flip(rpy_angle(robot_model.rotation)[0])
+        base_pose_vec = np.hstack([xyz, rpy])
+    else:
+        assert False
+    q = np.hstack([av_joint, base_pose_vec])
+    return q
