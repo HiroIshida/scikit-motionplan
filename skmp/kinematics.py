@@ -183,6 +183,7 @@ class ArticulatedEndEffectorKinematicsMap(ArticulatedKinematicsMapBase):
         joint_names: List[str],
         end_effector_names: List[str],
         base_type: BaseType = BaseType.FIXED,
+        fksolver_init_hook: Optional[Callable[[tinyfk.RobotModel], None]] = None,
     ):
 
         dim_cspace = (
@@ -194,6 +195,9 @@ class ArticulatedEndEffectorKinematicsMap(ArticulatedKinematicsMapBase):
 
         urdfpath_str = str(urdfpath.expanduser())
         fksolver = tinyfk.RobotModel(urdfpath_str)
+        if fksolver_init_hook is not None:
+            fksolver_init_hook(fksolver)
+
         tinyfk_ef_ids = fksolver.get_link_ids(end_effector_names)
 
         n_feature = len(tinyfk_ef_ids)
@@ -222,6 +226,7 @@ class ArticulatedCollisionKinematicsMap(ArticulatedKinematicsMapBase):
         collision_link_names: List[str],
         base_type: BaseType = BaseType.FIXED,
         link_wise_sphere_creator: Optional[Dict[str, Callable[[Trimesh], SphereCollection]]] = None,
+        fksolver_init_hook: Optional[Callable[[tinyfk.RobotModel], None]] = None,
     ):
         if link_wise_sphere_creator is None:
             link_wise_sphere_creator = {}
@@ -238,6 +243,8 @@ class ArticulatedCollisionKinematicsMap(ArticulatedKinematicsMapBase):
 
         urdfpath_str = str(urdfpath.expanduser())
         fksolver = tinyfk.RobotModel(urdfpath_str)
+        if fksolver_init_hook is not None:
+            fksolver_init_hook(fksolver)
 
         urdf = URDF.load(urdfpath_str)
 
