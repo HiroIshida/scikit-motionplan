@@ -7,7 +7,7 @@ import numpy as np
 import tinyfk
 from skrobot.coordinates.math import rpy_angle
 from skrobot.model import RobotModel
-from tinyfk import BaseType
+from tinyfk import BaseType, RotationType
 from trimesh import Trimesh
 
 from skmp.collision import SphereCollection, create_sphere_collection
@@ -82,7 +82,7 @@ class ArticulatedKinematicsMapBase:
     tinyfk_joint_ids: List[int]
     tinyfk_feature_ids: List[int]
     control_joint_names: List[str]
-    with_rpy: bool
+    rot_type: RotationType
     base_type: BaseType
     _map_cache: Optional[Tuple[np.ndarray, np.ndarray]] = None
 
@@ -113,7 +113,7 @@ class ArticulatedKinematicsMapBase:
             self.tinyfk_joint_ids,
             base_type=self.base_type,
             with_jacobian=True,
-            with_rot=self.with_rpy,
+            rot_type=self.rot_type,
         )
         points_tspace = f_tmp.reshape(n_point, self.n_feature, self.dim_tspace)
         jacobians = j_tmp.reshape(n_point, self.n_feature, self.dim_tspace, self.dim_cspace)
@@ -192,6 +192,7 @@ class ArticulatedEndEffectorKinematicsMap(ArticulatedKinematicsMapBase):
             + (base_type == BaseType.FLOATING) * 6
         )
         dim_tspace = 6
+        rot_type = RotationType.RPY
 
         urdfpath_str = str(urdfpath.expanduser())
         fksolver = tinyfk.RobotModel(urdfpath_str)
@@ -210,7 +211,7 @@ class ArticulatedEndEffectorKinematicsMap(ArticulatedKinematicsMapBase):
         self.tinyfk_joint_ids = tinyfk_joint_ids
         self.control_joint_names = joint_names
         self.base_type = base_type
-        self.with_rpy = True
+        self.rot_type = rot_type
         self.tinyfk_feature_ids = tinyfk_ef_ids
 
 
@@ -240,6 +241,7 @@ class ArticulatedCollisionKinematicsMap(ArticulatedKinematicsMapBase):
             + (base_type == BaseType.FLOATING) * 6
         )
         dim_tspace = 3
+        rot_type = RotationType.IGNORE
 
         urdfpath_str = str(urdfpath.expanduser())
         fksolver = tinyfk.RobotModel(urdfpath_str)
@@ -284,4 +286,4 @@ class ArticulatedCollisionKinematicsMap(ArticulatedKinematicsMapBase):
         self.control_joint_names = joint_names
         self.fksolver = fksolver
         self.base_type = base_type
-        self.with_rpy = False
+        self.rot_type = rot_type
