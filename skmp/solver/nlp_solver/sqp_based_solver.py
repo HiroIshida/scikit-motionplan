@@ -19,7 +19,7 @@ from skmp.trajectory import Trajectory
 
 def translate(
     problem: Problem, n_wp: int
-) -> Tuple[TrajectoryEqualityConstraint, Optional[TrajectoryInequalityConstraint]]:
+) -> Tuple[TrajectoryEqualityConstraint, TrajectoryInequalityConstraint]:
     n_dof = len(problem.start)
 
     # equality
@@ -36,13 +36,11 @@ def translate(
             traj_eq_const.add(i, problem.global_eq_const)
 
     # inequality
-    if problem.global_ineq_const is None:
-        return traj_eq_const, None
-    else:
-        traj_ineq_const = TrajectoryInequalityConstraint.create_homogeneous(
-            n_wp, n_dof, problem.global_ineq_const
-        )
-        return traj_eq_const, traj_ineq_const
+    traj_ineq_const = TrajectoryInequalityConstraint.create_homogeneous(
+        n_wp, n_dof, problem.global_ineq_const
+    )
+
+    return traj_eq_const, traj_ineq_const
 
 
 def smoothcost_fullmat(n_dof: int, n_wp: int, weights: Optional[np.ndarray] = None) -> np.ndarray:
@@ -146,57 +144,41 @@ class SQPBasedSolver(AbstractScratchSolver[SQPBasedSolverConfig, SQPBasedSolverR
         lb_stacked = np.tile(box_const.lb, config.n_wp)
         ub_stacked = np.tile(box_const.ub, config.n_wp)
 
-        if traj_ineq_const is None:
+        n_dof = traj_ineq_const.n_dof
+        n_wp = traj_ineq_const.n_wp
 
-            def dummy_ineq(x):
-                return np.array([1.0]), np.zeros([1, len(x)])
+        motion_step_box = problem.motion_step_box
+        msconst = MotionStepInequalityConstraint(n_dof, n_wp, motion_step_box)
 
-            solver = OsqpSqpSolver(
-                smooth_mat,
-                lambda x: traj_eq_const.evaluate(x),
-                dummy_ineq,
-                lb_stacked,
-                ub_stacked,
-            )
-            self.solver = solver
-            self.post_motion_step_validator = None
-            self.problem = problem
+        if config.motion_step_satisfaction == "implicit":
+            traj_ineq_const.motion_step_box = motion_step_box
+            post_motion_step_validator = None
+        elif config.motion_step_satisfaction == "explicit":
+            traj_ineq_const.global_constraint_table.append(msconst)
+            post_motion_step_validator = None
+        elif config.motion_step_satisfaction in ["post", "debug_ignore"]:
+            post_motion_step_validator = msconst
         else:
-            n_dof = traj_ineq_const.n_dof
-            n_wp = traj_ineq_const.n_wp
+            assert False
 
-            motion_step_box = problem.motion_step_box
-            msconst = MotionStepInequalityConstraint(n_dof, n_wp, motion_step_box)
+        ctol_ineq = config.osqpsqp_config.ctol_ineq
 
-            if config.motion_step_satisfaction == "implicit":
-                traj_ineq_const.motion_step_box = motion_step_box
-                post_motion_step_validator = None
-            elif config.motion_step_satisfaction == "explicit":
-                traj_ineq_const.global_constraint_table.append(msconst)
-                post_motion_step_validator = None
-            elif config.motion_step_satisfaction in ["post", "debug_ignore"]:
-                post_motion_step_validator = msconst
-            else:
-                assert False
+        def ineq_tighten(x):
+            # somehow, osqp-sqp result has some ineq error
+            # thus to compensate that, we tighten the ineq constraint here
+            f, jac = traj_ineq_const.evaluate(x)
+            return f - ctol_ineq * 2, jac
 
-            ctol_ineq = config.osqpsqp_config.ctol_ineq
-
-            def ineq_tighten(x):
-                # somehow, osqp-sqp result has some ineq error
-                # thus to compensate that, we tighten the ineq constraint here
-                f, jac = traj_ineq_const.evaluate(x)  # type: ignore[union-attr]
-                return f - ctol_ineq * 2, jac
-
-            solver = OsqpSqpSolver(
-                smooth_mat,
-                lambda x: traj_eq_const.evaluate(x),
-                ineq_tighten,
-                lb_stacked,
-                ub_stacked,
-            )
-            self.solver = solver
-            self.post_motion_step_validator = post_motion_step_validator
-            self.problem = problem
+        solver = OsqpSqpSolver(
+            smooth_mat,
+            lambda x: traj_eq_const.evaluate(x),
+            ineq_tighten,
+            lb_stacked,
+            ub_stacked,
+        )
+        self.solver = solver
+        self.post_motion_step_validator = post_motion_step_validator
+        self.problem = problem
 
     def solve(self, init_traj: Optional[Trajectory] = None) -> "SQPBasedSolverResult":
         assert self.solver is not None, "setup is not called yet"

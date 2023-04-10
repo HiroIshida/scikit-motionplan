@@ -46,7 +46,6 @@ def test_translate():
     )
     traj_eq_const, traj_ineq_const = translate(problem, n_wp)
     _, jac_eq_anal = traj_eq_const.evaluate(qs0)
-    assert traj_ineq_const is not None
     _, jac_ineq_anal = traj_ineq_const.evaluate(qs0)
 
     jac_eq_numel = jac_numerical(traj_eq_const, qs0)
