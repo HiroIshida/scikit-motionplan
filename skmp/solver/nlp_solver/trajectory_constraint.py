@@ -66,6 +66,10 @@ class TrajectoryConstraint(ABC, Mapping, Generic[ConstraintT]):
 
     def is_homogeneous(self) -> bool:
         """check if the same constraint is enforced over all waypoints"""
+        no_local_constraint = len(self.local_constraint_table) == 0
+        if no_local_constraint:
+            return True
+
         if len(self) < self.n_wp:
             return False
         ids = [id(cons) for cons in self.local_constraint_table.values()]
@@ -99,18 +103,21 @@ class TrajectoryConstraint(ABC, Mapping, Generic[ConstraintT]):
 
         local_table = self.local_constraint_table
 
-        value_list = []
-        jacobi_dict: Dict[int, np.ndarray] = {}
+        if len(local_table) > 0:
+            value_list = []
+            jacobi_dict: Dict[int, np.ndarray] = {}
 
-        for i in local_table.keys():
-            # compute constraint at waypoint at idx
-            const = local_table[i]
-            q = traj[i]
-            value, jacobi = const.evaluate_single(q, True)  # unzip
-            value_list.append(value)
-            jacobi_dict[i] = jacobi
+            for i in local_table.keys():
+                # compute constraint at waypoint at idx
+                const = local_table[i]
+                q = traj[i]
+                value, jacobi = const.evaluate_single(q, True)  # unzip
+                value_list.append(value)
+                jacobi_dict[i] = jacobi
+            local_value_total = np.hstack(value_list)
 
-        local_value_total = np.hstack(value_list)
+        elif len(local_table) == 0:
+            local_value_total = np.array([])
 
         local_dim_codomain_total = len(local_value_total)
 
