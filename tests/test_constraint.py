@@ -4,7 +4,7 @@ import numpy as np
 from skrobot.coordinates import Coordinates
 from skrobot.model.primitives import Box
 from skrobot.models import PR2
-from tinyfk import BaseType
+from tinyfk import BaseType, RotationType
 
 from skmp.constraint import (
     AbstractConst,
@@ -96,10 +96,19 @@ def test_configpoint_const():
     check_jacobian(const, 7)
 
 
-def test_pose_const():
+def test_pose_const_rpy():
     config = PR2Config(base_type=BaseType.FIXED)
     efkin = config.get_endeffector_kin()
 
+    target = Coordinates(pos=[0.8, -0.6, 1.1])
+    const = PoseConstraint.from_skrobot_coords([target], efkin, PR2())
+    check_jacobian(const, 7)
+
+
+def test_pose_const_xyzw():
+    config = PR2Config(base_type=BaseType.FIXED)
+    efkin = config.get_endeffector_kin()
+    efkin.update_rotation_type(RotationType.XYZW)
     target = Coordinates(pos=[0.8, -0.6, 1.1])
     const = PoseConstraint.from_skrobot_coords([target], efkin, PR2())
     check_jacobian(const, 7)

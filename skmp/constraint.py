@@ -7,9 +7,10 @@ from typing import Callable, List, Optional, Protocol, Tuple, TypeVar, runtime_c
 import numpy as np
 from selcol.file import default_pretrained_basepath
 from selcol.runtime import OrtSelColInferencer
-from skrobot.coordinates import Coordinates, rpy_angle
+from skrobot.coordinates import Coordinates, matrix2quaternion, rpy_angle
+from skrobot.coordinates.math import wxyz2xyzw
 from skrobot.model import RobotModel
-from tinyfk import BaseType
+from tinyfk import BaseType, RotationType
 
 from skmp.kinematics import (
     ArticulatedCollisionKinematicsMap,
@@ -367,9 +368,18 @@ class PoseConstraint(AbstractEqConst):
         vector_list = []
         for co in co_list:
             pos = co.worldpos()
-            ypr = rpy_angle(co.worldrot())[0]
-            rpy = np.flip(ypr)
-            vector = np.hstack([pos, rpy])
+            if efkin.rot_type == RotationType.RPY:
+                ypr = rpy_angle(co.worldrot())[0]
+                rpy = np.flip(ypr)
+                vector = np.hstack([pos, rpy])
+            elif efkin.rot_type == RotationType.XYZW:
+                xyzw = wxyz2xyzw(matrix2quaternion(co.worldrot()))
+                vector = np.hstack([pos, xyzw])
+            elif efkin.rot_type == RotationType.IGNORE:
+                vector = pos
+            else:
+                assert False
+
             vector_list.append(vector)
         return cls(vector_list, efkin, robot_model)
 
@@ -391,6 +401,7 @@ class RelativePoseConstraint(AbstractEqConst):
         efkin: ArticulatedEndEffectorKinematicsMap,
         robot_model: RobotModel,
     ):
+        assert efkin.rot_type == RotationType.RPY  # TODO: support xyzw
 
         efkin = copy.deepcopy(efkin)
 
