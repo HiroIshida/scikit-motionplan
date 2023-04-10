@@ -10,6 +10,7 @@ from skmp.robot.jaxon import Jaxon, JaxonConfig
 from skmp.robot.utils import set_robot_state
 from skmp.satisfy import satisfy_by_optimization
 from skmp.solver.interface import Problem
+from skmp.solver.nlp_solver import SQPBasedSolver, SQPBasedSolverConfig
 from skmp.solver.ompl_solver import OMPLSolver, OMPLSolverConfig
 
 np.random.seed(0)
@@ -59,12 +60,17 @@ solver = OMPLSolver.init(
 solver.setup(problem)
 res = solver.solve()
 assert res.traj is not None
-np.testing.assert_almost_equal(res.traj[0], res_start.q)
-np.testing.assert_almost_equal(res.traj[-1], res_goal.q)
 
-traj = res.traj.resample(30)
-np.testing.assert_almost_equal(traj[0], res_start.q)
-np.testing.assert_almost_equal(traj[-1], res_goal.q)
+sqp_solver = SQPBasedSolver.init(
+    SQPBasedSolverConfig(
+        30, n_max_call=100, motion_step_satisfaction="explicit", verbose=True, ctol_eq=1e-3
+    )
+)
+sqp_solver.setup(problem)
+sqp_res = sqp_solver.solve(res.traj)
+assert sqp_res.traj is not None
+
+traj = sqp_res.traj.resample(30)
 
 vis = TrimeshSceneViewer()
 vis.add(jaxon)
@@ -72,7 +78,6 @@ vis.show()
 time.sleep(15)
 
 for q in traj:
-    print("hoge!")
     set_robot_state(jaxon, config._get_control_joint_names(), q, base_type=BaseType.FLOATING)
     vis.redraw()
     time.sleep(1)
