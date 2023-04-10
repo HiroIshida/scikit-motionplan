@@ -1,65 +1,72 @@
 import time
 
 import numpy as np
-from ompl import Algorithm
+from skrobot.coordinates import Coordinates, rpy_matrix
 from skrobot.viewers import TrimeshSceneViewer
 from tinyfk import BaseType
 
 from skmp.constraint import ConfigPointConst, PoseConstraint
 from skmp.robot.jaxon import Jaxon, JaxonConfig
 from skmp.robot.utils import set_robot_state
-from skmp.satisfy import satisfy_by_optimization
+from skmp.satisfy import satisfy_by_optimization_with_budget
 from skmp.solver.interface import Problem
 from skmp.solver.nlp_solver import SQPBasedSolver, SQPBasedSolverConfig
-from skmp.solver.ompl_solver import OMPLSolver, OMPLSolverConfig
 
 np.random.seed(0)
 
 config = JaxonConfig()
-efkin = config.get_endeffector_kin()
+efkin = config.get_endeffector_kin(lleg=True, rleg=True)
 bounds = config.get_box_const()
 jaxon = Jaxon()
-
+angle = -2.0
 start_coords_list = [
-    np.array([0.0, -0.3, 0.0, 0, 0, 0]),
-    np.array([0.0, +0.3, 0.0, 0, 0, 0]),
-    np.array([0.6, -0.3, 0.0, 0, 0, 0]),
-    np.array([0.6, +0.3, 0.0, 0, 0, 0]),
+    Coordinates([0, -0.15, 0]),
+    Coordinates([0, +0.15, 0]),
+    Coordinates([0, -0.15, 1.5], rot=rpy_matrix(0, angle, 0)),
+    Coordinates([0, +0.15, 1.5], rot=rpy_matrix(0, angle, 0)),
 ]
 
 goal_coords_list = [
-    np.array([0.0, -0.3, 0.0, 0, 0, 0]),
-    np.array([0.0, +0.3, 0.0, 0, 0, 0]),
-    np.array([0.9, -0.3, 0.0, 0, 0, 0]),
-    np.array([0.6, +0.3, 0.0, 0, 0, 0]),
+    Coordinates([0, -0.15, 0.3]),
+    Coordinates([0, +0.15, 0]),
+    Coordinates([0, -0.15, 1.5], rot=rpy_matrix(0, angle, 0)),
+    Coordinates([0, +0.15, 1.5], rot=rpy_matrix(0, angle, 0)),
 ]
 
-eq_const = PoseConstraint(start_coords_list, efkin, jaxon)
-res_start = satisfy_by_optimization(eq_const, bounds, None, None)
+selcol_const = config.get_neural_selcol_const(jaxon)
+
+eq_const_start = PoseConstraint.from_skrobot_coords(start_coords_list, efkin, jaxon)
+res_start = satisfy_by_optimization_with_budget(
+    eq_const_start, bounds, selcol_const, None, n_trial_budget=100
+)
 assert res_start.success
 
-eq_const = PoseConstraint(goal_coords_list, efkin, jaxon)
-res_goal = satisfy_by_optimization(eq_const, bounds, None, None)
+eq_const_goal = PoseConstraint.from_skrobot_coords(goal_coords_list, efkin, jaxon)
+res_goal = satisfy_by_optimization_with_budget(
+    eq_const_goal, bounds, selcol_const, res_start.q, n_trial_budget=100
+)
 assert res_goal.success
 
 const_coords_list = [
-    np.array([0.0, -0.3, 0.0, 0, 0, 0]),
-    np.array([0.0, +0.3, 0.0, 0, 0, 0]),
-    np.array([0.6, +0.3, 0.0, 0, 0, 0]),
+    Coordinates([0, +0.15, 0]),
+    Coordinates([0, -0.15, 1.5], rot=rpy_matrix(0, angle, 0)),
+    Coordinates([0, +0.15, 1.5], rot=rpy_matrix(0, angle, 0)),
 ]
-efkin_swing = config.get_endeffector_kin(rarm=False)
-eq_const_global = PoseConstraint(const_coords_list, efkin_swing, jaxon)
+efkin_swing = config.get_endeffector_kin(rleg=False)
+eq_const_global = PoseConstraint.from_skrobot_coords(const_coords_list, efkin_swing, jaxon)
+problem = Problem(
+    res_start.q, bounds, ConfigPointConst(res_goal.q), None, eq_const_global, motion_step_box_=0.1
+)
 
 print("start solving")
-problem = Problem(res_start.q, bounds, ConfigPointConst(res_goal.q), None, eq_const_global)
-solver = OMPLSolver.init(
-    OMPLSolverConfig(
-        n_max_call=10000, simplify=True, algorithm=Algorithm.KPIECE1, algorithm_range=0.1
-    )
-)
-solver.setup(problem)
-res = solver.solve()
-assert res.traj is not None
+# solver = OMPLSolver.init(
+#     OMPLSolverConfig(
+#         n_max_call=10000, simplify=True, algorithm=Algorithm.KPIECE1, algorithm_range=0.001
+#     )
+# )
+# solver.setup(problem)
+# res = solver.solve()
+# assert res.traj is not None
 
 sqp_solver = SQPBasedSolver.init(
     SQPBasedSolverConfig(
@@ -67,7 +74,7 @@ sqp_solver = SQPBasedSolver.init(
     )
 )
 sqp_solver.setup(problem)
-sqp_res = sqp_solver.solve(res.traj)
+sqp_res = sqp_solver.solve()
 assert sqp_res.traj is not None
 
 traj = sqp_res.traj.resample(30)
@@ -78,6 +85,7 @@ vis.show()
 time.sleep(15)
 
 for q in traj:
+    print(q)
     set_robot_state(jaxon, config._get_control_joint_names(), q, base_type=BaseType.FLOATING)
     vis.redraw()
     time.sleep(1)

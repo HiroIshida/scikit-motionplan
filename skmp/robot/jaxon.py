@@ -7,7 +7,7 @@ from robot_descriptions.jaxon_description import URDF_PATH as JAXON_URDF_PATH
 from skrobot.coordinates import CascadedCoords
 from skrobot.coordinates.math import rotation_matrix, rpy_angle
 from skrobot.models.urdf import RobotModelFromURDF
-from tinyfk import BaseType, RobotModel
+from tinyfk import BaseType, RobotModel, RotationType
 
 from skmp.constraint import BoxConst, NeuralSelfCollFreeConst
 from skmp.kinematics import ArticulatedEndEffectorKinematicsMap
@@ -89,6 +89,7 @@ class JaxonConfig:
             self._get_control_joint_names(),
             endeffector_names,
             base_type=BaseType.FLOATING,
+            rot_type=RotationType.XYZW,
             fksolver_init_hook=self.add_end_coords,
         )
         return kinmap
