@@ -170,15 +170,20 @@ class OsqpSqpSolver:
             Jx_eq = J_eq.dot(x_guess)
 
             # inequality
-            val_ineq, J_ineq = self.cons_ineq(x_guess)
-            J_ineq = sparsify(J_ineq)
-            Jx_ineq = J_ineq.dot(x_guess)
+            if self.cons_ineq is None:
+                val_ineq = None
+                J_ineq = None
+                Jx_ineq = None
+            else:
+                val_ineq, J_ineq = self.cons_ineq(x_guess)
+                J_ineq = sparsify(J_ineq)
+                Jx_ineq = J_ineq.dot(x_guess)
 
             eval_cache = self.EvaluateCache(val_eq, J_eq, Jx_eq, val_ineq, J_ineq, Jx_ineq)
 
             # check break condition satisfied
             eq_const_satisfied = np.all(np.abs(val_eq) < config.ctol_eq)
-            ineq_const_satisfied = np.all(val_ineq > -config.ctol_ineq)
+            ineq_const_satisfied = self.cons_ineq is None or np.all(val_ineq > -config.ctol_ineq)  # type: ignore
             objective = self.P.dot(x_guess).dot(x_guess)
             if config.verbose:
                 print("iter: {}".format(idx_iter))
@@ -191,10 +196,15 @@ class OsqpSqpSolver:
                         to_exp_notation(objective), eq_const_satisfied, ineq_const_satisfied
                     )
                 )
+
                 n_eq_violation = sum(np.abs(val_eq) > config.ctol_eq)
                 eq_max_vilation = np.max(np.abs(val_eq))
-                n_ineq_violation = sum(val_ineq > -config.ctol_ineq)
-                ineq_max_violation = np.min(val_ineq)
+                if self.cons_ineq is not None:
+                    n_ineq_violation = sum(val_ineq > -config.ctol_ineq)  # type: ignore
+                    ineq_max_violation = np.min(val_ineq)  # type: ignore
+                else:
+                    n_ineq_violation = 0
+                    ineq_max_violation = -np.inf
                 print(
                     "eq max violation: {}, ineq max violation: {}".format(
                         to_exp_notation(eq_max_vilation), to_exp_notation(ineq_max_violation)
