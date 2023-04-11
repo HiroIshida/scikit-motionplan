@@ -8,6 +8,7 @@ import numpy as np
 from ompl import (
     Algorithm,
     ConstrainedPlanner,
+    ConstStateType,
     ERTConnectPlanner,
     InvalidProblemError,
     LightningDB,
@@ -36,6 +37,7 @@ class OMPLSolverConfig:
     simplify: bool = False
     expbased_planner_backend: Literal["ertconnect", "lightning"] = "lightning"
     ertconnect_eps: float = 5.0  # used only when ertconnect is selected
+    const_state_type: ConstStateType = ConstStateType.PROJECTION
 
 
 class TerminateState(Enum):
@@ -98,6 +100,7 @@ class OMPLSolverBase(AbstractSolver[OMPLSolverConfig, OMPLSolverResult]):
             validation_box=problem.motion_step_box,
             algo=self.config.algorithm,
             algo_range=self.config.algorithm_range,
+            cs_type=self.config.const_state_type,
         )
 
         self.problem = problem
@@ -207,8 +210,10 @@ class OMPLSolver(AbstractScratchSolver[OMPLSolverConfig, OMPLSolverResult], OMPL
         return cls(config, None, None, None, n_call_dict)
 
     def create_planner(self, **kwargs) -> _OMPLPlannerBase:
-        if kwargs["eq_const"] is None:
+        is_unconstraind = kwargs["eq_const"] is None
+        if is_unconstraind:
             kwargs.pop("eq_const")
+            kwargs.pop("cs_type")
             return Planner(**kwargs)
         else:
             f = kwargs["eq_const"]
@@ -245,5 +250,6 @@ class LightningSolver(AbstractDataDrivenSolver[OMPLSolverConfig, OMPLSolverResul
         if kwargs["eq_const"] is not None:
             raise RuntimeError("lightning does not support global equality constraint")
         kwargs.pop("eq_const")
+        kwargs.pop("cs_type")
         kwargs["db"] = self.db
         return LightningPlanner(**kwargs)
