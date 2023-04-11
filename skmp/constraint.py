@@ -333,17 +333,20 @@ class ConfigPointConst(AbstractEqConst):
 class PoseConstraint(AbstractEqConst):
     efkin: ArticulatedEndEffectorKinematicsMap
     desired_poses: List[np.ndarray]
+    debug_rank_deficiency: bool = False
 
     def __init__(
         self,
         desired_poses: List[np.ndarray],
         efkin: ArticulatedEndEffectorKinematicsMap,
         robot_model: RobotModel,
+        debug_rank_deficiency: bool,
     ) -> None:
         assert len(desired_poses) == efkin.n_feature
         self.desired_poses = desired_poses
         self.efkin = efkin
         self.reflect_skrobot_model(robot_model)
+        self.debug_rank_deficiency = debug_rank_deficiency
 
     def _evaluate(
         self, qs: np.ndarray, with_jacobian: bool = False
@@ -356,6 +359,16 @@ class PoseConstraint(AbstractEqConst):
 
         target = np.hstack(self.desired_poses)
         values = xs - target
+        if self.debug_rank_deficiency:
+            for i in range(len(jacs)):
+                jac = jacs[i]
+                rank_diff = jac.shape[0] - np.linalg.matrix_rank(jac)
+                if rank_diff > 0:
+                    row_sums = np.sum(jac, axis=1)
+                    message = "rank diference: {}".format(rank_diff)
+                    message += ", row sums: {}".format(row_sums)
+                    assert False, message
+
         return values, jacs
 
     @classmethod
@@ -364,6 +377,7 @@ class PoseConstraint(AbstractEqConst):
         co_list: List[Coordinates],
         efkin: ArticulatedEndEffectorKinematicsMap,
         robot_model: RobotModel,
+        debug_rank_deficiency: bool = False,
     ) -> "PoseConstraint":
         vector_list = []
         for co in co_list:
@@ -381,7 +395,7 @@ class PoseConstraint(AbstractEqConst):
                 assert False
 
             vector_list.append(vector)
-        return cls(vector_list, efkin, robot_model)
+        return cls(vector_list, efkin, robot_model, debug_rank_deficiency)
 
     def _reflect_skrobot_model(self, robot_model: Optional[RobotModel]) -> None:
         assert robot_model is not None
