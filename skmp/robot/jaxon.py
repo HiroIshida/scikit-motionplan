@@ -1,3 +1,5 @@
+import copy
+import uuid
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List
@@ -9,8 +11,12 @@ from skrobot.coordinates.math import rotation_matrix, rpy_angle
 from skrobot.models.urdf import RobotModelFromURDF
 from tinyfk import BaseType, RobotModel, RotationType
 
+from skmp.collision import SphereCollection
 from skmp.constraint import BoxConst, NeuralSelfCollFreeConst
-from skmp.kinematics import ArticulatedEndEffectorKinematicsMap
+from skmp.kinematics import (
+    ArticulatedCollisionKinematicsMap,
+    ArticulatedEndEffectorKinematicsMap,
+)
 
 
 class Jaxon(RobotModelFromURDF):
@@ -91,6 +97,66 @@ class JaxonConfig:
             base_type=BaseType.FLOATING,
             rot_type=RotationType.XYZW,
             fksolver_init_hook=self.add_end_coords,
+        )
+        return kinmap
+
+    def get_collision_kin(
+        self, rsole: bool = True, lsole: bool = True
+    ) -> ArticulatedCollisionKinematicsMap:
+        link_wise_sphere_creator = {}
+        collision_link_names = []
+
+        if rsole:
+            link_name = "RLEG_LINK5"
+            collection = []
+            collection.append((np.array([-0.08, 0.035, -0.075]), 0.04, str(uuid.uuid4())))
+            collection.append((np.array([-0.08, -0.05, -0.075]), 0.04, str(uuid.uuid4())))
+            collection.append((np.array([0.105, 0.035, -0.075]), 0.04, str(uuid.uuid4())))
+            collection.append((np.array([0.105, -0.05, -0.075]), 0.04, str(uuid.uuid4())))
+            collection.append((np.array([-0.0, 0.0, -0.075]), 0.04, str(uuid.uuid4())))
+            collection.append((np.array([0.0, 0.0, 0.0]), 0.07, str(uuid.uuid4())))
+            sc_rleg5 = copy.deepcopy(SphereCollection(*list(zip(*collection))))
+            link_wise_sphere_creator[link_name] = lambda mesh: sc_rleg5
+            collision_link_names.append(link_name)
+
+        if lsole:
+            link_name = "LLEG_LINK5"
+            collection = []
+            collection.append((np.array([-0.08, -0.035, -0.075]), 0.04, str(uuid.uuid4())))
+            collection.append((np.array([-0.08, +0.05, -0.075]), 0.04, str(uuid.uuid4())))
+            collection.append((np.array([0.105, -0.035, -0.075]), 0.04, str(uuid.uuid4())))
+            collection.append((np.array([0.105, +0.05, -0.075]), 0.04, str(uuid.uuid4())))
+            collection.append((np.array([-0.0, 0.0, -0.075]), 0.04, str(uuid.uuid4())))
+            collection.append((np.array([0.0, 0.0, 0.0]), 0.07, str(uuid.uuid4())))
+            sc_lleg5 = copy.deepcopy(SphereCollection(*list(zip(*collection))))
+            link_wise_sphere_creator[link_name] = lambda mesh: sc_lleg5
+            collision_link_names.append(link_name)
+
+        # link4
+        link_name = "RLEG_LINK4"
+        collection = []
+        collection.append((np.array([0.0, 0.0, 0.0]), 0.08, str(uuid.uuid4())))
+        collection.append((np.array([0.01, 0.0, 0.1]), 0.08, str(uuid.uuid4())))
+        collection.append((np.array([0.03, 0.0, 0.2]), 0.08, str(uuid.uuid4())))
+        sc_rleg4 = copy.deepcopy(SphereCollection(*list(zip(*collection))))
+        link_wise_sphere_creator[link_name] = lambda mesh: sc_rleg4
+        collision_link_names.append(link_name)
+
+        link_name = "LLEG_LINK4"
+        collection = []
+        collection.append((np.array([0.0, 0.0, 0.0]), 0.08, str(uuid.uuid4())))
+        collection.append((np.array([0.01, 0.0, 0.1]), 0.08, str(uuid.uuid4())))
+        collection.append((np.array([0.03, 0.0, 0.2]), 0.08, str(uuid.uuid4())))
+        sc_lleg4 = copy.deepcopy(SphereCollection(*list(zip(*collection))))
+        link_wise_sphere_creator[link_name] = lambda mesh: sc_lleg4
+        collision_link_names.append(link_name)
+
+        kinmap = ArticulatedCollisionKinematicsMap(
+            self.urdf_path(),
+            self._get_control_joint_names(),
+            collision_link_names,
+            link_wise_sphere_creator=link_wise_sphere_creator,
+            base_type=BaseType.FLOATING,
         )
         return kinmap
 
