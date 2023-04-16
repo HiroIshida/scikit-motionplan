@@ -1,8 +1,9 @@
 import copy
+from functools import lru_cache
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 import numpy as np
 from robot_descriptions.jaxon_description import URDF_PATH as JAXON_URDF_PATH
@@ -191,6 +192,25 @@ class JaxonConfig:
             self.urdf_path(), self._get_control_joint_names(), base_bounds=base_bounds
         )
         return bounds
+
+    def get_close_box_const(self, q: Optional[np.ndarray] = None, joint_margin: float = 1.0, base_pos_margin: float = 0.8, base_rot_margin: float = 1.0) -> BoxConst:
+        box_const = self.get_box_const()
+        if q is None:
+            return box_const
+        q_max = np.zeros(q.shape)
+        q_min = np.zeros(q.shape)
+
+        slices = [slice(None, -6), slice(-6, -3), slice(-3, None)]
+        margins = [joint_margin, base_pos_margin, base_rot_margin]
+        do_clips = [True, False, True]
+        for slice_indices, margin, do_clip in zip(slices, margins, do_clips):
+            if do_clip:
+                q_max[slice_indices] = np.minimum(q[slice_indices] + margin, box_const.ub[slice_indices])
+                q_min[slice_indices] = np.maximum(q[slice_indices] - margin, box_const.lb[slice_indices])
+            else:
+                q_max[slice_indices] = q[slice_indices] + margin
+                q_min[slice_indices] = q[slice_indices] - margin
+        return BoxConst(q_min, q_max)
 
     def get_neural_selcol_const(self, robot_model: Jaxon) -> NeuralSelfCollFreeConst:
         return NeuralSelfCollFreeConst.load(
