@@ -163,8 +163,8 @@ class JaxonConfig:
         return kinmap
 
     def get_box_const(self) -> BoxConst:
-        base_bounds = np.array([-1.0, -1.0, -2.0, -1.0, -1.0, -1.0]), np.array(
-            [1.0, 1.0, 2.0, 1.0, 1.0, 1.0]
+        base_bounds = np.array([-1.0, -1.0, 0.0, -1.0, -1.0, -1.0]), np.array(
+            [2.0, 1.0, 3.0, 1.0, 1.0, 1.0]
         )
         bounds = BoxConst.from_urdf(
             self.urdf_path(), self._get_control_joint_names(), base_bounds=base_bounds
