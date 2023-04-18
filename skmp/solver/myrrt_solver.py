@@ -6,7 +6,11 @@ from typing import Optional, Type, TypeVar
 import numpy as np
 
 from skmp.satisfy import SatisfactionConfig, SatisfactionResult, satisfy_by_optimization
-from skmp.solver._manifold_rrt_solver import ManifoldRRTConfig, ManifoldRRTConnect
+from skmp.solver._manifold_rrt_solver import (
+    ManifoldRRT,
+    ManifoldRRTConfig,
+    ManifoldRRTConnect,
+)
 from skmp.solver.interface import AbstractScratchSolver, Problem
 from skmp.trajectory import Trajectory
 
@@ -82,6 +86,45 @@ class MyRRTSolverBase(AbstractScratchSolver[MyRRTConfig, MyRRTResult]):
 
 
 @dataclass
+class MyRRTSolver(MyRRTSolverBase):
+    def solve(self, init_traj: Optional[Trajectory] = None) -> MyRRTResult:
+        """solve problem with maybe a solution guess"""
+        assert init_traj is None, "don't support replanning"
+        assert self.problem is not None
+
+        ts = time.time()
+
+        inner_conf = ManifoldRRTConfig(self.config.n_max_call)
+
+        assert not self.config.sample_goal_first  # TODO
+
+        def is_reached(q):
+            assert self.problem is not None
+            return self.problem.goal_const.is_approx_satisfied(q)
+
+        rrt = ManifoldRRT(
+            self.problem.start,
+            is_reached,
+            self.problem.box_const.lb,
+            self.problem.box_const.ub,
+            self.problem.motion_step_box,
+            self.project,
+            self.is_valid,
+            config=inner_conf,
+        )
+        is_success = rrt.solve()
+        if is_success:
+            traj = Trajectory(list(rrt.get_solution()))
+            return MyRRTResult(
+                traj, time.time() - ts, rrt.n_extension_trial, TerminateState.SUCCESS
+            )
+        else:
+            return MyRRTResult(
+                None, time.time() - ts, self.config.n_max_call, TerminateState.FAIL_PLANNING
+            )
+
+
+@dataclass
 class MyRRTConnectSolver(MyRRTSolverBase):
     def solve(self, init_traj: Optional[Trajectory] = None) -> MyRRTResult:
         """solve problem with maybe a solution guess"""
@@ -116,7 +159,7 @@ class MyRRTConnectSolver(MyRRTSolverBase):
             self.problem.motion_step_box,
             self.project,
             self.is_valid,
-            conf,
+            config=conf,
         )
         is_success = rrtconnect.solve()
         if is_success:

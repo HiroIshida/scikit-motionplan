@@ -76,6 +76,12 @@ class AbstractEqConst(AbstractConst):
     def is_equality(cls) -> bool:
         return True
 
+    def is_approx_satisfied(self, q: np.ndarray, eps: float = 0.01) -> bool:
+        # TODO: this is experimental!!
+        values, _ = self.evaluate_single(q, False)
+        print(values)
+        return bool(np.all(np.abs(values) < eps))
+
 
 @runtime_checkable
 class VectorDescriptable(Protocol):
