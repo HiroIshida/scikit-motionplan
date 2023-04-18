@@ -1,5 +1,4 @@
 import copy
-from functools import lru_cache
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
@@ -102,7 +101,7 @@ class JaxonConfig:
         return kinmap
 
     def get_collision_kin(
-        self, rsole: bool = True, lsole: bool = True
+        self, rsole: bool = True, lsole: bool = True, rgripper: bool = True, lgripper: bool = True
     ) -> ArticulatedCollisionKinematicsMap:
         link_wise_sphere_creator = {}
         collision_link_names = []
@@ -133,7 +132,7 @@ class JaxonConfig:
             link_wise_sphere_creator[link_name] = lambda mesh: sc_lleg5
             collision_link_names.append(link_name)
 
-        # link3
+        # leg link3
         link_name = "RLEG_LINK3"
         collection = []
         collection.append((np.array([0.0, 0.0, 0.0]), 0.08, str(uuid.uuid4())))
@@ -154,7 +153,7 @@ class JaxonConfig:
         link_wise_sphere_creator[link_name] = lambda mesh: sc_lleg3
         collision_link_names.append(link_name)
 
-        # link2
+        # leg link2
         link_name = "RLEG_LINK2"
         collection = []
         collection.append((np.array([0.0, -0.01, 0.0]), 0.08, str(uuid.uuid4())))
@@ -175,6 +174,115 @@ class JaxonConfig:
         link_wise_sphere_creator[link_name] = lambda mesh: sc_lleg2
         collision_link_names.append(link_name)
 
+        # arm finger
+        if rgripper:
+            link_name = "RARM_FINGER0"
+            collection = []
+            collection.append((np.array([0.04, 0.01, 0.0]), 0.02, str(uuid.uuid4())))
+            collection.append((np.array([0.06, 0.02, 0.0]), 0.02, str(uuid.uuid4())))
+            collection.append((np.array([0.1, 0.02, 0.0]), 0.02, str(uuid.uuid4())))
+            collection.append((np.array([0.14, 0.01, 0.0]), 0.02, str(uuid.uuid4())))
+            sc_rarm_finger0 = copy.deepcopy(SphereCollection(*list(zip(*collection))))
+            link_wise_sphere_creator[link_name] = lambda mesh: sc_rarm_finger0
+            collision_link_names.append(link_name)
+
+            link_name = "RARM_FINGER1"
+            collection = []
+            collection.append((np.array([0.04, -0.01, 0.02]), 0.02, str(uuid.uuid4())))
+            collection.append((np.array([0.06, -0.02, 0.02]), 0.02, str(uuid.uuid4())))
+            collection.append((np.array([0.1, -0.02, 0.02]), 0.02, str(uuid.uuid4())))
+            collection.append((np.array([0.14, -0.01, 0.02]), 0.02, str(uuid.uuid4())))
+            collection.append((np.array([0.04, -0.01, -0.02]), 0.02, str(uuid.uuid4())))
+            collection.append((np.array([0.06, -0.02, -0.02]), 0.02, str(uuid.uuid4())))
+            collection.append((np.array([0.1, -0.02, -0.02]), 0.02, str(uuid.uuid4())))
+            collection.append((np.array([0.14, -0.01, -0.02]), 0.02, str(uuid.uuid4())))
+            sc_rarm_finger1 = copy.deepcopy(SphereCollection(*list(zip(*collection))))
+            link_wise_sphere_creator[link_name] = lambda mesh: sc_rarm_finger1
+            collision_link_names.append(link_name)
+
+        if lgripper:
+            link_name = "LARM_FINGER0"
+            collection = []
+            collection.append((np.array([0.04, 0.01, 0.0]), 0.02, str(uuid.uuid4())))
+            collection.append((np.array([0.06, 0.02, 0.0]), 0.02, str(uuid.uuid4())))
+            collection.append((np.array([0.1, 0.02, 0.0]), 0.02, str(uuid.uuid4())))
+            collection.append((np.array([0.14, 0.01, 0.0]), 0.02, str(uuid.uuid4())))
+            sc_larm_finger0 = copy.deepcopy(SphereCollection(*list(zip(*collection))))
+            link_wise_sphere_creator[link_name] = lambda mesh: sc_larm_finger0
+            collision_link_names.append(link_name)
+
+            link_name = "LARM_FINGER1"
+            collection = []
+            collection.append((np.array([0.04, -0.01, 0.02]), 0.02, str(uuid.uuid4())))
+            collection.append((np.array([0.06, -0.02, 0.02]), 0.02, str(uuid.uuid4())))
+            collection.append((np.array([0.1, -0.02, 0.02]), 0.02, str(uuid.uuid4())))
+            collection.append((np.array([0.14, -0.01, 0.02]), 0.02, str(uuid.uuid4())))
+            collection.append((np.array([0.04, -0.01, -0.02]), 0.02, str(uuid.uuid4())))
+            collection.append((np.array([0.06, -0.02, -0.02]), 0.02, str(uuid.uuid4())))
+            collection.append((np.array([0.1, -0.02, -0.02]), 0.02, str(uuid.uuid4())))
+            collection.append((np.array([0.14, -0.01, -0.02]), 0.02, str(uuid.uuid4())))
+            sc_larm_finger1 = copy.deepcopy(SphereCollection(*list(zip(*collection))))
+            link_wise_sphere_creator[link_name] = lambda mesh: sc_larm_finger1
+            collision_link_names.append(link_name)
+
+        link_name = "RARM_LINK7"
+        collection = []
+        collection.append((np.array([0.0, 0.0, -0.14]), 0.06, str(uuid.uuid4())))
+        sc_rarm_link7 = copy.deepcopy(SphereCollection(*list(zip(*collection))))
+        link_wise_sphere_creator[link_name] = lambda mesh: sc_rarm_link7
+        collision_link_names.append(link_name)
+
+        link_name = "LARM_LINK7"
+        collection = []
+        collection.append((np.array([0.0, 0.0, -0.14]), 0.06, str(uuid.uuid4())))
+        sc_larm_link7 = copy.deepcopy(SphereCollection(*list(zip(*collection))))
+        link_wise_sphere_creator[link_name] = lambda mesh: sc_larm_link7
+        collision_link_names.append(link_name)
+
+        link_name = "RARM_LINK5"
+        collection = []
+        collection.append((np.array([0.0, 0.0, 0.0]), 0.08, str(uuid.uuid4())))
+        collection.append((np.array([0.0, 0.0, +0.12]), 0.08, str(uuid.uuid4())))
+        collection.append((np.array([0.0, 0.0, -0.12]), 0.08, str(uuid.uuid4())))
+        sc_rarm_link5 = copy.deepcopy(SphereCollection(*list(zip(*collection))))
+        link_wise_sphere_creator[link_name] = lambda mesh: sc_rarm_link5
+        collision_link_names.append(link_name)
+
+        link_name = "LARM_LINK5"
+        collection = []
+        collection.append((np.array([0.0, 0.0, 0.0]), 0.08, str(uuid.uuid4())))
+        collection.append((np.array([0.0, 0.0, +0.12]), 0.08, str(uuid.uuid4())))
+        collection.append((np.array([0.0, 0.0, -0.12]), 0.08, str(uuid.uuid4())))
+        sc_larm_link5 = copy.deepcopy(SphereCollection(*list(zip(*collection))))
+        link_wise_sphere_creator[link_name] = lambda mesh: sc_larm_link5
+        collision_link_names.append(link_name)
+
+        link_name = "RARM_LINK3"
+        collection = []
+        collection.append((np.array([0.0, 0.0, 0.0]), 0.08, str(uuid.uuid4())))
+        collection.append((np.array([0.0, 0.0, +0.12]), 0.08, str(uuid.uuid4())))
+        sc_rarm_link3 = copy.deepcopy(SphereCollection(*list(zip(*collection))))
+        link_wise_sphere_creator[link_name] = lambda mesh: sc_rarm_link3
+        collision_link_names.append(link_name)
+
+        link_name = "LARM_LINK3"
+        collection = []
+        collection.append((np.array([0.0, 0.0, 0.0]), 0.08, str(uuid.uuid4())))
+        collection.append((np.array([0.0, 0.0, +0.12]), 0.08, str(uuid.uuid4())))
+        sc_larm_link3 = copy.deepcopy(SphereCollection(*list(zip(*collection))))
+        link_wise_sphere_creator[link_name] = lambda mesh: sc_larm_link3
+        collision_link_names.append(link_name)
+
+        link_name = "CHEST_LINK2"
+        collection = []
+        collection.append((np.array([0.0, 0.0, 0.0]), 0.15, str(uuid.uuid4())))
+        collection.append((np.array([0.0, 0.0, -0.3]), 0.15, str(uuid.uuid4())))
+        collection.append((np.array([-0.2, 0.0, -0.1]), 0.20, str(uuid.uuid4())))
+        collection.append((np.array([-0.2, 0.0, -0.4]), 0.20, str(uuid.uuid4())))
+        sc_chest_link2 = copy.deepcopy(SphereCollection(*list(zip(*collection))))
+        link_wise_sphere_creator[link_name] = lambda mesh: sc_chest_link2
+        collision_link_names.append(link_name)
+
         kinmap = ArticulatedCollisionKinematicsMap(
             self.urdf_path(),
             self._get_control_joint_names(),
@@ -193,7 +301,13 @@ class JaxonConfig:
         )
         return bounds
 
-    def get_close_box_const(self, q: Optional[np.ndarray] = None, joint_margin: float = 1.0, base_pos_margin: float = 0.8, base_rot_margin: float = 1.0) -> BoxConst:
+    def get_close_box_const(
+        self,
+        q: Optional[np.ndarray] = None,
+        joint_margin: float = 1.0,
+        base_pos_margin: float = 0.8,
+        base_rot_margin: float = 1.0,
+    ) -> BoxConst:
         box_const = self.get_box_const()
         if q is None:
             return box_const
@@ -205,8 +319,12 @@ class JaxonConfig:
         do_clips = [True, False, True]
         for slice_indices, margin, do_clip in zip(slices, margins, do_clips):
             if do_clip:
-                q_max[slice_indices] = np.minimum(q[slice_indices] + margin, box_const.ub[slice_indices])
-                q_min[slice_indices] = np.maximum(q[slice_indices] - margin, box_const.lb[slice_indices])
+                q_max[slice_indices] = np.minimum(
+                    q[slice_indices] + margin, box_const.ub[slice_indices]
+                )
+                q_min[slice_indices] = np.maximum(
+                    q[slice_indices] - margin, box_const.lb[slice_indices]
+                )
             else:
                 q_max[slice_indices] = q[slice_indices] + margin
                 q_min[slice_indices] = q[slice_indices] - margin
