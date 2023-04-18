@@ -1,7 +1,7 @@
 import time
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional, Type
+from typing import Optional, Type, TypeVar
 
 import numpy as np
 
@@ -15,7 +15,11 @@ from skmp.trajectory import Trajectory
 class MyRRTConfig:
     n_max_call: int
     n_max_satisfaction_trial: int = 100
-    satisfaction_conf: SatisfactionConfig = SatisfactionConfig()
+    satisfaction_conf: Optional[SatisfactionConfig] = SatisfactionConfig()
+
+    @property
+    def sample_goal_first(self) -> bool:
+        return self.satisfaction_conf is not None
 
 
 class TerminateState(Enum):
@@ -36,8 +40,11 @@ class MyRRTResult:
         return cls(None, time_elapsed, -1, TerminateState.FAIL_SATISFACTION)
 
 
+MyRRTSolverT = TypeVar("MyRRTSolverT", bound="MyRRTSolverBase")
+
+
 @dataclass
-class MyRRTConnectSolver(AbstractScratchSolver[MyRRTConfig, MyRRTResult]):
+class MyRRTSolverBase(AbstractScratchSolver[MyRRTConfig, MyRRTResult]):
     config: MyRRTConfig
     problem: Optional[Problem] = None
 
@@ -46,12 +53,36 @@ class MyRRTConnectSolver(AbstractScratchSolver[MyRRTConfig, MyRRTResult]):
         return MyRRTResult
 
     @classmethod
-    def init(cls: Type["MyRRTConnectSolver"], config: MyRRTConfig) -> "MyRRTConnectSolver":
+    def init(cls: Type[MyRRTSolverT], config: MyRRTConfig) -> MyRRTSolverT:
         return cls(config)
 
     def setup(self, problem: Problem) -> None:
         self.problem = problem
 
+    def project(self, q: np.ndarray) -> Optional[np.ndarray]:
+        assert self.problem is not None
+
+        if self.problem.global_eq_const is None:
+            return q
+        else:
+            res = satisfy_by_optimization(
+                self.problem.global_eq_const, self.problem.box_const, None, q
+            )
+            if res.success:
+                return res.q
+            else:
+                return None
+
+    def is_valid(self, q: np.ndarray) -> bool:
+        assert self.problem is not None
+        if self.problem.global_ineq_const is None:
+            return True
+        val, _ = self.problem.global_ineq_const.evaluate_single(q, False)
+        return bool(np.all(val > 0))
+
+
+@dataclass
+class MyRRTConnectSolver(MyRRTSolverBase):
     def solve(self, init_traj: Optional[Trajectory] = None) -> MyRRTResult:
         """solve problem with maybe a solution guess"""
 
@@ -60,6 +91,7 @@ class MyRRTConnectSolver(AbstractScratchSolver[MyRRTConfig, MyRRTResult]):
 
         ts = time.time()
 
+        assert self.config.sample_goal_first, "goal must be sampled before in rrt-connect"
         satisfy_result: SatisfactionResult
         for _ in range(self.config.n_max_satisfaction_trial):
             satisfy_result = satisfy_by_optimization(
@@ -74,27 +106,6 @@ class MyRRTConnectSolver(AbstractScratchSolver[MyRRTConfig, MyRRTResult]):
         if not satisfy_result.success:
             return MyRRTResult.abnormal(time.time() - ts)
 
-        def project(q: np.ndarray) -> Optional[np.ndarray]:
-            assert self.problem is not None
-
-            if self.problem.global_eq_const is None:
-                return q
-            else:
-                res = satisfy_by_optimization(
-                    self.problem.global_eq_const, self.problem.box_const, None, q
-                )
-                if res.success:
-                    return res.q
-                else:
-                    return None
-
-        def is_valid(q: np.ndarray) -> bool:
-            assert self.problem is not None
-            if self.problem.global_ineq_const is None:
-                return True
-            val, _ = self.problem.global_ineq_const.evaluate_single(q, False)
-            return bool(np.all(val > 0))
-
         conf = ManifoldRRTConfig(self.config.n_max_call)
 
         rrtconnect = ManifoldRRTConnect(
@@ -103,8 +114,8 @@ class MyRRTConnectSolver(AbstractScratchSolver[MyRRTConfig, MyRRTResult]):
             self.problem.box_const.lb,
             self.problem.box_const.ub,
             self.problem.motion_step_box,
-            project,
-            is_valid,
+            self.project,
+            self.is_valid,
             conf,
         )
         is_success = rrtconnect.solve()

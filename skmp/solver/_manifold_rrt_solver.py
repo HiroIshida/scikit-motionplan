@@ -1,7 +1,7 @@
 from abc import ABC
 from dataclasses import dataclass
 from enum import Enum
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, List, Optional, Tuple, Union
 
 import numpy as np
 
@@ -29,7 +29,7 @@ class TerminationException(Exception):
 
 
 class ManifoldRRT(ABC):
-    q_goal: Optional[np.ndarray]
+    is_reached: Optional[Callable[[np.ndarray], bool]]
     b_min: np.ndarray
     b_max: np.ndarray
     motion_step_box: np.ndarray
@@ -43,7 +43,7 @@ class ManifoldRRT(ABC):
     def __init__(
         self,
         start: np.ndarray,
-        goal: Optional[np.ndarray],
+        goal: Optional[Union[np.ndarray, Callable[[np.ndarray], bool]]],
         b_min: np.ndarray,
         b_max: np.ndarray,
         motion_step_box: np.ndarray,
@@ -55,8 +55,9 @@ class ManifoldRRT(ABC):
 
         assert f_is_valid(start)
         if goal is not None:
-            f_is_valid(goal)
-        self.q_goal = goal
+            assert callable(goal)
+        self.is_reached = goal
+
         self.b_min = b_min
         self.b_max = b_max
         self.nodes = [Node(start, None)]
@@ -147,6 +148,19 @@ class ManifoldRRT(ABC):
                 return None
             if result == ExtensionResult.REACHED:
                 return self.nodes[-1]
+
+    def solve(self) -> bool:
+        assert self.is_reached is not None
+        try:
+            while True:
+                q_rand = self.sample()
+                res = self.extend(q_rand)
+                if res == ExtensionResult.ADVANCED:
+                    if self.is_reached(self.nodes[-1].q):
+                        return True
+        except TerminationException:
+            return False
+        return False
 
     def visualize(self, fax):
         assert self.dof in [3]
