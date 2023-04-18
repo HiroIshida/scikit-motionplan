@@ -58,6 +58,15 @@ class ManifoldRRT(ABC):
             assert callable(goal)
         self.is_reached = goal
 
+        if termination_hook is None:
+
+            def termination_hook():
+                n_total = self.n_extension_trial
+                if n_total > config.n_max_call:
+                    raise TerminationException
+
+        self.termination_hook = termination_hook
+
         self.b_min = b_min
         self.b_max = b_max
         self.nodes = [Node(start, None)]
@@ -161,6 +170,18 @@ class ManifoldRRT(ABC):
         except TerminationException:
             return False
         return False
+
+    def get_solution(self) -> np.ndarray:
+        node = self.nodes[-1]
+        q_seq = [node.q]
+
+        while True:
+            node = node.node_parent  # type: ignore
+            if node is None:
+                break
+            q_seq.append(node.q)
+        q_seq.reverse()
+        return np.array(q_seq)
 
     def visualize(self, fax):
         assert self.dof in [3]
@@ -277,6 +298,7 @@ class ManifoldRRTConnect:
         return False
 
     def get_solution(self) -> np.ndarray:
+        # TODO: reuse ManifoldRRT
         assert self.connection is not None
         node = self.connection[0]
         q_seq_start = [node.q]
