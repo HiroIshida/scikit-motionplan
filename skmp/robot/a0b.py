@@ -1,16 +1,15 @@
+import copy
+import uuid
 from pathlib import Path
 from typing import List
 
+import numpy as np
 from skrobot.coordinates import CascadedCoords
 from skrobot.model.primitives import Box
 from skrobot.models.urdf import RobotModelFromURDF
 from tinyfk import BaseType, RobotModel, RotationType
 
-from skmp.collision import (
-    SphereCollection,
-    SphereCreatorConfig,
-    create_sphere_collection,
-)
+from skmp.collision import SphereCollection
 from skmp.constraint import BoxConst
 from skmp.kinematics import (
     ArticulatedCollisionKinematicsMap,
@@ -75,18 +74,58 @@ class A0BConfig:
         return kinmap
 
     def get_collision_kin(self) -> ArticulatedCollisionKinematicsMap:
+        collision_link_names = ["RARM_LINK{}".format(i) for i in range(6)]
+
         link_wise_sphere_creator = {}
 
-        def create_creator(radius_scale: float):
-            config_tiny = SphereCreatorConfig(tol=0.2, radius_scale=radius_scale)
+        link_name = "RARM_LINK0"
+        collection = []
+        collection.append((np.array([0.0, 0.0, 0.0]), 0.08, str(uuid.uuid4())))
+        sc_rarm0 = copy.deepcopy(SphereCollection(*list(zip(*collection))))
+        link_wise_sphere_creator[link_name] = lambda mesh: sc_rarm0
+        collision_link_names.append(link_name)
 
-            def f(mesh) -> SphereCollection:
-                return create_sphere_collection(mesh, config_tiny)
+        link_name = "RARM_LINK1"
+        collection = []
+        collection.append((np.array([0.1, 0.0, 0.0]), 0.05, str(uuid.uuid4())))
+        collection.append((np.array([0.2, 0.0, 0.0]), 0.09, str(uuid.uuid4())))
+        sc_rarm1 = copy.deepcopy(SphereCollection(*list(zip(*collection))))
+        link_wise_sphere_creator[link_name] = lambda mesh: sc_rarm1
+        collision_link_names.append(link_name)
 
-            return f
+        link_name = "RARM_LINK2"
+        collection = []
+        collection.append((np.array([0.0, 0.0, 0.0]), 0.095, str(uuid.uuid4())))
+        sc_rarm2 = copy.deepcopy(SphereCollection(*list(zip(*collection))))
+        link_wise_sphere_creator[link_name] = lambda mesh: sc_rarm2
+        collision_link_names.append(link_name)
 
-        collision_link_names = ["RARM_LINK{}".format(i) for i in range(6)]
-        link_wise_sphere_creator = {name: create_creator(0.8) for name in collision_link_names}
+        link_name = "RARM_LINK3"
+        collection = []
+        collection.append((np.array([0.1, 0.0, 0.0]), 0.05, str(uuid.uuid4())))
+        collection.append((np.array([0.2, 0.0, 0.0]), 0.09, str(uuid.uuid4())))
+        sc_rarm3 = copy.deepcopy(SphereCollection(*list(zip(*collection))))
+        link_wise_sphere_creator[link_name] = lambda mesh: sc_rarm3
+        collision_link_names.append(link_name)
+
+        link_name = "RARM_LINK4"
+        collection = []
+        collection.append((np.array([0.0, 0.0, 0.0]), 0.09, str(uuid.uuid4())))
+        sc_rarm4 = copy.deepcopy(SphereCollection(*list(zip(*collection))))
+        link_wise_sphere_creator[link_name] = lambda mesh: sc_rarm4
+        collision_link_names.append(link_name)
+
+        link_name = "RARM_LINK5"
+        collection = []
+        collection.append((np.array([0.1, 0.0, 0.0]), 0.05, str(uuid.uuid4())))
+        collection.append((np.array([0.18, 0.0, 0.0]), 0.08, str(uuid.uuid4())))
+        collection.append((np.array([0.18, 0.06, 0.025]), 0.045, str(uuid.uuid4())))
+        collection.append((np.array([0.18, -0.06, 0.025]), 0.045, str(uuid.uuid4())))
+        collection.append((np.array([0.18, 0.06, -0.025]), 0.045, str(uuid.uuid4())))
+        collection.append((np.array([0.18, -0.06, -0.025]), 0.045, str(uuid.uuid4())))
+        sc_rarm5 = copy.deepcopy(SphereCollection(*list(zip(*collection))))
+        link_wise_sphere_creator[link_name] = lambda mesh: sc_rarm5
+        collision_link_names.append(link_name)
 
         kinmap = ArticulatedCollisionKinematicsMap(
             self.urdf_path,
