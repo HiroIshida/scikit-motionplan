@@ -6,7 +6,7 @@ install_requires = [
     "numpy",
     "matplotlib",
     "scipy",
-    "tinyfk==0.6.0.dev6",
+    "tinyfk==0.6.0.dev7",
     "robot_descriptions",
     "scikit-robot",
     "open3d",
