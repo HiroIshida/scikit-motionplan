@@ -115,6 +115,7 @@ def satisfy_by_optimization_with_budget(
     config: Optional[SatisfactionConfig] = None,
     n_trial_budget: int = 20,
 ) -> SatisfactionResult:
+
     # a util function
     ts = time.time()
     for i in range(n_trial_budget):
@@ -126,4 +127,7 @@ def satisfy_by_optimization_with_budget(
         q_seed = (
             None  # if specified seed was not effective, we invalidate it and will use random seed
         )
-    assert False, "satisfaction fail"
+
+    # fail in all trials
+    res.elapsed_time = time.time() - ts
+    return res
