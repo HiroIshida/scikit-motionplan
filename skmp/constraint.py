@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Callable, List, Optional, Protocol, Tuple, TypeVar, runtime_checkable
 
 import numpy as np
+import tinyfk
 from selcol.file import default_pretrained_basepath
 from selcol.runtime import OrtSelColInferencer
 from skrobot.coordinates import Coordinates, matrix2quaternion, rpy_angle
@@ -596,3 +597,72 @@ class NeuralSelfCollFreeConst(AbstractIneqConst):
     def _reflect_skrobot_model(self, robot_model: Optional[RobotModel]) -> None:
         angles = [robot_model.__dict__[jn].joint_angle() for jn in self.model.joint_names]
         self.model.set_context(np.array(angles))
+
+
+class COMStabilityConst(AbstractIneqConst):
+    # highly experimental feature
+    # will be used in humanoid planning only
+    dim_cspace: int
+    fksolver: tinyfk.RobotModel
+    tinyfk_joint_ids: List[int]
+    base_type: BaseType
+    model: RobotModel
+    sdf: Callable[[np.ndarray], np.ndarray]
+
+    def __init__(
+        self,
+        urdfpath: Path,
+        joint_names: List[str],
+        base_type: BaseType,
+        robot_model: RobotModel,
+        sdf: Callable[[np.ndarray], np.ndarray],
+    ):
+
+        dim_cspace = (
+            len(joint_names)
+            + (base_type == BaseType.PLANER) * 3
+            + (base_type == BaseType.FLOATING) * 6
+        )
+
+        urdfpath_str = str(urdfpath.expanduser())
+        fksolver = tinyfk.RobotModel(urdfpath_str)
+        tinyfk_joint_ids = fksolver.get_joint_ids(joint_names)
+
+        self.dim_cspace = dim_cspace
+        self.fksolver = fksolver
+        self.tinyfk_joint_ids = tinyfk_joint_ids
+        self.base_type = base_type
+        self.model = robot_model
+        self.sdf = sdf
+        self.reflect_skrobot_model(robot_model)
+
+    def _evaluate(
+        self, qs: np.ndarray, with_jacobian: bool = False
+    ) -> Tuple[np.ndarray, np.ndarray]:
+
+        n_point, n_dim = qs.shape
+        xs, jacs_tmp = self.fksolver.solve_com_forward_kinematics(
+            qs, self.tinyfk_joint_ids, self.base_type, with_jacobian
+        )
+        jacs = jacs_tmp.reshape(n_point, 1, 3, n_dim)
+        # xss: R^{n_point, 3}
+        # jacs: R^{3, n_point, dim_cspace}
+
+        sds = self.sdf(xs)
+        if with_jacobian:
+            eps = 1e-7
+            grads = np.zeros((n_point, 1, 3))
+
+            for i in range(3):
+                xs_plus = copy.deepcopy(xs)
+                xs_plus[:, i] += eps
+                sds_plus = self.sdf(xs_plus)
+                grads[:, 0, i] = (sds_plus - sds) / eps
+
+            Js = np.einsum("ijk,ijkl->ijl", grads, jacs)
+        else:
+            Js = self.dummy_jacobian()
+        return sds.reshape((n_point, 1)), Js
+
+    def _reflect_skrobot_model(self, robot_model: Optional[RobotModel]) -> None:
+        pass

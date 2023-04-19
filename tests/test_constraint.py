@@ -4,6 +4,7 @@ import numpy as np
 from skrobot.coordinates import Coordinates
 from skrobot.model.primitives import Box
 from skrobot.models import PR2
+from skrobot.utils.urdf import mesh_simplify_factor
 from tinyfk import BaseType, RotationType
 
 from skmp.constraint import (
@@ -16,6 +17,7 @@ from skmp.constraint import (
     ReducedCollisionFreeConst,
     RelativePoseConstraint,
 )
+from skmp.robot.jaxon import Jaxon, JaxonConfig
 from skmp.robot.pr2 import PR2Config
 
 
@@ -33,17 +35,19 @@ def jac_numerical(const: AbstractConst, q0: np.ndarray, eps: float) -> np.ndarra
     return jac
 
 
-def check_jacobian(const: AbstractConst, dim: int, eps: float = 1e-7, decimal: int = 4):
+def check_jacobian(
+    const: AbstractConst, dim: int, eps: float = 1e-7, decimal: int = 4, std: float = 1.0
+):
     # check single jacobian
     for _ in range(10):
-        q_test = np.random.randn(dim)
+        q_test = np.random.randn(dim) * std
         _, jac_anal = const.evaluate_single(q_test, with_jacobian=True)
         jac_numel = jac_numerical(const, q_test, eps)
         np.testing.assert_almost_equal(jac_anal, jac_numel, decimal=decimal)
 
     # check traj jacobian
     for _ in range(10):
-        qs_test = np.random.randn(10, dim)
+        qs_test = np.random.randn(10, dim) * std
         _, jac_anal = const.evaluate(qs_test, with_jacobian=True)
         jac_numel = np.array([jac_numerical(const, q, eps) for q in qs_test])
         np.testing.assert_almost_equal(jac_anal, jac_numel, decimal=decimal)
@@ -129,7 +133,7 @@ def test_realtive_pose_const():
     assert len(efkin.tinyfk_feature_ids) == 2
 
 
-def test_pair_wise_selfcollfree_cost():
+def test_pair_wise_selfcollfree_const():
     config = PR2Config(base_type=BaseType.FIXED)
     colkin = config.get_collision_kin()
     const = PairWiseSelfCollFreeConst(colkin, PR2())
@@ -138,6 +142,19 @@ def test_pair_wise_selfcollfree_cost():
     q_init = np.zeros(7)
     values, _ = const.evaluate_single(q_init, with_jacobian=False)
     assert np.all(values > 0)
+
+
+def test_com_stability_const():
+    config = JaxonConfig()
+    with mesh_simplify_factor(0.2):
+        jaxon = Jaxon()
+
+    com_box = Box([0.2, 0.6, 5.0], with_sdf=True)
+    const = config.get_com_stability_const(jaxon, com_box.sdf)
+    # NOTE: currently base jacobian computation is unstable when
+    # rpy angle is big due to singularity
+    # thus we set std = 0.1
+    check_jacobian(const, len(config._get_control_joint_names()) + 6, std=0.1)
 
 
 def test_composite_constraint():
@@ -165,4 +182,5 @@ if __name__ == "__main__":
     # test_configpoint_const()
     # test_pose_const()
     # test_composite_constraint()
-    test_realtive_pose_const()
+    # test_realtive_pose_const()
+    test_com_stability_const()
