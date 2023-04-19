@@ -31,16 +31,17 @@ vis = TrimeshSceneViewer()
 
 # define target coords
 co_target = surrounding.table.copy_worldcoords()
-co_target.translate([0.2, 0.3, 0.1])
+co_target.translate([0.25, 0.3, 0.1])
 co_target.rotate(np.pi * 0.5, "y")
 ax_target = Axis.from_coords(co_target)
 
 # define custom obstacle
-obstacle = Box([0.1, 0.1, 0.3], with_sdf=True)
+obstacle = Box([0.05, 0.05, 0.4], with_sdf=True)
 obstacle.translate([0.3, 0.15, -0.3])
 
 # union signed distance function
 sdf = UnionSDF([surrounding.pole.sdf, surrounding.table.sdf, obstacle.sdf])
+# sdf = UnionSDF([surrounding.pole.sdf, surrounding.table.sdf])
 
 # inequality constraint
 coll_free_const = CollFreeConst(colkin, sdf, model)
@@ -49,10 +50,12 @@ coll_free_const = CollFreeConst(colkin, sdf, model)
 pose_const = PoseConstraint.from_skrobot_coords([co_target], efkin, model)
 
 # solve IK
+print("start solving IK")
 result = satisfy_by_optimization_with_budget(
     pose_const, box_const, coll_free_const, None, n_trial_budget=100
 )
 assert result.success
+print("time to solve ik: {}".format(result.elapsed_time))
 
 # setup path planning problem
 problem = Problem(
@@ -64,10 +67,12 @@ problem = Problem(
     motion_step_box_=0.05,
 )
 
+print("start solving path planning")
 solver = OMPLSolver.init(OMPLSolverConfig(n_max_call=10000, simplify=True))
 solver.setup(problem)
 rrt_result = solver.solve()
 assert rrt_result.traj is not None
+print("time to solve rrt: {}".format(rrt_result.time_elapsed))
 
 if with_colvis:
     colvis = CollisionSphereVisualizationManager(colkin, vis)
