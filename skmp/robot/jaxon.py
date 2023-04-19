@@ -2,7 +2,7 @@ import copy
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional
+from typing import Callable, List, Optional
 
 import numpy as np
 from robot_descriptions.jaxon_description import URDF_PATH as JAXON_URDF_PATH
@@ -12,7 +12,7 @@ from skrobot.models.urdf import RobotModelFromURDF
 from tinyfk import BaseType, RobotModel, RotationType
 
 from skmp.collision import SphereCollection
-from skmp.constraint import BoxConst, NeuralSelfCollFreeConst
+from skmp.constraint import BoxConst, COMStabilityConst, NeuralSelfCollFreeConst
 from skmp.kinematics import (
     ArticulatedCollisionKinematicsMap,
     ArticulatedEndEffectorKinematicsMap,
@@ -334,3 +334,14 @@ class JaxonConfig:
         return NeuralSelfCollFreeConst.load(
             self.urdf_path(), self._get_control_joint_names(), robot_model, BaseType.FLOATING
         )
+
+    def get_com_stability_const(
+        self, robot_model: Jaxon, sdf: Callable[[np.ndarray], np.ndarray]
+    ) -> COMStabilityConst:
+        fksolver = RobotModel(self.urdf_path())
+        fksolver.get_joint_ids(self._get_control_joint_names())
+
+        const = COMStabilityConst(
+            self.urdf_path(), self._get_control_joint_names(), BaseType.FLOATING, robot_model, sdf
+        )
+        return const
