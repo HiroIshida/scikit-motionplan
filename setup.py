@@ -9,6 +9,7 @@ install_requires = [
     "tinyfk==0.6.0.dev6",
     "robot_descriptions",
     "scikit-robot",
+    "open3d",
     "osqp",
     "ompl-thin>=0.0.16",
     "selcol>=0.0.3.2",
