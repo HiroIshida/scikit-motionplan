@@ -98,7 +98,9 @@ class ManifoldRRT(ABC):
         q_rand = self.sample()
         self.extend(q_rand)
 
-    def extend(self, q_rand: np.ndarray, node_nearest: Optional[Node] = None) -> ExtensionResult:
+    def extend(
+        self, q_rand: np.ndarray, node_nearest: Optional[Node] = None, collision_aware: bool = False
+    ) -> ExtensionResult:
 
         if self.termination_hook is not None:
             self.termination_hook()
@@ -118,7 +120,7 @@ class ManifoldRRT(ABC):
         q_here = node_nearest.q + diff_clamped
         for _ in range(5):
             # check if projection successful
-            q_new = self.f_project(q_here)
+            q_new = self.f_project(q_here, collision_aware)
             if q_new is None:
                 return ExtensionResult.TRAPPED
 
@@ -150,17 +152,23 @@ class ManifoldRRT(ABC):
         # reutrn connceted Node if connected. Otherwise return None
 
         self.find_nearest_node(q_target)
-        result = self.extend(q_target, None)
+        result = self.extend(q_target, None, collision_aware=True)
         if result != ExtensionResult.ADVANCED:
             return None
 
+        dist_pre = np.linalg.norm(q_target - self.nodes[-1].q)
         # because last result is advanced
         while True:
-            result = self.extend(q_target, self.nodes[-1])
+            result = self.extend(q_target, self.nodes[-1], collision_aware=True)
             if result == ExtensionResult.TRAPPED:
                 return None
             if result == ExtensionResult.REACHED:
                 return self.nodes[-1]
+            dist = np.linalg.norm(q_target - self.nodes[-1].q)
+            is_deviated = dist > dist_pre
+            if is_deviated:
+                return None
+            dist_pre = dist
 
     def solve(self) -> bool:
         assert self.f_goal_project is not None
@@ -169,11 +177,14 @@ class ManifoldRRT(ABC):
                 q_rand = self.sample()
                 res = self.extend(q_rand)
                 if res == ExtensionResult.ADVANCED:
+                    print("advanced")
                     result_project = self.f_goal_project(self.nodes[-1].q)
                     if result_project is not None:
+                        print("projected")
                         if self.f_is_valid(result_project):
                             res = self.connect(result_project)
                             if res is not None:
+                                print("connected")
                                 return True
         except TerminationException:
             return False
@@ -331,7 +342,7 @@ class ManifoldRRTConnect:
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
-    def project(q: np.ndarray) -> Optional[np.ndarray]:
+    def project(q: np.ndarray, hoge) -> Optional[np.ndarray]:
         return q / np.linalg.norm(q)
 
     def is_valid(q: np.ndarray) -> bool:

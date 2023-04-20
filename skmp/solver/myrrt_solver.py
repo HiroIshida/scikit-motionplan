@@ -63,14 +63,15 @@ class MyRRTSolverBase(AbstractScratchSolver[MyRRTConfig, MyRRTResult]):
     def setup(self, problem: Problem) -> None:
         self.problem = problem
 
-    def project(self, q: np.ndarray) -> Optional[np.ndarray]:
+    def project(self, q: np.ndarray, collision_aware: bool = False) -> Optional[np.ndarray]:
         assert self.problem is not None
 
         if self.problem.global_eq_const is None:
             return q
         else:
+            ineq_const = self.problem.global_ineq_const if collision_aware else None
             res = satisfy_by_optimization(
-                self.problem.global_eq_const, self.problem.box_const, None, q
+                self.problem.global_eq_const, self.problem.box_const, ineq_const, q
             )
             if res.success:
                 return res.q
