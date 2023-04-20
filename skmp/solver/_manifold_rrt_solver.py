@@ -115,31 +115,34 @@ class ManifoldRRT(ABC):
         shrink_motion_box = self.motion_step_box * self.config.motion_step_shring_rate
         diff_clamped = np.maximum(np.minimum(diff_ambient, shrink_motion_box), -shrink_motion_box)
 
-        # check if projection successful
-        q_new = self.f_project(node_nearest.q + diff_clamped)
-        if q_new is None:
-            return ExtensionResult.TRAPPED
+        q_here = node_nearest.q + diff_clamped
+        for _ in range(5):
+            # check if projection successful
+            q_new = self.f_project(q_here)
+            if q_new is None:
+                return ExtensionResult.TRAPPED
 
-        # check if q_new is inside configuration box space
-        if np.any(q_new < self.b_min):
-            return ExtensionResult.TRAPPED
-        if np.any(q_new > self.b_max):
-            return ExtensionResult.TRAPPED
+            # check if q_new is inside configuration box space
+            if np.any(q_new < self.b_min):
+                return ExtensionResult.TRAPPED
+            if np.any(q_new > self.b_max):
+                return ExtensionResult.TRAPPED
 
-        # check if motion step constraint is satisfied
-        diff_actual = q_new - node_nearest.q
+            # check if motion step constraint is satisfied
+            diff_actual = q_new - node_nearest.q
 
-        if np.linalg.norm(diff_actual) < 1e-6:
-            return ExtensionResult.TRAPPED
+            if np.linalg.norm(diff_actual) < 1e-6:
+                return ExtensionResult.TRAPPED
 
-        if not np.all(np.abs(diff_actual) < self.motion_step_box):
-            return ExtensionResult.TRAPPED
+            if not np.all(np.abs(diff_actual) < self.motion_step_box):
+                return ExtensionResult.TRAPPED
 
-        # check if inequality constraint is satisfied
-        if not self.f_is_valid(q_new):
-            return ExtensionResult.TRAPPED
+            # check if inequality constraint is satisfied
+            if not self.f_is_valid(q_new):
+                return ExtensionResult.TRAPPED
+            q_here = q_new
 
-        new_node = Node(q_new, node_nearest)
+        new_node = Node(q_here, node_nearest)
         self.nodes.append(new_node)
         return ExtensionResult.ADVANCED
 
@@ -168,9 +171,10 @@ class ManifoldRRT(ABC):
                 if res == ExtensionResult.ADVANCED:
                     result_project = self.f_goal_project(self.nodes[-1].q)
                     if result_project is not None:
-                        diff = result_project - self.nodes[-1].q
-                        if np.all(np.abs(diff) < self.motion_step_box):
-                            return True
+                        if self.f_is_valid(result_project):
+                            res = self.connect(result_project)
+                            if res is not None:
+                                return True
         except TerminationException:
             return False
         return False

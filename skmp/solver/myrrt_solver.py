@@ -98,13 +98,29 @@ class MyRRTSolver(MyRRTSolverBase):
 
         assert not self.config.sample_goal_first  # TODO
 
-        def is_reached(q):
+        def f_goal_project(q) -> Optional[np.ndarray]:
             assert self.problem is not None
-            return self.problem.goal_const.is_approx_satisfied(q)
+            # box_const = copy.deepcopy(self.problem.box_const)
+            # box_const.lb = np.maximum(box_const.lb, q - self.problem.motion_step_box * 10)
+            # box_const.ub = np.minimum(box_const.ub, q + self.problem.motion_step_box * 10)
+
+            goal_const = self.problem.goal_const
+            satis_conf = SatisfactionConfig(n_max_eval=50, ftol=1e-3, acceptable_error=1e-3)
+            res = satisfy_by_optimization(
+                goal_const,
+                self.problem.box_const,
+                self.problem.global_ineq_const,
+                q,
+                config=satis_conf,
+            )
+            if res.success:
+                return res.q
+            else:
+                return None
 
         rrt = ManifoldRRT(
             self.problem.start,
-            is_reached,
+            f_goal_project,
             self.problem.box_const.lb,
             self.problem.box_const.ub,
             self.problem.motion_step_box,
