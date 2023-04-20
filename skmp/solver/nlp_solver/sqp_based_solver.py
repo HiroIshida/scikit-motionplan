@@ -91,6 +91,9 @@ class SQPBasedSolverConfig:
     n_max_satisfaction_trial: int = 100  # only used if init traj is not satisfied
     ctol_eq: float = 1e-4
     ctol_ineq: float = 1e-3
+    ineq_tighten_coef: float = (
+        2.0  # NOTE: in some large problem like humanoid planning, this value should be zero
+    )
     _osqpsqp_config: OsqpSqpConfig = OsqpSqpConfig()  # don't directly access this
 
     @property
@@ -167,7 +170,7 @@ class SQPBasedSolver(AbstractScratchSolver[SQPBasedSolverConfig, SQPBasedSolverR
             # somehow, osqp-sqp result has some ineq error
             # thus to compensate that, we tighten the ineq constraint here
             f, jac = traj_ineq_const.evaluate(x)
-            return f - ctol_ineq * 2, jac
+            return f - ctol_ineq * config.ineq_tighten_coef, jac
 
         solver = OsqpSqpSolver(
             smooth_mat,
