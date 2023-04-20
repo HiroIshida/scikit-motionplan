@@ -1,7 +1,7 @@
 from abc import ABC
 from dataclasses import dataclass
 from enum import Enum
-from typing import Callable, List, Optional, Tuple, Union
+from typing import Callable, List, Optional, Tuple
 
 import numpy as np
 
@@ -36,6 +36,7 @@ class ManifoldRRT(ABC):
     nodes: List[Node]
     f_project: Callable[[np.ndarray], Optional[np.ndarray]]
     f_is_valid: Callable[[np.ndarray], bool]
+    f_goal_project: Callable[[np.ndarray], Optional[np.ndarray]]
     termination_hook: Optional[Callable[[], None]]
     config: ManifoldRRTConfig
     n_extension_trial: int
@@ -43,7 +44,7 @@ class ManifoldRRT(ABC):
     def __init__(
         self,
         start: np.ndarray,
-        goal: Optional[Union[np.ndarray, Callable[[np.ndarray], bool]]],
+        f_goal_project: Optional[Callable[[np.ndarray], Optional[np.ndarray]]],
         b_min: np.ndarray,
         b_max: np.ndarray,
         motion_step_box: np.ndarray,
@@ -54,9 +55,9 @@ class ManifoldRRT(ABC):
     ):
 
         assert f_is_valid(start)
-        if goal is not None:
-            assert callable(goal)
-        self.is_reached = goal
+        if f_goal_project is not None:
+            assert callable(f_goal_project)
+        self.f_goal_project = f_goal_project
 
         if termination_hook is None:
 
@@ -159,14 +160,17 @@ class ManifoldRRT(ABC):
                 return self.nodes[-1]
 
     def solve(self) -> bool:
-        assert self.is_reached is not None
+        assert self.f_goal_project is not None
         try:
             while True:
                 q_rand = self.sample()
                 res = self.extend(q_rand)
                 if res == ExtensionResult.ADVANCED:
-                    if self.is_reached(self.nodes[-1].q):
-                        return True
+                    result_project = self.f_goal_project(self.nodes[-1].q)
+                    if result_project is not None:
+                        diff = result_project - self.nodes[-1].q
+                        if np.all(np.abs(diff) < self.motion_step_box):
+                            return True
         except TerminationException:
             return False
         return False
@@ -333,25 +337,27 @@ if __name__ == "__main__":
             return True
         return False
 
+    def f_goal_project(q: np.ndarray) -> Optional[np.ndarray]:
+        goal = np.array([+1, 0, 0])
+        return goal
+
     start = np.array([-1, 0, 0])
-    goal = np.array([+1, 0, 0])
     b_min = -np.ones(3) * 1.5
     b_max = +np.ones(3) * 1.5
     motion_step_box = np.ones(3) * 0.2
     conf = ManifoldRRTConfig(1000)
-    bitree = ManifoldRRTConnect(
-        start, goal, b_min, b_max, motion_step_box, project, is_valid, config=conf
+    rrt = ManifoldRRT(
+        start, f_goal_project, b_min, b_max, motion_step_box, project, is_valid, config=conf
     )
     import time
 
     ts = time.time()
-    res = bitree.solve()
+    res = rrt.solve()
     print(time.time() - ts)
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection="3d")
-    bitree.rrt_start.visualize((fig, ax))
-    bitree.rrt_goal.visualize((fig, ax))
-    Q = bitree.get_solution()
+    rrt.visualize((fig, ax))
+    Q = rrt.get_solution()
     ax.plot(Q[:, 0], Q[:, 1], Q[:, 2], c="k", linewidth=3)
     plt.show()
