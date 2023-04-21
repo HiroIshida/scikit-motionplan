@@ -7,20 +7,15 @@ from skrobot.utils.urdf import mesh_simplify_factor
 from skrobot.viewers import TrimeshSceneViewer
 from tinyfk import BaseType
 
-from skmp.constraint import (
-    CollFreeConst,
-    ConfigPointConst,
-    IneqCompositeConst,
-    PoseConstraint,
-)
+from skmp.constraint import CollFreeConst, IneqCompositeConst, PoseConstraint
 from skmp.robot.jaxon import Jaxon, JaxonConfig
 from skmp.robot.utils import set_robot_state
-from skmp.satisfy import satisfy_by_optimization_with_budget
+from skmp.satisfy import SatisfactionConfig, satisfy_by_optimization_with_budget
 from skmp.solver.interface import Problem
 from skmp.solver.myrrt_solver import MyRRTConfig, MyRRTConnectSolver
 from skmp.solver.nlp_solver import SQPBasedSolver, SQPBasedSolverConfig
 
-# np.random.seed(5)
+np.random.seed(5)
 
 com_box = Box([0.25, 0.5, 5.0], with_sdf=True)
 com_box.visual_mesh.visual.face_colors = [255, 0, 100, 100]
@@ -44,6 +39,7 @@ col_const = CollFreeConst(colkin, box.sdf, jaxon)
 com_const = config.get_com_stability_const(jaxon, lambda x: -com_box.sdf(x))
 ineq_const = IneqCompositeConst([com_const, col_const, selcol_const])
 
+# solve ik to determine start state (random)
 efkin = config.get_endeffector_kin()
 eq_const_start = PoseConstraint.from_skrobot_coords(start_coords_list, efkin, jaxon)
 bounds = config.get_box_const()
@@ -57,14 +53,6 @@ goal_rarm_co = Coordinates([0.5, -0.6, 0.8], rot=[0, -0.5 * np.pi, 0])
 goal_coords_list = [Coordinates([0.0, -0.2, 0]), Coordinates([0.0, +0.2, 0]), goal_rarm_co]
 efkin_goal_ik = config.get_endeffector_kin(rarm=True, larm=False)
 eq_const_goal = PoseConstraint.from_skrobot_coords(goal_coords_list, efkin_goal_ik, jaxon)
-print("start solving IK")
-ts = time.time()
-res_goal = satisfy_by_optimization_with_budget(
-    eq_const_goal, bounds, ineq_const, None, n_trial_budget=300
-)
-print("time to solve goal ik: {}".format(time.time() - ts))
-assert res_goal.success
-
 
 # setup for solve rrt
 efkin_rrt = config.get_endeffector_kin(rarm=False, larm=False)
@@ -77,13 +65,15 @@ eq_const_path_plan = PoseConstraint.from_skrobot_coords(const_coords_list, efkin
 problem = Problem(
     res_start.q,
     bounds,
-    ConfigPointConst(res_goal.q),
+    eq_const_goal,
     ineq_const,
     eq_const_path_plan,
     motion_step_box_=0.1,
 )
-print("start solving rrt")
-rrt = MyRRTConnectSolver.init(MyRRTConfig(10000))
+print("start solving rrt (with ik)")
+ts = time.time()
+rrt_conf = MyRRTConfig(10000, satisfaction_conf=SatisfactionConfig(n_max_eval=50))
+rrt = MyRRTConnectSolver.init(rrt_conf)
 rrt.setup(problem)
 result = rrt.solve()
 assert result.traj is not None
