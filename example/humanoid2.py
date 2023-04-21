@@ -107,7 +107,7 @@ solver = SQPBasedSolver.init(
     )
 )
 solver.setup(problem)
-result = solver.solve(result.traj)
+result = solver.solve(result.traj)  # type: ignore
 assert result.traj is not None
 print(result.time_elapsed)
 

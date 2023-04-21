@@ -34,9 +34,9 @@ class ManifoldRRT(ABC):
     b_max: np.ndarray
     motion_step_box: np.ndarray
     nodes: List[Node]
-    f_project: Callable[[np.ndarray], Optional[np.ndarray]]
+    f_project: Callable[[np.ndarray, bool], Optional[np.ndarray]]
     f_is_valid: Callable[[np.ndarray], bool]
-    f_goal_project: Callable[[np.ndarray], Optional[np.ndarray]]
+    f_goal_project: Optional[Callable[[np.ndarray], Optional[np.ndarray]]]
     termination_hook: Optional[Callable[[], None]]
     config: ManifoldRRTConfig
     n_extension_trial: int
@@ -48,7 +48,7 @@ class ManifoldRRT(ABC):
         b_min: np.ndarray,
         b_max: np.ndarray,
         motion_step_box: np.ndarray,
-        f_project: Callable[[np.ndarray], Optional[np.ndarray]],
+        f_project: Callable[[np.ndarray, bool], Optional[np.ndarray]],
         f_is_valid: Callable[[np.ndarray], bool],
         termination_hook: Optional[Callable[[], None]] = None,
         config: ManifoldRRTConfig = ManifoldRRTConfig(),
@@ -182,8 +182,8 @@ class ManifoldRRT(ABC):
                     if result_project is not None:
                         print("projected")
                         if self.f_is_valid(result_project):
-                            res = self.connect(result_project)
-                            if res is not None:
+                            result_connect = self.connect(result_project)
+                            if result_connect is not None:
                                 print("connected")
                                 return True
         except TerminationException:
@@ -263,7 +263,7 @@ class ManifoldRRTConnect:
         b_min: np.ndarray,
         b_max: np.ndarray,
         motion_step_box: np.ndarray,
-        f_project: Callable[[np.ndarray], Optional[np.ndarray]],
+        f_project: Callable[[np.ndarray, bool], Optional[np.ndarray]],
         f_is_valid: Callable[[np.ndarray], bool],
         config: ManifoldRRTConfig = ManifoldRRTConfig(),
     ):
