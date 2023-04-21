@@ -135,20 +135,24 @@ class JaxonConfig:
         # leg link3
         link_name = "RLEG_LINK3"
         collection = []
-        collection.append((np.array([0.0, 0.0, 0.0]), 0.08, str(uuid.uuid4())))
-        collection.append((np.array([0.02, 0.0, -0.1]), 0.08, str(uuid.uuid4())))
-        collection.append((np.array([0.02, 0.0, -0.2]), 0.08, str(uuid.uuid4())))
-        collection.append((np.array([0.0, 0.0, -0.3]), 0.08, str(uuid.uuid4())))
+        collection.append((np.array([0.0, -0.015, 0.0]), 0.09, str(uuid.uuid4())))
+        collection.append((np.array([0.02, -0.015, -0.07]), 0.09, str(uuid.uuid4())))
+        collection.append((np.array([0.02, -0.015, -0.14]), 0.09, str(uuid.uuid4())))
+        collection.append((np.array([0.02, -0.015, -0.21]), 0.09, str(uuid.uuid4())))
+        collection.append((np.array([0.0, -0.015, -0.3]), 0.08, str(uuid.uuid4())))
+        collection.append((np.array([0.0, -0.015, -0.35]), 0.08, str(uuid.uuid4())))
         sc_rleg3 = copy.deepcopy(SphereCollection(*list(zip(*collection))))
         link_wise_sphere_creator[link_name] = lambda mesh: sc_rleg3
         collision_link_names.append(link_name)
 
         link_name = "LLEG_LINK3"
         collection = []
-        collection.append((np.array([0.0, 0.0, 0.0]), 0.08, str(uuid.uuid4())))
-        collection.append((np.array([0.02, 0.0, -0.1]), 0.08, str(uuid.uuid4())))
-        collection.append((np.array([0.02, 0.0, -0.2]), 0.08, str(uuid.uuid4())))
-        collection.append((np.array([0.0, 0.0, -0.3]), 0.08, str(uuid.uuid4())))
+        collection.append((np.array([0.0, +0.015, 0.0]), 0.09, str(uuid.uuid4())))
+        collection.append((np.array([0.02, +0.015, -0.07]), 0.09, str(uuid.uuid4())))
+        collection.append((np.array([0.02, +0.015, -0.14]), 0.09, str(uuid.uuid4())))
+        collection.append((np.array([0.02, +0.015, -0.21]), 0.09, str(uuid.uuid4())))
+        collection.append((np.array([0.0, +0.015, -0.3]), 0.08, str(uuid.uuid4())))
+        collection.append((np.array([0.0, +0.015, -0.35]), 0.08, str(uuid.uuid4())))
         sc_lleg3 = copy.deepcopy(SphereCollection(*list(zip(*collection))))
         link_wise_sphere_creator[link_name] = lambda mesh: sc_lleg3
         collision_link_names.append(link_name)
@@ -156,20 +160,22 @@ class JaxonConfig:
         # leg link2
         link_name = "RLEG_LINK2"
         collection = []
-        collection.append((np.array([0.0, -0.01, 0.0]), 0.08, str(uuid.uuid4())))
-        collection.append((np.array([0.02, -0.01, -0.1]), 0.09, str(uuid.uuid4())))
-        collection.append((np.array([0.02, -0.02, -0.2]), 0.09, str(uuid.uuid4())))
-        collection.append((np.array([0.02, -0.02, -0.3]), 0.09, str(uuid.uuid4())))
+        collection.append((np.array([-0.02, -0.01, 0.0]), 0.12, str(uuid.uuid4())))
+        collection.append((np.array([-0.02, -0.01, -0.08]), 0.12, str(uuid.uuid4())))
+        collection.append((np.array([0.02, -0.01, -0.16]), 0.12, str(uuid.uuid4())))
+        collection.append((np.array([0.02, -0.02, -0.24]), 0.1, str(uuid.uuid4())))
+        collection.append((np.array([0.02, -0.02, -0.32]), 0.1, str(uuid.uuid4())))
         sc_rleg2 = copy.deepcopy(SphereCollection(*list(zip(*collection))))
         link_wise_sphere_creator[link_name] = lambda mesh: sc_rleg2
         collision_link_names.append(link_name)
 
         link_name = "LLEG_LINK2"
         collection = []
-        collection.append((np.array([0.0, +0.01, 0.0]), 0.08, str(uuid.uuid4())))
-        collection.append((np.array([0.02, +0.01, -0.1]), 0.09, str(uuid.uuid4())))
-        collection.append((np.array([0.02, +0.02, -0.2]), 0.09, str(uuid.uuid4())))
-        collection.append((np.array([0.02, +0.02, -0.3]), 0.09, str(uuid.uuid4())))
+        collection.append((np.array([-0.02, +0.01, 0.0]), 0.12, str(uuid.uuid4())))
+        collection.append((np.array([-0.02, +0.01, -0.08]), 0.12, str(uuid.uuid4())))
+        collection.append((np.array([0.02, +0.01, -0.16]), 0.12, str(uuid.uuid4())))
+        collection.append((np.array([0.02, +0.02, -0.24]), 0.1, str(uuid.uuid4())))
+        collection.append((np.array([0.02, +0.02, -0.32]), 0.1, str(uuid.uuid4())))
         sc_lleg2 = copy.deepcopy(SphereCollection(*list(zip(*collection))))
         link_wise_sphere_creator[link_name] = lambda mesh: sc_lleg2
         collision_link_names.append(link_name)
@@ -202,7 +208,10 @@ class JaxonConfig:
 
             link_name = "RARM_LINK7"
             collection = []
-            collection.append((np.array([0.0, 0.0, -0.14]), 0.06, str(uuid.uuid4())))
+            collection.append((np.array([0.0, 0.04, -0.16]), 0.06, str(uuid.uuid4())))
+            collection.append((np.array([0.0, -0.04, -0.16]), 0.06, str(uuid.uuid4())))
+            collection.append((np.array([0.0, 0.0, -0.10]), 0.06, str(uuid.uuid4())))
+            collection.append((np.array([0.03, 0.0, -0.15]), 0.06, str(uuid.uuid4())))
             sc_rarm_link7 = copy.deepcopy(SphereCollection(*list(zip(*collection))))
             link_wise_sphere_creator[link_name] = lambda mesh: sc_rarm_link7
             collision_link_names.append(link_name)
@@ -234,51 +243,57 @@ class JaxonConfig:
 
             link_name = "LARM_LINK7"
             collection = []
-            collection.append((np.array([0.0, 0.0, -0.14]), 0.06, str(uuid.uuid4())))
+            collection.append((np.array([0.0, 0.04, -0.16]), 0.06, str(uuid.uuid4())))
+            collection.append((np.array([0.0, -0.04, -0.16]), 0.06, str(uuid.uuid4())))
+            collection.append((np.array([0.0, 0.0, -0.10]), 0.06, str(uuid.uuid4())))
+            collection.append((np.array([0.03, 0.0, -0.15]), 0.06, str(uuid.uuid4())))
             sc_larm_link7 = copy.deepcopy(SphereCollection(*list(zip(*collection))))
             link_wise_sphere_creator[link_name] = lambda mesh: sc_larm_link7
             collision_link_names.append(link_name)
 
         link_name = "RARM_LINK5"
         collection = []
-        collection.append((np.array([0.0, 0.0, 0.0]), 0.08, str(uuid.uuid4())))
-        collection.append((np.array([0.0, 0.0, +0.12]), 0.08, str(uuid.uuid4())))
-        collection.append((np.array([0.0, 0.0, -0.12]), 0.08, str(uuid.uuid4())))
+        collection.append((np.array([0.0, 0.0, +0.14]), 0.08, str(uuid.uuid4())))
+        collection.append((np.array([0.0, 0.0, +0.04]), 0.08, str(uuid.uuid4())))
+        collection.append((np.array([0.0, 0.0, -0.06]), 0.09, str(uuid.uuid4())))
+        collection.append((np.array([0.0, 0.0, -0.16]), 0.09, str(uuid.uuid4())))
         sc_rarm_link5 = copy.deepcopy(SphereCollection(*list(zip(*collection))))
         link_wise_sphere_creator[link_name] = lambda mesh: sc_rarm_link5
         collision_link_names.append(link_name)
 
         link_name = "LARM_LINK5"
         collection = []
-        collection.append((np.array([0.0, 0.0, 0.0]), 0.08, str(uuid.uuid4())))
-        collection.append((np.array([0.0, 0.0, +0.12]), 0.08, str(uuid.uuid4())))
-        collection.append((np.array([0.0, 0.0, -0.12]), 0.08, str(uuid.uuid4())))
+        collection.append((np.array([0.0, 0.0, +0.14]), 0.08, str(uuid.uuid4())))
+        collection.append((np.array([0.0, 0.0, +0.04]), 0.08, str(uuid.uuid4())))
+        collection.append((np.array([0.0, 0.0, -0.06]), 0.09, str(uuid.uuid4())))
+        collection.append((np.array([0.0, 0.0, -0.16]), 0.09, str(uuid.uuid4())))
         sc_larm_link5 = copy.deepcopy(SphereCollection(*list(zip(*collection))))
         link_wise_sphere_creator[link_name] = lambda mesh: sc_larm_link5
         collision_link_names.append(link_name)
 
         link_name = "RARM_LINK3"
         collection = []
-        collection.append((np.array([0.0, 0.0, 0.0]), 0.08, str(uuid.uuid4())))
-        collection.append((np.array([0.0, 0.0, +0.12]), 0.08, str(uuid.uuid4())))
+        collection.append((np.array([0.0, 0.0, +0.16]), 0.08, str(uuid.uuid4())))
+        collection.append((np.array([0.0, 0.0, +0.06]), 0.08, str(uuid.uuid4())))
+        collection.append((np.array([0.0, 0.0, -0.04]), 0.08, str(uuid.uuid4())))
         sc_rarm_link3 = copy.deepcopy(SphereCollection(*list(zip(*collection))))
         link_wise_sphere_creator[link_name] = lambda mesh: sc_rarm_link3
         collision_link_names.append(link_name)
 
         link_name = "LARM_LINK3"
         collection = []
-        collection.append((np.array([0.0, 0.0, 0.0]), 0.08, str(uuid.uuid4())))
-        collection.append((np.array([0.0, 0.0, +0.12]), 0.08, str(uuid.uuid4())))
+        collection.append((np.array([0.0, 0.0, +0.16]), 0.08, str(uuid.uuid4())))
+        collection.append((np.array([0.0, 0.0, +0.06]), 0.08, str(uuid.uuid4())))
+        collection.append((np.array([0.0, 0.0, -0.04]), 0.08, str(uuid.uuid4())))
         sc_larm_link3 = copy.deepcopy(SphereCollection(*list(zip(*collection))))
         link_wise_sphere_creator[link_name] = lambda mesh: sc_larm_link3
         collision_link_names.append(link_name)
 
         link_name = "CHEST_LINK2"
         collection = []
-        collection.append((np.array([0.0, 0.0, 0.0]), 0.15, str(uuid.uuid4())))
-        collection.append((np.array([0.0, 0.0, -0.3]), 0.15, str(uuid.uuid4())))
-        collection.append((np.array([-0.2, 0.0, -0.1]), 0.20, str(uuid.uuid4())))
-        collection.append((np.array([-0.2, 0.0, -0.4]), 0.20, str(uuid.uuid4())))
+        collection.append((np.array([-0.06, 0.0, -0.05]), 0.25, str(uuid.uuid4())))
+        collection.append((np.array([-0.17, 0.0, -0.03]), 0.25, str(uuid.uuid4())))
+        collection.append((np.array([-0.08, 0.0, -0.27]), 0.25, str(uuid.uuid4())))
         sc_chest_link2 = copy.deepcopy(SphereCollection(*list(zip(*collection))))
         link_wise_sphere_creator[link_name] = lambda mesh: sc_chest_link2
         collision_link_names.append(link_name)
