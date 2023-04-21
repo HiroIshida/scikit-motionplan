@@ -2,7 +2,7 @@ import time
 
 import numpy as np
 from skrobot.coordinates import Coordinates
-from skrobot.model.primitives import Box
+from skrobot.model.primitives import Axis, Box
 from skrobot.utils.urdf import mesh_simplify_factor
 from skrobot.viewers import TrimeshSceneViewer
 from tinyfk import BaseType
@@ -20,7 +20,7 @@ from skmp.solver.interface import Problem
 from skmp.solver.myrrt_solver import MyRRTConfig, MyRRTConnectSolver
 from skmp.solver.nlp_solver import SQPBasedSolver, SQPBasedSolverConfig
 
-np.random.seed(5)
+# np.random.seed(5)
 
 com_box = Box([0.25, 0.5, 5.0], with_sdf=True)
 com_box.visual_mesh.visual.face_colors = [255, 0, 100, 100]
@@ -51,16 +51,20 @@ res_start = satisfy_by_optimization_with_budget(
     eq_const_start, bounds, ineq_const, None, n_trial_budget=300
 )
 assert res_start.success
-print(res_start.q)
 
 # setup for solve ik
-goal_coords_list = [
-    Coordinates([0.0, -0.2, 0]),
-    Coordinates([0.0, +0.2, 0]),
-    Coordinates([0.5, -0.6, 0.8], rot=[0, -0.5 * np.pi, 0]),
-]
+goal_rarm_co = Coordinates([0.5, -0.6, 0.8], rot=[0, -0.5 * np.pi, 0])
+goal_coords_list = [Coordinates([0.0, -0.2, 0]), Coordinates([0.0, +0.2, 0]), goal_rarm_co]
 efkin_goal_ik = config.get_endeffector_kin(rarm=True, larm=False)
 eq_const_goal = PoseConstraint.from_skrobot_coords(goal_coords_list, efkin_goal_ik, jaxon)
+print("start solving IK")
+ts = time.time()
+res_goal = satisfy_by_optimization_with_budget(
+    eq_const_goal, bounds, ineq_const, None, n_trial_budget=300
+)
+print("time to solve goal ik: {}".format(time.time() - ts))
+assert res_goal.success
+
 
 # setup for solve rrt
 efkin_rrt = config.get_endeffector_kin(rarm=False, larm=False)
@@ -69,14 +73,6 @@ const_coords_list = [
     Coordinates([0.0, +0.2, 0]),
 ]
 eq_const_path_plan = PoseConstraint.from_skrobot_coords(const_coords_list, efkin_rrt, jaxon)
-
-print("start solving IK")
-ts = time.time()
-res_goal = satisfy_by_optimization_with_budget(
-    eq_const_goal, bounds, ineq_const, None, n_trial_budget=300
-)
-print(time.time() - ts)
-assert res_goal.success
 
 problem = Problem(
     res_start.q,
@@ -91,8 +87,7 @@ rrt = MyRRTConnectSolver.init(MyRRTConfig(10000))
 rrt.setup(problem)
 result = rrt.solve()
 assert result.traj is not None
-print(result)
-print(time.time() - ts)
+print("time to solve rrt: {}".format(time.time() - ts))
 
 print("smooth out the result")
 solver = SQPBasedSolver.init(
@@ -109,12 +104,14 @@ solver = SQPBasedSolver.init(
 solver.setup(problem)
 result = solver.solve(result.traj)  # type: ignore
 assert result.traj is not None
-print(result.time_elapsed)
+print("time to smooth by sqp: {}".format(result.time_elapsed))
 
 vis = TrimeshSceneViewer()
 vis.add(box)
 vis.add(jaxon)
 vis.add(com_box)
+ax = Axis.from_coords(goal_rarm_co)
+vis.add(ax)
 vis.show()
 time.sleep(4)
 for q in result.traj.resample(20):
