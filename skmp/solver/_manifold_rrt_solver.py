@@ -118,7 +118,7 @@ class ManifoldRRT(ABC):
         diff_clamped = np.maximum(np.minimum(diff_ambient, shrink_motion_box), -shrink_motion_box)
 
         q_here = node_nearest.q + diff_clamped
-        for _ in range(3):
+        for _ in range(5):
             # check if projection successful
             q_new = self.f_project(q_here, collision_aware)
             if q_new is None:
@@ -144,8 +144,8 @@ class ManifoldRRT(ABC):
                 return ExtensionResult.TRAPPED
             q_here = q_new
 
-        new_node = Node(q_here, node_nearest)
-        self.nodes.append(new_node)
+            new_node = Node(q_here, node_nearest)
+            self.nodes.append(new_node)
         return ExtensionResult.ADVANCED
 
     def connect(self, q_target: np.ndarray) -> Optional[Node]:
