@@ -118,7 +118,7 @@ class ManifoldRRT(ABC):
         diff_clamped = np.maximum(np.minimum(diff_ambient, shrink_motion_box), -shrink_motion_box)
 
         q_here = node_nearest.q + diff_clamped
-        for _ in range(5):
+        for _ in range(3):
             # check if projection successful
             q_new = self.f_project(q_here, collision_aware)
             if q_new is None:

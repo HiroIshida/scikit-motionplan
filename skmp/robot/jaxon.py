@@ -345,6 +345,33 @@ class JaxonConfig:
                 q_min[slice_indices] = q[slice_indices] - margin
         return BoxConst(q_min, q_max)
 
+    def get_motion_step_box(self) -> np.ndarray:
+        name_to_width_table = {jn: 0.2 for jn in self._get_control_joint_names()}
+
+        name_to_width_table["RARM_JOINT0"] = 0.1
+        name_to_width_table["RARM_JOINT1"] = 0.1
+        name_to_width_table["RARM_JOINT2"] = 0.1
+
+        name_to_width_table["LARM_JOINT0"] = 0.1
+        name_to_width_table["LARM_JOINT1"] = 0.1
+        name_to_width_table["LARM_JOINT2"] = 0.1
+
+        name_to_width_table["RLEG_JOINT0"] = 0.1
+        name_to_width_table["RLEG_JOINT1"] = 0.1
+        name_to_width_table["RLEG_JOINT2"] = 0.1
+
+        name_to_width_table["LLEG_JOINT0"] = 0.1
+        name_to_width_table["LLEG_JOINT1"] = 0.1
+        name_to_width_table["LLEG_JOINT2"] = 0.1
+
+        name_to_width_table["CHEST_JOINT0"] = 0.1
+        name_to_width_table["CHEST_JOINT1"] = 0.1
+        name_to_width_table["CHEST_JOINT2"] = 0.1
+
+        joint_step_width = np.array(list(name_to_width_table.values()))
+        base_step_width = np.ones(6) * 0.1
+        return np.hstack([joint_step_width, base_step_width])
+
     def get_neural_selcol_const(self, robot_model: Jaxon) -> NeuralSelfCollFreeConst:
         return NeuralSelfCollFreeConst.load(
             self.urdf_path(), self._get_control_joint_names(), robot_model, BaseType.FLOATING
