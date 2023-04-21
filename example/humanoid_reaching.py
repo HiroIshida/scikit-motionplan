@@ -15,8 +15,9 @@ from skmp.satisfy import SatisfactionConfig, satisfy_by_optimization_with_budget
 from skmp.solver.interface import Problem
 from skmp.solver.myrrt_solver import MyRRTConfig, MyRRTConnectSolver
 from skmp.solver.nlp_solver import SQPBasedSolver, SQPBasedSolverConfig
+from skmp.visualization import CollisionSphereVisualizationManager
 
-np.random.seed(5)
+# np.random.seed(5)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -75,11 +76,14 @@ if __name__ == "__main__":
         eq_const_goal,
         ineq_const,
         eq_const_path_plan,
-        motion_step_box_=0.1,
+        motion_step_box_=config.get_motion_step_box(),
     )
     print("start solving rrt (with ik)")
     ts = time.time()
-    rrt_conf = MyRRTConfig(10000, satisfaction_conf=SatisfactionConfig(n_max_eval=50))
+    # rrt_conf = MyRRTConfig(10000, satisfaction_conf=None)
+    # rrt = MyRRTSolver.init(rrt_conf)
+
+    rrt_conf = MyRRTConfig(500, satisfaction_conf=SatisfactionConfig(n_max_eval=50))
     rrt = MyRRTConnectSolver.init(rrt_conf)
     rrt.setup(problem)
     result = rrt.solve()
@@ -99,9 +103,12 @@ if __name__ == "__main__":
         )
     )
     solver.setup(problem)
-    result = solver.solve(result.traj)  # type: ignore
-    assert result.traj is not None
-    print("time to smooth by sqp: {}".format(result.time_elapsed))
+    smooth_result = solver.solve(result.traj)  # type: ignore
+    if smooth_result.traj is None:
+        print("sqp: fail to smooth")
+    else:
+        print("sqp: time to smooth: {}".format(smooth_result.time_elapsed))
+        result = smooth_result  # type: ignore
 
     if with_visualize:
         vis = TrimeshSceneViewer()
@@ -110,12 +117,17 @@ if __name__ == "__main__":
         vis.add(com_box)
         ax = Axis.from_coords(goal_rarm_co)
         vis.add(ax)
+        colvis = CollisionSphereVisualizationManager(colkin, vis)
+        colvis.update(jaxon)
+
         vis.show()
         time.sleep(4)
+        assert result.traj is not None
         for q in result.traj.resample(20):
             set_robot_state(
                 jaxon, config._get_control_joint_names(), q, base_type=BaseType.FLOATING
             )
-            time.sleep(0.5)
+            colvis.update(jaxon)  # type: ignore
             vis.redraw()
+            time.sleep(1.0)
         time.sleep(10)
