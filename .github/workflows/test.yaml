@@ -40,6 +40,11 @@ jobs:
               run: |
                   pytest -v tests
 
+            - name: Run example
+              run: |
+                  # python3 example/a0b_reaching.py  # a0b model is not public?
+                  python3 example/humanoid_reaching.py
+
             - name: Run mypy
               run: |
                   mypy .
