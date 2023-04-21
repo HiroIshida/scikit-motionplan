@@ -200,6 +200,13 @@ class JaxonConfig:
             link_wise_sphere_creator[link_name] = lambda mesh: sc_rarm_finger1
             collision_link_names.append(link_name)
 
+            link_name = "RARM_LINK7"
+            collection = []
+            collection.append((np.array([0.0, 0.0, -0.14]), 0.06, str(uuid.uuid4())))
+            sc_rarm_link7 = copy.deepcopy(SphereCollection(*list(zip(*collection))))
+            link_wise_sphere_creator[link_name] = lambda mesh: sc_rarm_link7
+            collision_link_names.append(link_name)
+
         if lgripper:
             link_name = "LARM_FINGER0"
             collection = []
@@ -225,19 +232,12 @@ class JaxonConfig:
             link_wise_sphere_creator[link_name] = lambda mesh: sc_larm_finger1
             collision_link_names.append(link_name)
 
-        link_name = "RARM_LINK7"
-        collection = []
-        collection.append((np.array([0.0, 0.0, -0.14]), 0.06, str(uuid.uuid4())))
-        sc_rarm_link7 = copy.deepcopy(SphereCollection(*list(zip(*collection))))
-        link_wise_sphere_creator[link_name] = lambda mesh: sc_rarm_link7
-        collision_link_names.append(link_name)
-
-        link_name = "LARM_LINK7"
-        collection = []
-        collection.append((np.array([0.0, 0.0, -0.14]), 0.06, str(uuid.uuid4())))
-        sc_larm_link7 = copy.deepcopy(SphereCollection(*list(zip(*collection))))
-        link_wise_sphere_creator[link_name] = lambda mesh: sc_larm_link7
-        collision_link_names.append(link_name)
+            link_name = "LARM_LINK7"
+            collection = []
+            collection.append((np.array([0.0, 0.0, -0.14]), 0.06, str(uuid.uuid4())))
+            sc_larm_link7 = copy.deepcopy(SphereCollection(*list(zip(*collection))))
+            link_wise_sphere_creator[link_name] = lambda mesh: sc_larm_link7
+            collision_link_names.append(link_name)
 
         link_name = "RARM_LINK5"
         collection = []
