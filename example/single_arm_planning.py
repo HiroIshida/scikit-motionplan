@@ -26,7 +26,7 @@ np.random.seed(0)
 set_ompl_random_seed(0)
 
 if __name__ == "__main__":
-    base_type = BaseType.FLOATING
+    base_type = BaseType.FIXED
 
     pr2 = PR2(use_tight_joint_limit=False)
     pr2.reset_manip_pose()
@@ -39,7 +39,6 @@ if __name__ == "__main__":
     colkin.reflect_skrobot_model(pr2)
 
     use_pose_constraint = True
-    neural_selcol = False
     smooth_by_nlp = False
 
     start = np.array([0.564, 0.35, -0.74, -0.7, -0.7, -0.17, -0.63])
@@ -69,26 +68,20 @@ if __name__ == "__main__":
     obstacle.translate(np.array([0.8, -0.2, 0.9]))
     assert obstacle.sdf is not None
     collfree_const = CollFreeConst(colkin, obstacle.sdf, pr2)
-
-    if neural_selcol:
-        selcolfree_const = robot_config.get_neural_selcol_const(pr2)
-        selcolfree_const.reflect_skrobot_model(pr2)
-    else:
-        selcolfree_const = PairWiseSelfCollFreeConst(colkin, pr2)  # type: ignore[assignment]
-
+    selcolfree_const = PairWiseSelfCollFreeConst(colkin, pr2, only_closest_feature=True)  # type: ignore[assignment]
     global_ineq_const = IneqCompositeConst([collfree_const, selcolfree_const])
 
     # construct problem
     problem = Problem(start, box_const, goal_eq_const, global_ineq_const, None)
 
-    ompl_config = OMPLSolverConfig(n_max_call=50000, algorithm=Algorithm.RRT)
+    ompl_config = OMPLSolverConfig(n_max_call=10000, algorithm=Algorithm.RRT, simplify=True)
     ompl_solver = OMPLSolver.init(ompl_config)
     ompl_solver.setup(problem)
     result = ompl_solver.solve()
     print(result.time_elapsed)
     assert result.traj is not None
 
-    n_wp = 30
+    n_wp = 40
     if smooth_by_nlp:
         sqp_config = SQPBasedSolverConfig(n_wp=n_wp)
         nlp_solver = SQPBasedSolver.init(sqp_config)
