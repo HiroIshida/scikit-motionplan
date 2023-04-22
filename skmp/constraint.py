@@ -203,18 +203,68 @@ class BoxConst(AbstractIneqConst):
 class CollFreeConst(AbstractIneqConst):
     colkin: ArticulatedCollisionKinematicsMap
     sdf: Callable[[np.ndarray], np.ndarray]
+    only_closest_feature: bool
 
     def __init__(
         self,
         colkin: ArticulatedCollisionKinematicsMap,
         sdf: Callable[[np.ndarray], np.ndarray],
         robot_model: RobotModel,
+        only_closest_feature: bool = False
     ) -> None:
         self.colkin = colkin
         self.sdf = sdf
         self.reflect_skrobot_model(robot_model)
+        self.only_closest_feature = only_closest_feature
 
     def _evaluate(self, qs: np.ndarray, with_jacobian: bool) -> Tuple[np.ndarray, np.ndarray]:
+        if self.only_closest_feature:
+            return self._evaluate_closest(qs, with_jacobian)
+        else:
+            return self._evaluate_all(qs, with_jacobian)
+
+    def _evaluate_closest(
+        self, qs: np.ndarray, with_jacobian: bool
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        assert self.sdf is not None
+        n_point, dim_cspace = qs.shape
+        self.colkin.n_feature
+        dim_tspace = self.colkin.dim_tspace
+
+        # xss: R^{n_point, n_feature * dim_tspace}
+        # jacss: R^{n_point, n_feature, dim_tspace, dim_cspace}
+        xss, jacss = self.colkin.map(qs)  # ss refere to points of points
+
+        # NOTE: 1 because we focus single closest feature point
+        values = np.zeros([n_point, 1])
+        Js = np.zeros([n_point, 1, dim_cspace])
+
+        for i in range(n_point):
+            xs = xss[i]
+            sds_stacked = self.sdf(xs)
+            idx_closest = np.argmin(sds_stacked)
+            sd_closest = sds_stacked[idx_closest]
+            sd_with_margin = sd_closest - self.colkin.radius_list[idx_closest]
+
+            values[i] = sd_with_margin
+
+            if with_jacobian:
+                eps = 1e-7
+                xs_closest = xs[idx_closest]
+                jac_closest = jacss[i][idx_closest]
+
+                grad = np.zeros(dim_tspace)
+
+                for j in range(dim_tspace):
+                    xs_closest_plus = copy.deepcopy(xs_closest)
+                    xs_closest_plus[j] += eps
+                    sd_closest_plus = self.sdf(np.expand_dims(xs_closest_plus, axis=0))[0]
+                    grad[j] = (sd_closest_plus - sd_closest) / eps
+                Js[i, 0, :] = grad.dot(jac_closest)
+
+        return values, Js
+
+    def _evaluate_all(self, qs: np.ndarray, with_jacobian: bool) -> Tuple[np.ndarray, np.ndarray]:
         """compute signed distance of feature points and its jacobian
         input:
             qs: R^{n_point, n_feature}

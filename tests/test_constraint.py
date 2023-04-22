@@ -66,6 +66,10 @@ def test_collfree_const():
     box.translate(np.array([0.85, -0.2, 0.9]))
     assert box.sdf is not None
     collfree_const = CollFreeConst(colkin, box.sdf, PR2())
+    collfree_const.only_closest_feature = False
+    check_jacobian(collfree_const, 7)
+
+    collfree_const.only_closest_feature = True
     check_jacobian(collfree_const, 7)
 
 
