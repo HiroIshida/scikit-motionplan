@@ -13,7 +13,7 @@ install_requires = [
     "osqp",
     "ompl-thin>=0.0.16",
     "selcol>=0.0.3.2",
-    "pyglet<2.0",  # waiting for https://github.com/iory/scikit-robot/pull/284 be marged
+    "threadpoolctl",
 ]
 
 setup(

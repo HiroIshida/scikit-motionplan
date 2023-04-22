@@ -1,8 +1,12 @@
+import multiprocessing
+import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Generic, List, Optional, Protocol, Tuple, Type, TypeVar, Union
 
 import numpy as np
+import threadpoolctl
 
 from skmp.constraint import AbstractEqConst, AbstractIneqConst, BoxConst
 from skmp.solver.motion_step_box import is_valid_motion_step
@@ -94,6 +98,30 @@ class AbstractSolver(ABC, Generic[ConfigT, ResultT]):
     def solve(self, init_traj: Optional[Trajectory] = None) -> ResultT:
         """solve problem with maybe a solution guess"""
         ...
+
+    def _parallel_solve_inner(self, init_traj: Optional[Trajectory] = None) -> ResultT:
+        """assume to be used in multi processing"""
+        # prevend numpy from using multi-thread
+        unique_seed = datetime.now().microsecond + os.getpid()
+        np.random.seed(unique_seed)
+        with threadpoolctl.threadpool_limits(limits=1, user_api="blas"):
+            return self.solve(init_traj)
+
+    def parallel_solve(self, n_process: int = 4) -> ResultT:
+        processes = []
+        result_queue = multiprocessing.Queue()  # type: ignore
+
+        for i in range(n_process):
+            p = multiprocessing.Process(
+                target=lambda: result_queue.put(self._parallel_solve_inner())
+            )
+            processes.append(p)
+            p.start()
+
+        result = result_queue.get()
+        for p in processes:
+            p.terminate()
+        return result
 
 
 class AbstractScratchSolver(AbstractSolver[ConfigT, ResultT]):

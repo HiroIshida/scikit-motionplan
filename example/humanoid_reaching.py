@@ -43,8 +43,8 @@ if __name__ == "__main__":
     ]
     selcol_const = config.get_neural_selcol_const(jaxon)
     colkin = config.get_collision_kin()
-    col_const = CollFreeConst(colkin, box.sdf, jaxon)
-    com_const = config.get_com_stability_const(jaxon, lambda x: -com_box.sdf(x))
+    col_const = CollFreeConst(colkin, box.sdf, jaxon, only_closest_feature=False)
+    com_const = config.get_com_stability_const(jaxon, com_box)
     ineq_const = IneqCompositeConst([com_const, col_const, selcol_const])
 
     # solve ik to determine start state (random)
@@ -83,10 +83,10 @@ if __name__ == "__main__":
     # rrt_conf = MyRRTConfig(10000, satisfaction_conf=None)
     # rrt = MyRRTSolver.init(rrt_conf)
 
-    rrt_conf = MyRRTConfig(500, satisfaction_conf=SatisfactionConfig(n_max_eval=50))
+    rrt_conf = MyRRTConfig(2000, satisfaction_conf=SatisfactionConfig(n_max_eval=50))
     rrt = MyRRTConnectSolver.init(rrt_conf)
     rrt.setup(problem)
-    result = rrt.solve()
+    result = rrt.parallel_solve(n_process=12)
     assert result.traj is not None
     print("time to solve rrt: {}".format(time.time() - ts))
 
