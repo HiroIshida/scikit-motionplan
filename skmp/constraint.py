@@ -518,8 +518,14 @@ class PairWiseSelfCollFreeConst(AbstractIneqConst):
     colkin: ArticulatedCollisionKinematicsMap
     check_sphere_id_pairs: List[Tuple[int, int]]
     check_sphere_pair_sqdists: np.ndarray  # pair sqdist means (r1 + r2) ** 2
+    only_closest_feature: bool
 
-    def __init__(self, colkin: ArticulatedCollisionKinematicsMap, robot_model: RobotModel) -> None:
+    def __init__(
+        self,
+        colkin: ArticulatedCollisionKinematicsMap,
+        robot_model: RobotModel,
+        only_closest_feature: bool = False,
+    ) -> None:
         # here in this constructor, we will filter out collision pair which is already collide
         # at the initial pose np.zeros(n_dof)
 
@@ -566,9 +572,10 @@ class PairWiseSelfCollFreeConst(AbstractIneqConst):
         self.check_sphere_id_pairs = valid_sphere_id_pairs
         self.check_sphere_pair_sqdists = valid_sphere_pair_dists**2
         self.reflect_skrobot_model(robot_model)
+        self.only_closest_feature = only_closest_feature
 
     def _evaluate(self, qs: np.ndarray, with_jacobian: bool) -> Tuple[np.ndarray, np.ndarray]:
-        n_sample, n_dim = qs.shape
+        n_wp, n_dim = qs.shape
 
         sqdists_stacked, grads_stacked = self.colkin.fksolver.compute_inter_link_sqdists(
             qs,
@@ -577,14 +584,26 @@ class PairWiseSelfCollFreeConst(AbstractIneqConst):
             base_type=self.colkin.base_type,
             with_jacobian=with_jacobian,
         )
-        sqdistss = sqdists_stacked.reshape(n_sample, -1)
+        sqdistss = sqdists_stacked.reshape(n_wp, -1)
         valuess = sqdistss - self.check_sphere_pair_sqdists
 
-        if not with_jacobian:
-            return valuess, self.dummy_jacobian()
-
-        gradss = grads_stacked.reshape(n_sample, -1, n_dim)
-        return valuess, gradss
+        if self.only_closest_feature:
+            min_valuess = np.expand_dims(np.min(valuess, axis=1), axis=1)
+            if not with_jacobian:
+                return min_valuess, self.dummy_jacobian()
+            else:
+                min_jacs = np.zeros((n_wp, 1, n_dim))
+                gradss = grads_stacked.reshape(n_wp, -1, n_dim)
+                for i in range(n_wp):
+                    values, grads = valuess[i], gradss[i]
+                    idx_min = np.argmin(values)
+                    min_jacs[i, 0, :] = grads[idx_min]
+            return min_valuess, min_jacs
+        else:
+            if not with_jacobian:
+                return valuess, self.dummy_jacobian()
+            gradss = grads_stacked.reshape(n_wp, -1, n_dim)
+            return valuess, gradss
 
     def _reflect_skrobot_model(self, robot_model: Optional[RobotModel]) -> None:
         assert robot_model is not None

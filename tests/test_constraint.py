@@ -140,7 +140,11 @@ def test_realtive_pose_const():
 def test_pair_wise_selfcollfree_const():
     config = PR2Config(base_type=BaseType.FIXED)
     colkin = config.get_collision_kin()
-    const = PairWiseSelfCollFreeConst(colkin, PR2())
+
+    const = PairWiseSelfCollFreeConst(colkin, PR2(), only_closest_feature=False)
+    check_jacobian(const, 7)
+
+    const = PairWiseSelfCollFreeConst(colkin, PR2(), only_closest_feature=True)
     check_jacobian(const, 7)
 
     q_init = np.zeros(7)
