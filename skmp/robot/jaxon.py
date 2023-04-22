@@ -46,6 +46,18 @@ class Jaxon(RobotModelFromURDF):
     def default_urdf_path(self):
         return JAXON_URDF_PATH
 
+    def reset_manip_pose(self):
+        angle_table = {
+            "RLEG": [0.0, 0.0, -0.349066, 0.698132, -0.349066, 0.0],
+            "LLEG": [0.0, 0.0, -0.349066, 0.698132, -0.349066, 0.0],
+            "CHEST": [0.0, 0.0, 0.0],
+            "RARM": [0.0, 0.959931, -0.349066, -0.261799, -1.74533, -0.436332, 0.0, -0.785398],
+            "LARM": [0.0, 0.959931, 0.349066, 0.261799, -1.74533, 0.436332, 0.0, -0.785398],
+        }
+        for key, values in angle_table.items():
+            for i, angle in enumerate(values):
+                self.__dict__["{}_JOINT{}".format(key, i)].joint_angle(angle)
+
 
 @dataclass
 class JaxonConfig:
