@@ -154,7 +154,7 @@ def test_com_stability_const():
         jaxon = Jaxon()
 
     com_box = Box([0.2, 0.6, 5.0], with_sdf=True)
-    const = config.get_com_stability_const(jaxon, com_box.sdf)
+    const = config.get_com_stability_const(jaxon, com_box)
     # NOTE: currently base jacobian computation is unstable when
     # rpy angle is big due to singularity
     # thus we set std = 0.1

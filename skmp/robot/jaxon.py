@@ -2,12 +2,13 @@ import copy
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, List, Optional
+from typing import List, Optional
 
 import numpy as np
 from robot_descriptions.jaxon_description import URDF_PATH as JAXON_URDF_PATH
 from skrobot.coordinates import CascadedCoords
 from skrobot.coordinates.math import rotation_matrix, rpy_angle
+from skrobot.model.primitives import Box
 from skrobot.models.urdf import RobotModelFromURDF
 from tinyfk import BaseType, RobotModel, RotationType
 
@@ -389,13 +390,15 @@ class JaxonConfig:
             self.urdf_path(), self._get_control_joint_names(), robot_model, BaseType.FLOATING
         )
 
-    def get_com_stability_const(
-        self, robot_model: Jaxon, sdf: Callable[[np.ndarray], np.ndarray]
-    ) -> COMStabilityConst:
+    def get_com_stability_const(self, robot_model: Jaxon, com_box: Box) -> COMStabilityConst:
         fksolver = RobotModel(self.urdf_path())
         fksolver.get_joint_ids(self._get_control_joint_names())
 
         const = COMStabilityConst(
-            self.urdf_path(), self._get_control_joint_names(), BaseType.FLOATING, robot_model, sdf
+            self.urdf_path(),
+            self._get_control_joint_names(),
+            BaseType.FLOATING,
+            robot_model,
+            com_box,
         )
         return const

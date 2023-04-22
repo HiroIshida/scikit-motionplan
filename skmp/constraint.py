@@ -11,6 +11,7 @@ from selcol.runtime import OrtSelColInferencer
 from skrobot.coordinates import Coordinates, matrix2quaternion, rpy_angle
 from skrobot.coordinates.math import wxyz2xyzw
 from skrobot.model import RobotModel
+from skrobot.model.primitives import Box
 from tinyfk import BaseType, RotationType
 
 from skmp.kinematics import (
@@ -210,7 +211,7 @@ class CollFreeConst(AbstractIneqConst):
         colkin: ArticulatedCollisionKinematicsMap,
         sdf: Callable[[np.ndarray], np.ndarray],
         robot_model: RobotModel,
-        only_closest_feature: bool = False
+        only_closest_feature: bool = False,
     ) -> None:
         self.colkin = colkin
         self.sdf = sdf
@@ -657,7 +658,7 @@ class COMStabilityConst(AbstractIneqConst):
     tinyfk_joint_ids: List[int]
     base_type: BaseType
     model: RobotModel
-    sdf: Callable[[np.ndarray], np.ndarray]
+    com_box: Box
 
     def __init__(
         self,
@@ -665,7 +666,7 @@ class COMStabilityConst(AbstractIneqConst):
         joint_names: List[str],
         base_type: BaseType,
         robot_model: RobotModel,
-        sdf: Callable[[np.ndarray], np.ndarray],
+        com_box: Box,
     ):
 
         dim_cspace = (
@@ -683,7 +684,7 @@ class COMStabilityConst(AbstractIneqConst):
         self.tinyfk_joint_ids = tinyfk_joint_ids
         self.base_type = base_type
         self.model = robot_model
-        self.sdf = sdf
+        self.com_box = com_box
         self.reflect_skrobot_model(robot_model)
 
     def _evaluate(
@@ -698,7 +699,8 @@ class COMStabilityConst(AbstractIneqConst):
         # xss: R^{n_point, 3}
         # jacs: R^{3, n_point, dim_cspace}
 
-        sds = self.sdf(xs)
+        assert self.com_box is not None
+        sds = -self.com_box.sdf(xs)
         if with_jacobian:
             eps = 1e-7
             grads = np.zeros((n_point, 1, 3))
@@ -706,7 +708,7 @@ class COMStabilityConst(AbstractIneqConst):
             for i in range(3):
                 xs_plus = copy.deepcopy(xs)
                 xs_plus[:, i] += eps
-                sds_plus = self.sdf(xs_plus)
+                sds_plus = -self.com_box.sdf(xs_plus)
                 grads[:, 0, i] = (sds_plus - sds) / eps
 
             Js = np.einsum("ijk,ijkl->ijl", grads, jacs)
