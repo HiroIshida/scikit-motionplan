@@ -28,6 +28,10 @@ class TerminationException(Exception):
     ...
 
 
+class InvalidStartPosition(Exception):
+    ...
+
+
 class ManifoldRRT(ABC):
     is_reached: Optional[Callable[[np.ndarray], bool]]
     b_min: np.ndarray
@@ -54,7 +58,6 @@ class ManifoldRRT(ABC):
         config: ManifoldRRTConfig = ManifoldRRTConfig(),
     ):
 
-        assert f_is_valid(start)
         if f_goal_project is not None:
             assert callable(f_goal_project)
         self.f_goal_project = f_goal_project
@@ -171,6 +174,9 @@ class ManifoldRRT(ABC):
             dist_pre = dist
 
     def solve(self) -> bool:
+        if self.f_is_valid(self.start_node.q):
+            raise InvalidStartPosition
+
         assert self.f_goal_project is not None
         try:
             while True:

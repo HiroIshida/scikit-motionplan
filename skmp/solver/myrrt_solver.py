@@ -7,6 +7,7 @@ import numpy as np
 
 from skmp.satisfy import SatisfactionConfig, SatisfactionResult, satisfy_by_optimization
 from skmp.solver._manifold_rrt_solver import (
+    InvalidStartPosition,
     ManifoldRRT,
     ManifoldRRTConfig,
     ManifoldRRTConnect,
@@ -178,7 +179,11 @@ class MyRRTConnectSolver(MyRRTSolverBase):
             self.is_valid,
             config=conf,
         )
-        is_success = rrtconnect.solve()
+        try:
+            is_success = rrtconnect.solve()
+        except InvalidStartPosition:
+            return MyRRTResult.abnormal(None, np.inf)
+
         if is_success:
             traj = Trajectory(list(rrtconnect.get_solution()))
             return MyRRTResult(
