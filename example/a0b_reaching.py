@@ -13,7 +13,7 @@ from skmp.robot.utils import set_robot_state
 from skmp.satisfy import satisfy_by_optimization_with_budget
 from skmp.solver.interface import Problem
 from skmp.solver.ompl_solver import OMPLSolver, OMPLSolverConfig
-from skmp.visualization import CollisionSphereVisualizationManager
+from skmp.visualization.collision_visualizer import CollisionSphereVisualizationManager
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

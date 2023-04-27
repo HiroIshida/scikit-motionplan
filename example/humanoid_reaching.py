@@ -15,7 +15,7 @@ from skmp.satisfy import SatisfactionConfig, satisfy_by_optimization_with_budget
 from skmp.solver.interface import Problem
 from skmp.solver.myrrt_solver import MyRRTConfig, MyRRTConnectSolver
 from skmp.solver.nlp_solver import SQPBasedSolver, SQPBasedSolverConfig
-from skmp.visualization import CollisionSphereVisualizationManager
+from skmp.visualization.collision_visualizer import CollisionSphereVisualizationManager
 
 # np.random.seed(5)
 

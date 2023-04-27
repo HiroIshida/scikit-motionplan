@@ -1,11 +1,9 @@
-import time
 from typing import Optional
 
 import numpy as np
 from ompl import Algorithm, set_ompl_random_seed
 from skrobot.model.primitives import Axis, Box
 from skrobot.models import PR2
-from skrobot.viewers import TrimeshSceneViewer
 from tinyfk import BaseType
 
 from skmp.constraint import (
@@ -20,7 +18,7 @@ from skmp.robot.utils import set_robot_state
 from skmp.solver.interface import Problem
 from skmp.solver.nlp_solver import SQPBasedSolver, SQPBasedSolverConfig
 from skmp.solver.ompl_solver import OMPLSolver, OMPLSolverConfig
-from skmp.visualization import CollisionSphereVisualizationManager
+from skmp.visualization.solution_visualizer import InteractiveSolutionVisualizer
 
 np.random.seed(0)
 set_ompl_random_seed(0)
@@ -90,23 +88,12 @@ if __name__ == "__main__":
         print(result.time_elapsed)
         assert result.traj is not None
 
-    viewer = TrimeshSceneViewer(resolution=(640, 480))
-    colvis = CollisionSphereVisualizationManager(colkin, viewer)
-    viewer.add(pr2)
-    viewer.add(obstacle)
+    def robot_updator(robot, q) -> None:
+        set_robot_state(robot, robot_config._get_control_joint_names(), q, base_type=base_type)
+
+    geometry = [obstacle]
     if target is not None:
-        viewer.add(target)
-
-    viewer.show()
-    time.sleep(1.0)
+        geometry.append(target)
+    vis = InteractiveSolutionVisualizer(pr2, geometry, robot_updator=robot_updator)
     assert result.traj is not None
-    for q in result.traj.resample(n_wp):
-        set_robot_state(pr2, robot_config._get_control_joint_names(), q, base_type=base_type)
-        colvis.update(pr2, obstacle.sdf)
-        viewer.redraw()
-        time.sleep(0.6)
-
-    print("==> Press [q] to close window")
-    while not viewer.has_exit:
-        time.sleep(0.1)
-        viewer.redraw()
+    vis.visualize_trajectory(result.traj.resample(n_wp))
