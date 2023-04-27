@@ -174,7 +174,8 @@ class ManifoldRRT(ABC):
             dist_pre = dist
 
     def solve(self) -> bool:
-        if self.f_is_valid(self.start_node.q):
+        assert self.start_node is not None
+        if not self.f_is_valid(self.start_node.q):
             raise InvalidStartPosition
 
         assert self.f_goal_project is not None

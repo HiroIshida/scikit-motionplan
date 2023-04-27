@@ -182,7 +182,7 @@ class MyRRTConnectSolver(MyRRTSolverBase):
         try:
             is_success = rrtconnect.solve()
         except InvalidStartPosition:
-            return MyRRTResult.abnormal(None, np.inf)
+            return MyRRTResult.abnormal(time.time() - ts)
 
         if is_success:
             traj = Trajectory(list(rrtconnect.get_solution()))
