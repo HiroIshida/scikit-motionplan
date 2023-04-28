@@ -7,11 +7,11 @@ import numpy as np
 import tinyfk
 from skrobot.coordinates.math import rpy_angle
 from skrobot.model import RobotModel
-from skrobot.utils import URDF
 from tinyfk import BaseType, RotationType
 from trimesh import Trimesh
 
 from skmp.collision import SphereCollection, create_sphere_collection
+from skmp.utils import load_urdf_model_using_cache
 
 
 class KinematicsMapProtocol(Protocol):
@@ -265,7 +265,7 @@ class ArticulatedCollisionKinematicsMap(ArticulatedKinematicsMapBase):
         if fksolver_init_hook is not None:
             fksolver_init_hook(fksolver)
 
-        urdf = URDF.load(urdfpath_str)
+        urdf = load_urdf_model_using_cache(urdfpath)
 
         radius_list = []
         sphere_name_list = []

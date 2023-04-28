@@ -12,13 +12,14 @@ from skrobot.coordinates import Coordinates, matrix2quaternion, rpy_angle
 from skrobot.coordinates.math import wxyz2xyzw
 from skrobot.model import RobotModel
 from skrobot.model.primitives import Box
-from skrobot.utils.urdf import URDF, JointLimit
+from skrobot.utils.urdf import JointLimit
 from tinyfk import BaseType, RotationType
 
 from skmp.kinematics import (
     ArticulatedCollisionKinematicsMap,
     ArticulatedEndEffectorKinematicsMap,
 )
+from skmp.utils import load_urdf_model_using_cache
 
 
 class AbstractConst(ABC):
@@ -154,8 +155,7 @@ class BoxConst(AbstractIneqConst):
         base_bounds: Optional[Tuple[np.ndarray, np.ndarray]] = None,
     ):
 
-        urdfpath_str = str(urdf_path.expanduser())
-        urdf = URDF.load(urdfpath_str)
+        urdf = load_urdf_model_using_cache(urdf_path.expanduser())
         b_min = []
         b_max = []
         for joint_name in joint_names:
