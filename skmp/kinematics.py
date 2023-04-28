@@ -7,11 +7,11 @@ import numpy as np
 import tinyfk
 from skrobot.coordinates.math import rpy_angle
 from skrobot.model import RobotModel
+from skrobot.utils import URDF
 from tinyfk import BaseType, RotationType
 from trimesh import Trimesh
 
 from skmp.collision import SphereCollection, create_sphere_collection
-from skmp.utils.urdf import URDF  # type: ignore
 
 
 class KinematicsMapProtocol(Protocol):

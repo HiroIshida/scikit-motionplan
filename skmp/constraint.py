@@ -12,13 +12,13 @@ from skrobot.coordinates import Coordinates, matrix2quaternion, rpy_angle
 from skrobot.coordinates.math import wxyz2xyzw
 from skrobot.model import RobotModel
 from skrobot.model.primitives import Box
+from skrobot.utils.urdf import URDF, JointLimit
 from tinyfk import BaseType, RotationType
 
 from skmp.kinematics import (
     ArticulatedCollisionKinematicsMap,
     ArticulatedEndEffectorKinematicsMap,
 )
-from skmp.utils.urdf import URDF, JointLimit  # type: ignore
 
 
 class AbstractConst(ABC):
