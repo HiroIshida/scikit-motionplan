@@ -4,10 +4,9 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional, Protocol, Tuple, Union
 
 import numpy as np
-import tinyfk
 from skrobot.coordinates.math import rpy_angle
 from skrobot.model import RobotModel
-from tinyfk import BaseType, RotationType
+from tinyfk import BaseType, KinematicModel, RotationType
 from trimesh import Trimesh
 
 from skmp.collision import SphereCollection, create_sphere_collection
@@ -78,7 +77,7 @@ class ArticulatedKinematicsMapBase:
     dim_cspace: int
     dim_tspace: int
     n_feature: int
-    fksolver: tinyfk.RobotModel
+    fksolver: KinematicModel
     tinyfk_joint_ids: List[int]
     tinyfk_feature_ids: List[int]
     control_joint_names: List[str]
@@ -110,12 +109,12 @@ class ArticulatedKinematicsMapBase:
                 assert len(base_pose) == 6
             angles = angles + list(base_pose)
 
-        self.fksolver.set_joint_angles(joint_ids, angles)
+        self.fksolver.set_q(joint_ids, angles)
 
     def map(self, points_cspace: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         n_point, n_dim_cspace = points_cspace.shape
 
-        f_tmp, j_tmp = self.fksolver.solve_forward_kinematics(
+        f_tmp, j_tmp = self.fksolver.solve_fk(
             points_cspace,
             self.tinyfk_feature_ids,
             self.tinyfk_joint_ids,
@@ -192,7 +191,7 @@ class ArticulatedEndEffectorKinematicsMap(ArticulatedKinematicsMapBase):
         end_effector_names: List[str],
         base_type: BaseType = BaseType.FIXED,
         rot_type: RotationType = RotationType.RPY,
-        fksolver_init_hook: Optional[Callable[[tinyfk.RobotModel], None]] = None,
+        fksolver_init_hook: Optional[Callable[[KinematicModel], None]] = None,
     ):
 
         dim_cspace = (
@@ -202,7 +201,7 @@ class ArticulatedEndEffectorKinematicsMap(ArticulatedKinematicsMapBase):
         )
 
         urdfpath_str = str(urdfpath.expanduser())
-        fksolver = tinyfk.RobotModel(urdfpath_str)
+        fksolver = KinematicModel(urdfpath_str)
         if fksolver_init_hook is not None:
             fksolver_init_hook(fksolver)
 
@@ -244,7 +243,7 @@ class ArticulatedCollisionKinematicsMap(ArticulatedKinematicsMapBase):
         collision_link_names: List[str],
         base_type: BaseType = BaseType.FIXED,
         link_wise_sphere_creator: Optional[Dict[str, Callable[[Trimesh], SphereCollection]]] = None,
-        fksolver_init_hook: Optional[Callable[[tinyfk.RobotModel], None]] = None,
+        fksolver_init_hook: Optional[Callable[[KinematicModel], None]] = None,
     ):
         if link_wise_sphere_creator is None:
             link_wise_sphere_creator = {}
@@ -261,7 +260,7 @@ class ArticulatedCollisionKinematicsMap(ArticulatedKinematicsMapBase):
         rot_type = RotationType.IGNORE
 
         urdfpath_str = str(urdfpath.expanduser())
-        fksolver = tinyfk.RobotModel(urdfpath_str)
+        fksolver = KinematicModel(urdfpath_str)
         if fksolver_init_hook is not None:
             fksolver_init_hook(fksolver)
 

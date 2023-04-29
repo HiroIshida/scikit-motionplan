@@ -10,7 +10,7 @@ from skrobot.coordinates import CascadedCoords
 from skrobot.coordinates.math import rotation_matrix, rpy_angle
 from skrobot.model.primitives import Box
 from skrobot.models.urdf import RobotModelFromURDF
-from tinyfk import BaseType, RobotModel, RotationType
+from tinyfk import BaseType, KinematicModel, RotationType
 
 from skmp.collision import SphereCollection
 from skmp.constraint import BoxConst, COMStabilityConst, NeuralSelfCollFreeConst
@@ -67,16 +67,16 @@ class JaxonConfig:
         return Path(JAXON_URDF_PATH)
 
     @staticmethod
-    def add_end_coords(robot_model: RobotModel) -> None:
-        rarm_id, larm_id = robot_model.get_link_ids(["RARM_LINK7", "LARM_LINK7"])
+    def add_end_coords(kin: KinematicModel) -> None:
+        rarm_id, larm_id = kin.get_link_ids(["RARM_LINK7", "LARM_LINK7"])
         matrix = rotation_matrix(np.pi * 0.5, [0, 0, 1.0])
         rpy = np.flip(rpy_angle(matrix)[0])
-        robot_model.add_new_link("rarm_end_coords", rarm_id, [0, 0, -0.220], rotation=rpy)
-        robot_model.add_new_link("larm_end_coords", larm_id, [0, 0, -0.220], rotation=rpy)
+        kin.add_new_link("rarm_end_coords", rarm_id, [0, 0, -0.220], rpy=rpy)
+        kin.add_new_link("larm_end_coords", larm_id, [0, 0, -0.220], rpy=rpy)
 
-        rleg_id, lleg_id = robot_model.get_link_ids(["RLEG_LINK5", "LLEG_LINK5"])
-        robot_model.add_new_link("rleg_end_coords", rleg_id, [0, 0, -0.1])
-        robot_model.add_new_link("lleg_end_coords", lleg_id, [0, 0, -0.1])
+        rleg_id, lleg_id = kin.get_link_ids(["RLEG_LINK5", "LLEG_LINK5"])
+        kin.add_new_link("rleg_end_coords", rleg_id, [0, 0, -0.1])
+        kin.add_new_link("lleg_end_coords", lleg_id, [0, 0, -0.1])
 
     def _get_control_joint_names(self) -> List[str]:
         joint_names = []
@@ -391,7 +391,7 @@ class JaxonConfig:
         )
 
     def get_com_stability_const(self, robot_model: Jaxon, com_box: Box) -> COMStabilityConst:
-        fksolver = RobotModel(self.urdf_path())
+        fksolver = KinematicModel(self.urdf_path())
         fksolver.get_joint_ids(self._get_control_joint_names())
 
         const = COMStabilityConst(

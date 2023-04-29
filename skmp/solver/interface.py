@@ -117,6 +117,7 @@ class AbstractSolver(ABC, Generic[ConfigT, ResultT]):
             )
             processes.append(p)
             p.start()
+            print("start process")
 
         result = result_queue.get()
         for p in processes:

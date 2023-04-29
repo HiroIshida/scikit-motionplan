@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Callable, List, Optional, Protocol, Tuple, TypeVar, runtime_checkable
 
 import numpy as np
-import tinyfk
 from selcol.file import default_pretrained_basepath
 from selcol.runtime import OrtSelColInferencer
 from skrobot.coordinates import Coordinates, matrix2quaternion, rpy_angle
@@ -13,7 +12,7 @@ from skrobot.coordinates.math import wxyz2xyzw
 from skrobot.model import RobotModel
 from skrobot.model.primitives import Box
 from skrobot.utils.urdf import JointLimit
-from tinyfk import BaseType, RotationType
+from tinyfk import BaseType, KinematicModel, RotationType
 
 from skmp.kinematics import (
     ArticulatedCollisionKinematicsMap,
@@ -673,7 +672,7 @@ class COMStabilityConst(AbstractIneqConst):
     # highly experimental feature
     # will be used in humanoid planning only
     dim_cspace: int
-    fksolver: tinyfk.RobotModel
+    fksolver: KinematicModel
     tinyfk_joint_ids: List[int]
     base_type: BaseType
     model: RobotModel
@@ -695,7 +694,7 @@ class COMStabilityConst(AbstractIneqConst):
         )
 
         urdfpath_str = str(urdfpath.expanduser())
-        fksolver = tinyfk.RobotModel(urdfpath_str)
+        fksolver = KinematicModel(urdfpath_str)
         tinyfk_joint_ids = fksolver.get_joint_ids(joint_names)
 
         self.dim_cspace = dim_cspace
@@ -711,7 +710,7 @@ class COMStabilityConst(AbstractIneqConst):
     ) -> Tuple[np.ndarray, np.ndarray]:
 
         n_point, n_dim = qs.shape
-        xs, jacs_tmp = self.fksolver.solve_com_forward_kinematics(
+        xs, jacs_tmp = self.fksolver.solve_com_fk(
             qs, self.tinyfk_joint_ids, self.base_type, with_jacobian
         )
         jacs = jacs_tmp.reshape(n_point, 1, 3, n_dim)
