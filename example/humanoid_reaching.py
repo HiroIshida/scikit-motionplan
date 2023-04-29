@@ -45,7 +45,7 @@ if __name__ == "__main__":
     colkin = config.get_collision_kin()
     col_const = CollFreeConst(colkin, box.sdf, jaxon, only_closest_feature=False)
     com_const = config.get_com_stability_const(jaxon, com_box)
-    ineq_const = IneqCompositeConst([com_const, col_const, selcol_const])
+    ineq_const = IneqCompositeConst([selcol_const, com_const, col_const])
 
     # solve ik to determine start state (random)
     efkin = config.get_endeffector_kin()

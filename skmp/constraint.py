@@ -72,6 +72,10 @@ class AbstractIneqConst(AbstractConst):
     def is_equality(cls) -> bool:
         return False
 
+    def is_valid(self, q: np.ndarray) -> bool:
+        value, _ = self.evaluate_single(q, False)
+        return bool(np.all(value > 0))
+
 
 class AbstractEqConst(AbstractConst):
     @classmethod
@@ -130,7 +134,21 @@ class _CompositeConst(AbstractConst):
 
 
 class IneqCompositeConst(AbstractIneqConst, _CompositeConst):
-    ...
+    """
+    Order of the list of constraints affects lot to performance.
+    See the comment in is_valid function.
+    """
+
+    def is_valid(self, q: np.ndarray) -> bool:
+        # NOTE: return False as soon as possible when
+        # finding invalidity found for some constraint.
+        # therefore, the order of const_list is "really" important
+        # to speed up planning
+        for const in self.const_list:
+            values, _ = const.evaluate_single(q, False)
+            if np.any(values < 0.0):
+                return False
+        return True
 
 
 class EqCompositeConst(AbstractEqConst, _CompositeConst):

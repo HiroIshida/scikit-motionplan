@@ -85,8 +85,7 @@ class OMPLSolverBase(AbstractSolver[OMPLSolverConfig, OMPLSolverResult]):
             if problem.global_ineq_const is None:
                 return True
             else:
-                val, _ = problem.global_ineq_const.evaluate_single(q, with_jacobian=False)
-                return bool(np.all(val > 0))
+                return problem.global_ineq_const.is_valid(q)
 
         lb = problem.box_const.lb
         ub = problem.box_const.ub
