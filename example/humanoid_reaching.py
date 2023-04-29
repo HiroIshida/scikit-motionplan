@@ -80,13 +80,12 @@ if __name__ == "__main__":
     )
     print("start solving rrt (with ik)")
     ts = time.time()
-    # rrt_conf = MyRRTConfig(10000, satisfaction_conf=None)
-    # rrt = MyRRTSolver.init(rrt_conf)
 
     rrt_conf = MyRRTConfig(2000, satisfaction_conf=SatisfactionConfig(n_max_eval=50))
     rrt = MyRRTConnectSolver.init(rrt_conf)
-    rrt.setup(problem)
-    result = rrt.parallel_solve(n_process=12)
+    rrt_parallel = rrt.as_parallel_solver(12)
+    rrt_parallel.setup(problem)
+    result = rrt_parallel.solve()
     assert result.traj is not None
     print("time to solve rrt: {}".format(time.time() - ts))
 
