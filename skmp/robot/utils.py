@@ -46,6 +46,8 @@ def get_robot_state(
         xyz = robot_model.translation
         rpy = np.flip(rpy_angle(robot_model.rotation)[0])
         base_pose_vec = np.hstack([xyz, rpy])
+    elif base_type == BaseType.FIXED:
+        base_pose_vec = np.array([])
     else:
         assert False
     q = np.hstack([av_joint, base_pose_vec])
