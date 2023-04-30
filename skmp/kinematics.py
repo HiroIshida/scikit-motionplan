@@ -266,7 +266,11 @@ class ArticulatedCollisionKinematicsMap(ArticulatedKinematicsMapBase):
         if fksolver_init_hook is not None:
             fksolver_init_hook(fksolver)
 
-        urdf = load_urdf_model_using_cache(urdfpath)
+        require_urdf_with_geometry = False
+        for sphere_collection in link_wise_sphere_collection.values():
+            if isinstance(sphere_collection, Callable):  # type: ignore
+                require_urdf_with_geometry = True
+        urdf = load_urdf_model_using_cache(urdfpath, with_geometry=require_urdf_with_geometry)
 
         radius_list = []
         sphere_name_list = []
