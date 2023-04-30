@@ -242,14 +242,16 @@ class ArticulatedCollisionKinematicsMap(ArticulatedKinematicsMapBase):
         joint_names: List[str],
         collision_link_names: List[str],
         base_type: BaseType = BaseType.FIXED,
-        link_wise_sphere_creator: Optional[Dict[str, Callable[[Trimesh], SphereCollection]]] = None,
+        link_wise_sphere_collection: Optional[
+            Dict[str, Union[Callable[[Trimesh], SphereCollection], SphereCollection]]
+        ] = None,
         fksolver_init_hook: Optional[Callable[[KinematicModel], None]] = None,
     ):
-        if link_wise_sphere_creator is None:
-            link_wise_sphere_creator = {}
+        if link_wise_sphere_collection is None:
+            link_wise_sphere_collection = {}
         for ln in collision_link_names:
-            if ln not in link_wise_sphere_creator:
-                link_wise_sphere_creator[ln] = create_sphere_collection
+            if ln not in link_wise_sphere_collection:
+                link_wise_sphere_collection[ln] = create_sphere_collection
 
         dim_cspace = (
             len(joint_names)
@@ -272,7 +274,11 @@ class ArticulatedCollisionKinematicsMap(ArticulatedKinematicsMapBase):
 
         for ln in collision_link_names:
             mesh: Trimesh = urdf.link_map[ln].collision_mesh
-            sphere_collection = link_wise_sphere_creator[ln](mesh)
+            sphere_collection_like = link_wise_sphere_collection[ln]
+            if isinstance(sphere_collection_like, SphereCollection):
+                sphere_collection = sphere_collection_like
+            else:
+                sphere_collection = sphere_collection_like(mesh)
 
             coll_link_id = fksolver.get_link_ids([ln])[0]
 

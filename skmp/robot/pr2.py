@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Literal
+from typing import Callable, Dict, List, Literal, Union
 
 import numpy as np
 from skrobot.models import PR2
@@ -193,7 +193,9 @@ class PR2Config:
             assert False
 
     def get_collision_kin(self) -> ArticulatedCollisionKinematicsMap:
-        link_wise_sphere_creator = {}
+        link_wise_sphere_collection: Dict[
+            str, Union[Callable[[Trimesh], SphereCollection], SphereCollection]
+        ] = {}
 
         def create_creator(radius_scale: float):
             config_tiny = SphereCreatorConfig(tol=0.2, radius_scale=radius_scale)
@@ -203,22 +205,22 @@ class PR2Config:
 
             return f
 
-        link_wise_sphere_creator["r_shoulder_lift_link"] = create_creator(0.8)
-        link_wise_sphere_creator["r_forearm_link"] = create_creator(0.7)
-        link_wise_sphere_creator["r_gripper_palm_link"] = create_creator(0.7)
-        link_wise_sphere_creator["r_gripper_r_finger_link"] = create_creator(0.7)
-        link_wise_sphere_creator["r_gripper_l_finger_link"] = create_creator(0.7)
-        link_wise_sphere_creator["r_forearm_link"] = create_creator(0.9)
-        link_wise_sphere_creator["r_upper_arm_link"] = create_creator(0.9)
+        link_wise_sphere_collection["r_shoulder_lift_link"] = create_creator(0.8)
+        link_wise_sphere_collection["r_forearm_link"] = create_creator(0.7)
+        link_wise_sphere_collection["r_gripper_palm_link"] = create_creator(0.7)
+        link_wise_sphere_collection["r_gripper_r_finger_link"] = create_creator(0.7)
+        link_wise_sphere_collection["r_gripper_l_finger_link"] = create_creator(0.7)
+        link_wise_sphere_collection["r_forearm_link"] = create_creator(0.9)
+        link_wise_sphere_collection["r_upper_arm_link"] = create_creator(0.9)
 
         # link_wise_sphere_creator["l_shoulder_pan_link"] = create_creator(0.9)
-        link_wise_sphere_creator["l_shoulder_lift_link"] = create_creator(0.8)
-        link_wise_sphere_creator["l_forearm_link"] = create_creator(0.7)
-        link_wise_sphere_creator["l_gripper_palm_link"] = create_creator(0.7)
-        link_wise_sphere_creator["l_gripper_r_finger_link"] = create_creator(0.7)
-        link_wise_sphere_creator["l_gripper_l_finger_link"] = create_creator(0.7)
-        link_wise_sphere_creator["l_forearm_link"] = create_creator(0.9)
-        link_wise_sphere_creator["l_upper_arm_link"] = create_creator(0.9)
+        link_wise_sphere_collection["l_shoulder_lift_link"] = create_creator(0.8)
+        link_wise_sphere_collection["l_forearm_link"] = create_creator(0.7)
+        link_wise_sphere_collection["l_gripper_palm_link"] = create_creator(0.7)
+        link_wise_sphere_collection["l_gripper_r_finger_link"] = create_creator(0.7)
+        link_wise_sphere_collection["l_gripper_l_finger_link"] = create_creator(0.7)
+        link_wise_sphere_collection["l_forearm_link"] = create_creator(0.9)
+        link_wise_sphere_collection["l_upper_arm_link"] = create_creator(0.9)
 
         r_shoulder_collection = SphereCollection(
             [np.array([0.0, 0.0, 0.0]), np.array([0.0, 0.0, -0.25]), np.array([0.0, 0.0, -0.4])],
@@ -231,8 +233,8 @@ class PR2Config:
             [0.2, 0.15, 0.15],
             ["l_shoudler{}".format(i) for i in range(3)],
         )
-        link_wise_sphere_creator["r_shoulder_pan_link"] = lambda mesh: r_shoulder_collection
-        link_wise_sphere_creator["l_shoulder_pan_link"] = lambda mesh: l_shoulder_collection
+        link_wise_sphere_collection["r_shoulder_pan_link"] = r_shoulder_collection
+        link_wise_sphere_collection["l_shoulder_pan_link"] = l_shoulder_collection
 
         base_link_sphere_collection = SphereCollection(
             [
@@ -248,7 +250,7 @@ class PR2Config:
             [0.15, 0.15, 0.23, 0.15, 0.15, 0.23, 0.23, 0.23],
             ["base{}".format(i) for i in range(8)],
         )
-        link_wise_sphere_creator["base_link"] = lambda mesh: base_link_sphere_collection
+        link_wise_sphere_collection["base_link"] = base_link_sphere_collection
 
         control_joint_names = self._get_control_joint_names()
         collision_link_names = self._get_collision_link_names()
@@ -257,7 +259,7 @@ class PR2Config:
             self.urdf_path(),
             control_joint_names,
             collision_link_names,
-            link_wise_sphere_creator=link_wise_sphere_creator,
+            link_wise_sphere_collection=link_wise_sphere_collection,
             base_type=self.base_type,
         )
         return kinmap

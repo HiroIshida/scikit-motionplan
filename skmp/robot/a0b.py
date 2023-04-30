@@ -1,13 +1,14 @@
 import copy
 import uuid
 from pathlib import Path
-from typing import List
+from typing import Callable, Dict, List, Union
 
 import numpy as np
 from skrobot.coordinates import CascadedCoords
 from skrobot.model.primitives import Box
 from skrobot.models.urdf import RobotModelFromURDF
-from tinyfk import BaseType, RobotModel, RotationType
+from tinyfk import BaseType, KinematicModel, RotationType
+from trimesh import Trimesh
 
 from skmp.collision import SphereCollection
 from skmp.constraint import BoxConst
@@ -58,7 +59,7 @@ class A0BConfig:
         return names
 
     @staticmethod
-    def add_end_coords(robot_model: RobotModel) -> None:
+    def add_end_coords(robot_model: KinematicModel) -> None:
         rarm_id = robot_model.get_link_ids(["RARM_LINK5"])[0]
         robot_model.add_new_link("rarm_end_coords", rarm_id, [END_COORDS_TRANSLATION, 0, 0.0])
 
@@ -76,43 +77,41 @@ class A0BConfig:
     def get_collision_kin(self) -> ArticulatedCollisionKinematicsMap:
         collision_link_names = ["RARM_LINK{}".format(i) for i in range(6)]
 
-        link_wise_sphere_creator = {}
+        link_wise_sphere_collection: Dict[
+            str, Union[Callable[[Trimesh], SphereCollection], SphereCollection]
+        ] = {}
 
         link_name = "RARM_LINK0"
         collection = []
         collection.append((np.array([0.0, 0.0, 0.0]), 0.08, str(uuid.uuid4())))
-        sc_rarm0 = copy.deepcopy(SphereCollection(*list(zip(*collection))))
-        link_wise_sphere_creator[link_name] = lambda mesh: sc_rarm0
+        link_wise_sphere_collection[link_name] = SphereCollection(*list(zip(*collection)))
         collision_link_names.append(link_name)
 
         link_name = "RARM_LINK1"
         collection = []
         collection.append((np.array([0.1, 0.0, 0.0]), 0.05, str(uuid.uuid4())))
         collection.append((np.array([0.2, 0.0, 0.0]), 0.09, str(uuid.uuid4())))
-        sc_rarm1 = copy.deepcopy(SphereCollection(*list(zip(*collection))))
-        link_wise_sphere_creator[link_name] = lambda mesh: sc_rarm1
+        link_wise_sphere_collection[link_name] = SphereCollection(*list(zip(*collection)))
         collision_link_names.append(link_name)
 
         link_name = "RARM_LINK2"
         collection = []
         collection.append((np.array([0.0, 0.0, 0.0]), 0.095, str(uuid.uuid4())))
-        sc_rarm2 = copy.deepcopy(SphereCollection(*list(zip(*collection))))
-        link_wise_sphere_creator[link_name] = lambda mesh: sc_rarm2
+        copy.deepcopy(SphereCollection(*list(zip(*collection))))
+        link_wise_sphere_collection[link_name] = SphereCollection(*list(zip(*collection)))
         collision_link_names.append(link_name)
 
         link_name = "RARM_LINK3"
         collection = []
         collection.append((np.array([0.1, 0.0, 0.0]), 0.05, str(uuid.uuid4())))
         collection.append((np.array([0.2, 0.0, 0.0]), 0.09, str(uuid.uuid4())))
-        sc_rarm3 = copy.deepcopy(SphereCollection(*list(zip(*collection))))
-        link_wise_sphere_creator[link_name] = lambda mesh: sc_rarm3
+        link_wise_sphere_collection[link_name] = SphereCollection(*list(zip(*collection)))
         collision_link_names.append(link_name)
 
         link_name = "RARM_LINK4"
         collection = []
         collection.append((np.array([0.0, 0.0, 0.0]), 0.09, str(uuid.uuid4())))
-        sc_rarm4 = copy.deepcopy(SphereCollection(*list(zip(*collection))))
-        link_wise_sphere_creator[link_name] = lambda mesh: sc_rarm4
+        link_wise_sphere_collection[link_name] = SphereCollection(*list(zip(*collection)))
         collision_link_names.append(link_name)
 
         link_name = "RARM_LINK5"
@@ -123,15 +122,14 @@ class A0BConfig:
         collection.append((np.array([0.18, -0.06, 0.025]), 0.045, str(uuid.uuid4())))
         collection.append((np.array([0.18, 0.06, -0.025]), 0.045, str(uuid.uuid4())))
         collection.append((np.array([0.18, -0.06, -0.025]), 0.045, str(uuid.uuid4())))
-        sc_rarm5 = copy.deepcopy(SphereCollection(*list(zip(*collection))))
-        link_wise_sphere_creator[link_name] = lambda mesh: sc_rarm5
+        link_wise_sphere_collection[link_name] = SphereCollection(*list(zip(*collection)))
         collision_link_names.append(link_name)
 
         kinmap = ArticulatedCollisionKinematicsMap(
             self.urdf_path,
             self._get_control_joint_names(),
             ["RARM_LINK{}".format(i) for i in range(6)],
-            link_wise_sphere_creator=link_wise_sphere_creator,
+            link_wise_sphere_collection=link_wise_sphere_collection,
             base_type=BaseType.FIXED,
         )
         return kinmap
