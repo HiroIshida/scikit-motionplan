@@ -26,11 +26,36 @@ DataLikeT = TypeVar("DataLikeT")
 class Problem:
     start: np.ndarray
     box_const: BoxConst
-    goal_const: AbstractEqConst
+    goal_const_seq: List[AbstractEqConst]
     global_ineq_const: Optional[AbstractIneqConst]
     global_eq_const: Optional[AbstractEqConst]
-    eqconst_admissible_mse: float = 1e-6
-    motion_step_box_: Union[float, np.ndarray] = 0.1
+    eqconst_admissible_mse: float
+    motion_step_box_: np.ndarray
+
+    def __init__(
+        self,
+        start: np.ndarray,
+        box_const: BoxConst,
+        goal_const_seq: Union[AbstractEqConst, List[AbstractEqConst]],
+        global_ineq_const: Optional[AbstractIneqConst],
+        global_eq_const: Optional[AbstractEqConst],
+        eqconst_admissible_mse: float = 1e-6,
+        motion_step_box: Union[float, np.ndarray] = 0.1,
+    ):
+
+        if isinstance(goal_const_seq, AbstractEqConst):
+            goal_const_seq = [goal_const_seq]
+
+        if not isinstance(self.motion_step_box_, np.ndarray):
+            n_dim = len(start)
+            np.ones(n_dim) * self.motion_step_box_
+
+        self.start = start
+        self.box_const = box_const
+        self.goal_const_seq = goal_const_seq
+        self.global_ineq_const = global_ineq_const
+        self.global_eq_const = global_eq_const
+        self.eqconst_admissible_mse = eqconst_admissible_mse
 
     @property
     def motion_step_box(self) -> np.ndarray:
@@ -44,26 +69,29 @@ class Problem:
     def is_constrained(self) -> bool:
         return self.global_eq_const is not None
 
-    def is_satisfied(self, traj: Trajectory) -> bool:
-        # check goal satsifaction
-        vals, _ = self.goal_const.evaluate_single(traj[-1], with_jacobian=False)
-        if vals.dot(vals) > self.eqconst_admissible_mse:
-            return False
+    def is_satisfied(self, traj_seq: Union[Trajectory, List[Trajectory]]) -> bool:
+        if isinstance(traj_seq, Trajectory):
+            traj_seq = [traj_seq]
 
-        # check ineq satisfaction
-        if self.global_ineq_const is not None:
-            valss, _ = self.global_ineq_const.evaluate(traj.numpy(), with_jacobian=False)
-            if not np.all(valss > 0):
+        for goal_const, traj in zip(self.goal_const_seq, traj_seq):
+            vals, _ = goal_const.evaluate_single(traj[-1], with_jacobian=False)
+            if vals.dot(vals) > self.eqconst_admissible_mse:
                 return False
 
-        # check motion step box
-        if self.global_ineq_const is not None:
-            # note: we will not check eqality constraint because checking requires
-            # traversing on manifold and its bit difficult to implement
-            for i in range(len(traj) - 1):
-                q1, q2 = traj[i], traj[i + 1]
-                if not is_valid_motion_step(self.motion_step_box, q1, q2, self.global_ineq_const):  # type: ignore[arg-type]
+            # check ineq satisfaction
+            if self.global_ineq_const is not None:
+                valss, _ = self.global_ineq_const.evaluate(traj.numpy(), with_jacobian=False)
+                if not np.all(valss > 0):
                     return False
+
+            # check motion step box
+            if self.global_ineq_const is not None:
+                # note: we will not check eqality constraint because checking requires
+                # traversing on manifold and its bit difficult to implement
+                for i in range(len(traj) - 1):
+                    q1, q2 = traj[i], traj[i + 1]
+                    if not is_valid_motion_step(self.motion_step_box, q1, q2, self.global_ineq_const):  # type: ignore[arg-type]
+                        return False
         return True
 
 
