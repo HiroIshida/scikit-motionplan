@@ -21,6 +21,7 @@ class MyRRTConfig:
     n_max_call: int
     n_max_satisfaction_trial: int = 100
     satisfaction_conf: Optional[SatisfactionConfig] = SatisfactionConfig()
+    n_subgoal: int = 4  # used only when init_traj is specified
 
     @property
     def sample_goal_first(self) -> bool:
@@ -147,7 +148,9 @@ class MyRRTConnectSolver(MyRRTSolverBase):
     def solve(self, init_traj: Optional[Trajectory] = None) -> MyRRTResult:
         """solve problem with maybe a solution guess"""
 
-        assert init_traj is None, "don't support replanning"
+        if init_traj is not None:
+            return self.solve_with_initial_solution(init_traj)
+
         assert self.problem is not None
 
         ts = time.time()
@@ -193,3 +196,65 @@ class MyRRTConnectSolver(MyRRTSolverBase):
             return MyRRTResult(
                 None, time.time() - ts, self.config.n_max_call, TerminateState.FAIL_PLANNING
             )
+
+    def solve_with_initial_solution(self, init_traj: Trajectory):
+        ts = time.time()
+        n_subgoal = self.config.n_subgoal
+        subgoal_cands = init_traj.resample(n_subgoal + 1)[1:]  # +1 for initial state
+
+        assert self.problem is not None
+
+        q_start = self.problem.start
+        n_call_sofar = 0
+        q_seq_list = []
+        for i in range(n_subgoal):
+            subgoal_cand = subgoal_cands[i]
+
+            if i == n_subgoal - 1:
+                satisfy_result = satisfy_by_optimization(
+                    self.problem.goal_const,
+                    self.problem.box_const,
+                    self.problem.global_ineq_const,
+                    subgoal_cand,
+                )
+            else:
+                satisfy_result = satisfy_by_optimization(
+                    None,
+                    self.problem.box_const,
+                    self.problem.global_ineq_const,
+                    subgoal_cand,
+                )
+
+            if not satisfy_result.success:
+                return MyRRTResult.abnormal(time.time() - ts)
+
+            conf = ManifoldRRTConfig(self.config.n_max_call - n_call_sofar)
+
+            rrtconnect = ManifoldRRTConnect(
+                q_start,
+                satisfy_result.q,
+                self.problem.box_const.lb,
+                self.problem.box_const.ub,
+                self.problem.motion_step_box,
+                self.project,
+                self.is_valid,
+                config=conf,
+            )
+            try:
+                is_success = rrtconnect.solve()
+            except InvalidStartPosition:
+                return MyRRTResult.abnormal(time.time() - ts)
+
+            n_call_sofar += rrtconnect.n_extension_trial
+
+            if not is_success:
+                return MyRRTResult(
+                    None, time.time() - ts, n_call_sofar, TerminateState.FAIL_PLANNING
+                )
+            q_seq = rrtconnect.get_solution()
+            q_seq_list.append(q_seq)
+            q_start = q_seq[-1]
+
+        traj = Trajectory(list(np.vstack(q_seq_list)))
+        # all sub goal solved
+        return MyRRTResult(traj, time.time() - ts, n_call_sofar, TerminateState.SUCCESS)
