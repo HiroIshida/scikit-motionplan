@@ -252,8 +252,11 @@ class MyRRTConnectSolver(MyRRTSolverBase):
                     None, time.time() - ts, n_call_sofar, TerminateState.FAIL_PLANNING
                 )
             q_seq = rrtconnect.get_solution()
-            q_seq_list.append(q_seq)
             q_start = q_seq[-1]
+            if i == 1:
+                q_seq_list.append(q_seq)
+            else:
+                q_seq_list.append(q_seq[1:])
 
         traj = Trajectory(list(np.vstack(q_seq_list)))
         # all sub goal solved
