@@ -43,7 +43,7 @@ class SatisfactionResult:
 
 
 def satisfy_by_optimization(
-    eq_const: AbstractEqConst,
+    eq_const: Optional[AbstractEqConst],
     box_const: BoxConst,
     ineq_const: Optional[AbstractIneqConst],
     q_seed: Optional[np.ndarray],
@@ -56,14 +56,23 @@ def satisfy_by_optimization(
     if isinstance(eq_const, ConfigPointConst):
         return SatisfactionResult(eq_const.desired_angles, 0.0, True)
 
+    # define objective function
+    const_used_in_objfun: AbstractEqConst
+    if eq_const is None:
+        assert q_seed is not None
+        const_used_in_objfun = ConfigPointConst(q_seed)
+    else:
+        const_used_in_objfun = eq_const
+
     def objective_fun(q: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-        vals, jac = eq_const.evaluate_single(q, with_jacobian=True)
+        vals, jac = const_used_in_objfun.evaluate_single(q, with_jacobian=True)
         f = vals.dot(vals)
         grad = 2 * vals.dot(jac)
         return f, grad
 
     f, jac = scipinize(objective_fun)
 
+    # define constraint
     constraints = []
     if ineq_const is not None:
 
@@ -98,9 +107,10 @@ def satisfy_by_optimization(
     )
 
     # check additional success condition
-    is_ik_actually_solved = res.fun < config.acceptable_error  # ensure not in local optima
-    if not is_ik_actually_solved:
-        res.success = False
+    if eq_const is not None:
+        is_ik_actually_solved = res.fun < config.acceptable_error  # ensure not in local optima
+        if not is_ik_actually_solved:
+            res.success = False
 
     elapsed_time = time.time() - ts
 

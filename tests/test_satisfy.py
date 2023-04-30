@@ -15,7 +15,7 @@ from skmp.constraint import (
     RelativePoseConstraint,
 )
 from skmp.robot.pr2 import PR2Config
-from skmp.robot.utils import set_robot_state
+from skmp.robot.utils import get_robot_state, set_robot_state
 from skmp.satisfy import SatisfactionResult, satisfy_by_optimization
 
 
@@ -76,5 +76,29 @@ def test_satisfy_by_optimization_relative_pose_const(debug: bool = False):
         time.sleep(10)
 
 
+def test_satisfy_by_optimization_without_eq_const():
+    pr2 = PR2()
+    pr2.reset_manip_pose()
+    config = PR2Config(base_type=BaseType.FIXED)
+    colkin = config.get_collision_kin()
+    config.get_endeffector_kin()
+
+    box = Box(extents=[0.7, 0.5, 1.2], with_sdf=True)
+    box.translate(np.array([0.68, -0.3, 0.9]))
+    assert box.sdf is not None
+    ineq_const = CollFreeConst(colkin, box.sdf, pr2)
+    box_const = config.get_box_const()
+
+    q_now = get_robot_state(pr2, config._get_control_joint_names())
+
+    # ensure that robot collides with the obstacle at initial state
+    assert not ineq_const.is_valid(q_now)
+
+    result = satisfy_by_optimization(None, box_const, ineq_const, q_now)
+    assert result.success
+
+    assert ineq_const.is_valid(result.q)
+
+
 if __name__ == "__main__":
-    test_satisfy_by_optimization_relative_pose_const(debug=True)
+    test_satisfy_by_optimization_without_eq_const()
