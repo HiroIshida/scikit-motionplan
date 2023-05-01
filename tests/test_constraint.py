@@ -58,6 +58,9 @@ def test_box_const():
     box_const = config.get_box_const()
     check_jacobian(box_const, 7)
 
+    # check if id_value is assigned
+    assert isinstance(box_const.id_value, str)
+
 
 def test_collfree_const():
     config = PR2Config(base_type=BaseType.FIXED)
@@ -72,6 +75,9 @@ def test_collfree_const():
     collfree_const.only_closest_feature = True
     check_jacobian(collfree_const, 7)
 
+    # check if id_value is assigned
+    assert isinstance(collfree_const.id_value, str)
+
 
 def test_reduced_collfree_const():
     config = PR2Config(base_type=BaseType.FIXED)
@@ -81,6 +87,9 @@ def test_reduced_collfree_const():
     assert box.sdf is not None
     collfree_const = ReducedCollisionFreeConst(colkin, box.sdf, PR2())
     check_jacobian(collfree_const, 7)
+
+    # check if id_value is assigned
+    assert isinstance(collfree_const.id_value, str)
 
 
 def test_neural_collfree_const():
@@ -98,10 +107,16 @@ def test_neural_collfree_const():
     selcol_const = config.get_neural_selcol_const(pr2)
     check_jacobian(selcol_const, 10, eps=1e-4, decimal=2)
 
+    # check if id_value is assigned
+    assert isinstance(selcol_const.id_value, str)
+
 
 def test_configpoint_const():
     const = ConfigPointConst(np.zeros(7))
     check_jacobian(const, 7)
+
+    # check if id_value is assigned
+    assert isinstance(const.id_value, str)
 
 
 def test_pose_const_rpy():
@@ -112,6 +127,9 @@ def test_pose_const_rpy():
     const = PoseConstraint.from_skrobot_coords([target], efkin, PR2())
     check_jacobian(const, 7)
 
+    # check if id_value is assigned
+    assert isinstance(const.id_value, str)
+
 
 def test_pose_const_xyzw():
     config = PR2Config(base_type=BaseType.FIXED)
@@ -120,6 +138,9 @@ def test_pose_const_xyzw():
     target = Coordinates(pos=[0.8, -0.6, 1.1])
     const = PoseConstraint.from_skrobot_coords([target], efkin, PR2())
     check_jacobian(const, 7)
+
+    # check if id_value is assigned
+    assert isinstance(const.id_value, str)
 
 
 def test_realtive_pose_const():
@@ -136,6 +157,9 @@ def test_realtive_pose_const():
     assert efkin.n_feature == 2
     assert len(efkin.tinyfk_feature_ids) == 2
 
+    # check if id_value is assigned
+    assert isinstance(relconst.id_value, str)
+
 
 def test_pair_wise_selfcollfree_const():
     config = PR2Config(base_type=BaseType.FIXED)
@@ -151,6 +175,9 @@ def test_pair_wise_selfcollfree_const():
     values, _ = const.evaluate_single(q_init, with_jacobian=False)
     assert np.all(values > 0)
 
+    # check if id_value is assigned
+    assert isinstance(const.id_value, str)
+
 
 def test_com_stability_const():
     config = JaxonConfig()
@@ -163,6 +190,9 @@ def test_com_stability_const():
     # rpy angle is big due to singularity
     # thus we set std = 0.1
     check_jacobian(const, len(config._get_control_joint_names()) + 6, std=0.1)
+
+    # check if id_value is assigned
+    assert isinstance(const.id_value, str)
 
 
 def test_composite_constraint():
@@ -181,6 +211,9 @@ def test_composite_constraint():
     composite_const = IneqCompositeConst([collfree_const, selcol_const])
     # NOTE: selcol model uses float32. So, larger eps is required
     check_jacobian(composite_const, 7, eps=1e-4, decimal=2)
+
+    # check if id_value is assigned
+    assert isinstance(composite_const.id_value, str)
 
 
 if __name__ == "__main__":

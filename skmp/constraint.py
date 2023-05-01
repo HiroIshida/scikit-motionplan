@@ -1,5 +1,6 @@
 import copy
 import itertools
+import uuid
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Callable, List, Optional, Protocol, Tuple, TypeVar, runtime_checkable
@@ -23,6 +24,10 @@ from skmp.utils import load_urdf_model_using_cache
 
 class AbstractConst(ABC):
     reflect_robot_flag: bool = False
+    id_value: str
+
+    def assign_id_value(self):
+        self.id_value = str(uuid.uuid4())
 
     def evaluate(self, qs: np.ndarray, with_jacobian: bool) -> Tuple[np.ndarray, np.ndarray]:
         if not self.reflect_robot_flag:
@@ -110,6 +115,7 @@ class _CompositeConst(AbstractConst):
         # call of _reflect_skrobot_model, because all const_list
         # is supposed to already reflect robot state
         self.reflect_robot_flag = True
+        self.assign_id_value()
 
     def _evaluate(self, qs: np.ndarray, with_jacobian: bool) -> Tuple[np.ndarray, np.ndarray]:
         valuess_list = []
@@ -163,6 +169,7 @@ class BoxConst(AbstractIneqConst):
         self.lb = lb
         self.ub = ub
         self.reflect_skrobot_model(None)
+        self.assign_id_value()
 
     @classmethod
     def from_urdf(
@@ -234,6 +241,7 @@ class CollFreeConst(AbstractIneqConst):
         self.sdf = sdf
         self.reflect_skrobot_model(robot_model)
         self.only_closest_feature = only_closest_feature
+        self.assign_id_value()
 
     def _evaluate(self, qs: np.ndarray, with_jacobian: bool) -> Tuple[np.ndarray, np.ndarray]:
         if self.only_closest_feature:
@@ -367,6 +375,7 @@ class PointCollFreeConst(AbstractIneqConst):
     def __init__(self, sdf: Callable[[np.ndarray], np.ndarray]):
         self.sdf = sdf
         self.reflect_skrobot_model(None)
+        self.assign_id_value()
 
     def _evaluate(self, qs: np.ndarray, with_jacobian: bool) -> Tuple[np.ndarray, np.ndarray]:
         n_point, n_dim = qs.shape
@@ -388,6 +397,7 @@ class ConfigPointConst(AbstractEqConst):
     def __init__(self, desired_angles: np.ndarray) -> None:
         self.desired_angles = desired_angles
         self.reflect_skrobot_model(None)
+        self.assign_id_value()
 
     def _evaluate(self, qs: np.ndarray, with_jacobian: bool) -> Tuple[np.ndarray, np.ndarray]:
         n_point, dim = qs.shape
@@ -422,6 +432,7 @@ class PoseConstraint(AbstractEqConst):
         self.efkin = efkin
         self.reflect_skrobot_model(robot_model)
         self.debug_rank_deficiency = debug_rank_deficiency
+        self.assign_id_value()
 
     def _evaluate(
         self, qs: np.ndarray, with_jacobian: bool = False
@@ -506,6 +517,7 @@ class RelativePoseConstraint(AbstractEqConst):
         self.desired_relative_position = desired_relative_position
         self.efkin = efkin
         self.reflect_skrobot_model(robot_model)
+        self.assign_id_value()
 
     def _evaluate(self, qs: np.ndarray, with_jacobian: bool) -> Tuple[np.ndarray, np.ndarray]:
         n_point, n_dim = qs.shape
@@ -590,6 +602,7 @@ class PairWiseSelfCollFreeConst(AbstractIneqConst):
         self.check_sphere_pair_sqdists = valid_sphere_pair_dists**2
         self.reflect_skrobot_model(robot_model)
         self.only_closest_feature = only_closest_feature
+        self.assign_id_value()
 
     def _evaluate(self, qs: np.ndarray, with_jacobian: bool) -> Tuple[np.ndarray, np.ndarray]:
         n_wp, n_dim = qs.shape
@@ -636,6 +649,7 @@ class NeuralSelfCollFreeConst(AbstractIneqConst):
         self.model = infer_model  # type: ignore
         self.base_type = base_type
         self.reflect_skrobot_model(robot_Model)
+        self.assign_id_value()
 
     @classmethod
     def load(
@@ -722,6 +736,7 @@ class COMStabilityConst(AbstractIneqConst):
         self.model = robot_model
         self.com_box = com_box
         self.reflect_skrobot_model(robot_model)
+        self.assign_id_value()
 
     def _evaluate(
         self, qs: np.ndarray, with_jacobian: bool = False
