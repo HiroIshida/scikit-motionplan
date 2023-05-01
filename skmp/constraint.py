@@ -117,6 +117,8 @@ class _CompositeConst(AbstractConst):
         self.reflect_robot_flag = True
         self.assign_id_value()
 
+        self._remove_duplication()
+
     def _evaluate(self, qs: np.ndarray, with_jacobian: bool) -> Tuple[np.ndarray, np.ndarray]:
         valuess_list = []
         jacs_list = []
@@ -137,6 +139,13 @@ class _CompositeConst(AbstractConst):
     def _reflect_skrobot_model(self, robot_model: Optional[RobotModel]) -> None:
         for const in self.const_list:
             const.reflect_skrobot_model(robot_model)
+
+    def _remove_duplication(self) -> None:
+        table = {}
+        for const in self.const_list:
+            table[const.id_value] = const
+        const_list = [value for value in table.values()]
+        self.const_list = const_list
 
 
 class IneqCompositeConst(AbstractIneqConst, _CompositeConst):

@@ -215,6 +215,12 @@ def test_composite_constraint():
     # check if id_value is assigned
     assert isinstance(composite_const.id_value, str)
 
+    # check if composite const is properly reduced
+    composite_const = IneqCompositeConst([collfree_const, selcol_const, collfree_const])
+    assert len(composite_const.const_list) == 2
+    assert composite_const.const_list[0].id_value == collfree_const.id_value
+    assert composite_const.const_list[1].id_value == selcol_const.id_value
+
 
 if __name__ == "__main__":
     # test_box_const()
