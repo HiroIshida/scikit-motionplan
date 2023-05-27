@@ -61,7 +61,7 @@ OMPLSolverT = TypeVar("OMPLSolverT", bound="OMPLSolver")
 
 
 @dataclass
-class OMPLSolverBase(AbstractSolver[OMPLSolverConfig, OMPLSolverResult]):
+class OMPLSolverBase(AbstractSolver[OMPLSolverConfig, OMPLSolverResult, Trajectory]):
     config: OMPLSolverConfig
     problem: Optional[Problem]
     planner: Optional[_OMPLPlannerBase]
@@ -225,9 +225,8 @@ class OMPLSolver(AbstractScratchSolver[OMPLSolverConfig, OMPLSolverResult], OMPL
 
 
 @dataclass
-class OMPLDataDrivenSolver(
-    AbstractDataDrivenSolver[OMPLSolverConfig, OMPLSolverResult], OMPLSolverBase
-):
+class OMPLDataDrivenSolver(AbstractDataDrivenSolver[OMPLSolverConfig, OMPLSolverResult]):
+    internal_solver: OMPLSolverBase
     vec_descs: np.ndarray
     trajectories: List[Trajectory]
 
@@ -238,22 +237,24 @@ class OMPLDataDrivenSolver(
         n_call_dict = {"count": 0}
         vec_descs = np.array([p[0] for p in dataset])
         trajectories = [p[1] for p in dataset]
-        return cls(config, None, None, None, n_call_dict, vec_descs, trajectories)
+        internal_solver = OMPLSolver(config, None, None, None, n_call_dict)
+        return cls(internal_solver, vec_descs, trajectories)
 
-    def create_planner(self, **kwargs) -> _OMPLPlannerBase:
-        is_unconstraind = kwargs["eq_const"] is None
-        if is_unconstraind:
-            kwargs.pop("eq_const")
-            kwargs.pop("cs_type")
-            return Planner(**kwargs)
-        else:
-            raise RuntimeError("lightning does not support global equality constraint")
-
-    def solve_data_driven(self, query_desc: np.ndarray) -> OMPLSolverResult:
+    def solve(self, query_desc: Optional[np.ndarray] = None) -> OMPLSolverResult:
         ts = time.time()
-        sqdists = np.sum((self.vec_descs - query_desc) ** 2, axis=1)
-        idx_closest = np.argmin(sqdists)
-        reuse_traj = self.trajectories[idx_closest]
-        result = self.solve(reuse_traj)
+        if query_desc is not None:
+            sqdists = np.sum((self.vec_descs - query_desc) ** 2, axis=1)
+            idx_closest = np.argmin(sqdists)
+            reuse_traj = self.trajectories[idx_closest]
+        else:
+            reuse_traj = None
+        result = self.internal_solver.solve(reuse_traj)
         result.time_elapsed = time.time() - ts  # overwrite
         return result
+
+    @classmethod
+    def get_result_type(cls) -> Type[OMPLSolverResult]:
+        return OMPLSolverResult
+
+    def setup(self, problem: Problem) -> None:
+        self.internal_solver.setup(problem)

@@ -3,7 +3,7 @@ import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Generic, List, Optional, Protocol, Tuple, Type, TypeVar, Union
+from typing import Any, Generic, List, Optional, Protocol, Tuple, Type, TypeVar, Union
 
 import numpy as np
 import threadpoolctl
@@ -19,7 +19,7 @@ SolverT = TypeVar("SolverT", bound="AbstractSolver")
 DataDrivenSolverT = TypeVar("DataDrivenSolverT", bound="AbstractDataDrivenSolver")
 ConfigT = TypeVar("ConfigT", bound="ConfigProtocol")
 ResultT = TypeVar("ResultT", bound="ResultProtocol")
-DataLikeT = TypeVar("DataLikeT")
+ReplanInfoT = TypeVar("ReplanInfoT", bound=Any)
 
 
 @dataclass
@@ -83,7 +83,7 @@ class ResultProtocol(Protocol):
         ...
 
 
-class AbstractSolver(ABC, Generic[ConfigT, ResultT]):
+class AbstractSolver(ABC, Generic[ConfigT, ResultT, ReplanInfoT]):
     @abstractmethod
     def get_result_type(self) -> Type[ResultT]:
         ...
@@ -94,17 +94,17 @@ class AbstractSolver(ABC, Generic[ConfigT, ResultT]):
         ...
 
     @abstractmethod
-    def solve(self, init_traj: Optional[Trajectory] = None) -> ResultT:
+    def solve(self, replan_info: Optional[ReplanInfoT] = None) -> ResultT:
         """solve problem with maybe a solution guess"""
         ...
 
-    def as_parallel_solver(self, n_process=4) -> "ParallelSolver[ConfigT, ResultT]":
+    def as_parallel_solver(self, n_process=4) -> "ParallelSolver[ConfigT, ResultT, ReplanInfoT]":
         return ParallelSolver(self, n_process)
 
 
 @dataclass
-class ParallelSolver(AbstractSolver, Generic[ConfigT, ResultT]):
-    internal_solver: AbstractSolver[ConfigT, ResultT]
+class ParallelSolver(AbstractSolver, Generic[ConfigT, ResultT, ReplanInfoT]):
+    internal_solver: AbstractSolver[ConfigT, ResultT, ReplanInfoT]
     n_process: int = 4
 
     def get_result_type(self) -> Type[ResultT]:
@@ -113,21 +113,21 @@ class ParallelSolver(AbstractSolver, Generic[ConfigT, ResultT]):
     def setup(self, problem: Problem) -> None:
         self.internal_solver.setup(problem)
 
-    def _parallel_solve_inner(self, init_traj: Optional[Trajectory] = None) -> ResultT:
+    def _parallel_solve_inner(self, replan_info: Optional[ReplanInfoT] = None) -> ResultT:
         """assume to be used in multi processing"""
         # prevend numpy from using multi-thread
         unique_seed = datetime.now().microsecond + os.getpid()
         np.random.seed(unique_seed)
         with threadpoolctl.threadpool_limits(limits=1, user_api="blas"):
-            return self.internal_solver.solve(init_traj)
+            return self.internal_solver.solve(replan_info)
 
-    def solve(self, init_traj: Optional[Trajectory] = None) -> ResultT:
+    def solve(self, replan_info: Optional[ReplanInfoT] = None) -> ResultT:
         processes = []
         result_queue = multiprocessing.Queue()  # type: ignore
 
         for i in range(self.n_process):
             p = multiprocessing.Process(
-                target=lambda: result_queue.put(self._parallel_solve_inner(init_traj))
+                target=lambda: result_queue.put(self._parallel_solve_inner(replan_info))
             )
             processes.append(p)
             p.start()
@@ -138,7 +138,7 @@ class ParallelSolver(AbstractSolver, Generic[ConfigT, ResultT]):
         return result
 
 
-class AbstractScratchSolver(AbstractSolver[ConfigT, ResultT]):
+class AbstractScratchSolver(AbstractSolver[ConfigT, ResultT, Trajectory]):
     @classmethod
     @abstractmethod
     def init(cls: Type[SolverT], config: ConfigT) -> SolverT:
@@ -146,17 +146,11 @@ class AbstractScratchSolver(AbstractSolver[ConfigT, ResultT]):
         ...
 
 
-class AbstractDataDrivenSolver(AbstractSolver[ConfigT, ResultT]):
-    # experimental
-
+class AbstractDataDrivenSolver(AbstractSolver[ConfigT, ResultT, np.ndarray]):
     @classmethod
     @abstractmethod
     def init(
         cls: Type[SolverT], config: ConfigT, dataset: List[Tuple[np.ndarray, Trajectory]]
     ) -> SolverT:
         """common interface of constructor"""
-        ...
-
-    @abstractmethod
-    def solve_data_driven(self, query_desc: np.ndarray) -> ResultT:
         ...

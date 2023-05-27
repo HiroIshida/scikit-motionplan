@@ -40,7 +40,7 @@ def test_datadriven_solver():
         solcon = OMPLSolverConfig(expbased_planner_backend=exp_backend)  # type: ignore[arg-type]
         ddsolver = OMPLDataDrivenSolver.init(solcon, dataset)
         ddsolver.setup(problem)
-        result = ddsolver.solve_data_driven(key)
+        result = ddsolver.solve(key)
         assert result.traj is not None
 
 
