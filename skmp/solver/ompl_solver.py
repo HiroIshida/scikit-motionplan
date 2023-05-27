@@ -11,8 +11,6 @@ from ompl import (
     ConstStateType,
     ERTConnectPlanner,
     InvalidProblemError,
-    LightningDB,
-    LightningPlanner,
     Planner,
     RepairPlanner,
     _OMPLPlannerBase,
@@ -227,28 +225,35 @@ class OMPLSolver(AbstractScratchSolver[OMPLSolverConfig, OMPLSolverResult], OMPL
 
 
 @dataclass
-class LightningSolver(AbstractDataDrivenSolver[OMPLSolverConfig, OMPLSolverResult], OMPLSolverBase):
-    db: LightningDB
+class OMPLDataDrivenSolver(
+    AbstractDataDrivenSolver[OMPLSolverConfig, OMPLSolverResult], OMPLSolverBase
+):
+    vec_descs: np.ndarray
+    trajectories: List[Trajectory]
 
     @classmethod
     def init(
-        cls, config: OMPLSolverConfig, dataset: List[Tuple[Problem, Trajectory]]
-    ) -> "LightningSolver":
+        cls, config: OMPLSolverConfig, dataset: List[Tuple[np.ndarray, Trajectory]]
+    ) -> "OMPLDataDrivenSolver":
         n_call_dict = {"count": 0}
-
-        trajectories = [pair[1] for pair in dataset]
-
-        dim = len(trajectories[0][0])
-        db = LightningDB(dim)
-        for traj in trajectories:
-            db.add_experience(list(traj.numpy()))
-
-        return cls(config, None, None, None, n_call_dict, db)
+        vec_descs = np.array([p[0] for p in dataset])
+        trajectories = [p[1] for p in dataset]
+        return cls(config, None, None, None, n_call_dict, vec_descs, trajectories)
 
     def create_planner(self, **kwargs) -> _OMPLPlannerBase:
-        if kwargs["eq_const"] is not None:
+        is_unconstraind = kwargs["eq_const"] is None
+        if is_unconstraind:
+            kwargs.pop("eq_const")
+            kwargs.pop("cs_type")
+            return Planner(**kwargs)
+        else:
             raise RuntimeError("lightning does not support global equality constraint")
-        kwargs.pop("eq_const")
-        kwargs.pop("cs_type")
-        kwargs["db"] = self.db
-        return LightningPlanner(**kwargs)
+
+    def solve_data_driven(self, query_desc: np.ndarray) -> OMPLSolverResult:
+        ts = time.time()
+        sqdists = np.sum((self.vec_descs - query_desc) ** 2, axis=1)
+        idx_closest = np.argmin(sqdists)
+        reuse_traj = self.trajectories[idx_closest]
+        result = self.solve(reuse_traj)
+        result.time_elapsed = time.time() - ts  # overwrite
+        return result

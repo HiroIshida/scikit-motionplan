@@ -1,3 +1,4 @@
+import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import List, Optional, Tuple, Type, TypeVar, Union
@@ -6,7 +7,6 @@ import GPy
 import numpy as np
 from sklearn.decomposition import PCA
 
-from skmp.constraint import VectorDescriptable
 from skmp.solver.interface import AbstractDataDrivenSolver, Problem
 from skmp.solver.nlp_solver import (
     SQPBasedSolver,
@@ -19,28 +19,19 @@ RegressorT = TypeVar("RegressorT", bound="Regressor")
 MemmoSolverT = TypeVar("MemmoSolverT", bound="AbstractMemmoSolver")
 
 
-def get_memmo_problem_description(problem: Problem) -> np.ndarray:
-    """get vector-form description of a problem"""
-    start_desc = problem.start
-    assert isinstance(problem.goal_const, VectorDescriptable)
-    goal_desc = problem.goal_const.get_description()
-    return np.hstack([start_desc, goal_desc])
-
-
 @dataclass(frozen=True)
 class Regressor(ABC):
     n_dim: int
 
     @classmethod
     def fit_from_dataset(
-        cls: Type[RegressorT], dataset: List[Tuple[Problem, Trajectory]]
+        cls: Type[RegressorT], dataset: List[Tuple[np.ndarray, Trajectory]]
     ) -> RegressorT:
         x_list = []
         y_list = []
-        for problem, trajectory in dataset:
-            x = get_memmo_problem_description(problem)
+        for vec_desc, trajectory in dataset:
+            x_list.append(vec_desc)
             y = trajectory.numpy()
-            x_list.append(x)
             y_list.append(y)
         X = np.array(x_list)
         Y = np.array(y_list)
@@ -163,7 +154,7 @@ class AbstractMemmoSolver(AbstractDataDrivenSolver[SQPBasedSolverConfig, SQPBase
     def init(
         cls: Type[MemmoSolverT],
         config: SQPBasedSolverConfig,
-        dataset: List[Tuple[Problem, Trajectory]],
+        dataset: List[Tuple[np.ndarray, Trajectory]],
     ) -> MemmoSolverT:
         solver = SQPBasedSolver.init(config)
         regressor_type = cls.get_regressor_type()
@@ -176,13 +167,16 @@ class AbstractMemmoSolver(AbstractDataDrivenSolver[SQPBasedSolverConfig, SQPBase
 
     def setup(self, problem: Problem) -> None:
         self.solver.setup(problem)
-        self.problem_vector_description = get_memmo_problem_description(problem)
 
     def solve(self, init_traj: Optional[Trajectory] = None) -> SQPBasedSolverResult:
-        if not init_traj:
-            assert self.problem_vector_description is not None
-            init_traj = self.regressor.predict(self.problem_vector_description)
         return self.solver.solve(init_traj)
+
+    def solve_data_driven(self, query_desc: np.ndarray) -> SQPBasedSolverResult:
+        ts = time.time()
+        init_traj = self.regressor.predict(query_desc)
+        result = self.solver.solve(init_traj)
+        result.time_elapsed = time.time() - ts
+        return result
 
 
 class NnMemmoSolver(AbstractMemmoSolver):

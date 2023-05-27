@@ -108,9 +108,11 @@ def test_memmo_solvers():
     config = SQPBasedSolverConfig(n_wp=30, motion_step_satisfaction="implicit")
     solver = SQPBasedSolver.init(config)
     solver.setup(problem)
-    res = solver.solve()
-    assert res.traj is not None
-    dataset = [(problem, res.traj)]  # dataset with only one element
+    result = solver.solve()
+    assert result.traj is not None
+
+    key = np.hstack([result.traj[0], result.traj[-1]])
+    dataset = [(key, result.traj)]
 
     for solver_type in [NnMemmoSolver, GprMemmoSolver]:
         solver_type.init(config, dataset)

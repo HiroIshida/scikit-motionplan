@@ -131,7 +131,6 @@ class ParallelSolver(AbstractSolver, Generic[ConfigT, ResultT]):
             )
             processes.append(p)
             p.start()
-            print("start process")
 
         result = result_queue.get()
         for p in processes:
@@ -148,10 +147,16 @@ class AbstractScratchSolver(AbstractSolver[ConfigT, ResultT]):
 
 
 class AbstractDataDrivenSolver(AbstractSolver[ConfigT, ResultT]):
+    # experimental
+
     @classmethod
     @abstractmethod
     def init(
-        cls: Type[SolverT], config: ConfigT, dataset: List[Tuple[Problem, Trajectory]]
+        cls: Type[SolverT], config: ConfigT, dataset: List[Tuple[np.ndarray, Trajectory]]
     ) -> SolverT:
         """common interface of constructor"""
+        ...
+
+    @abstractmethod
+    def solve_data_driven(self, query_desc: np.ndarray) -> ResultT:
         ...
