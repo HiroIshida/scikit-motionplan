@@ -9,7 +9,7 @@ install_requires = [
     "scipy",
     "tinyfk>=0.6.0",
     "robot_descriptions",
-    "scikit-robot",
+    "scikit-robot[all]",
     "open3d",
     "osqp",
     "ompl-thin>=0.0.16",
