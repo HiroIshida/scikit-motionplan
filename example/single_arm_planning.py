@@ -46,6 +46,11 @@ if __name__ == "__main__":
         start = np.hstack([start, np.zeros(6)])
     box_const = robot_config.get_box_const()
 
+    # keep the third joint angle static
+    eps = 1e-3
+    box_const.ub[2] = start[2] + eps
+    box_const.lb[2] = start[2] - eps
+
     # create equality constraint
     target: Optional[Axis]
     if use_pose_constraint:
@@ -78,6 +83,7 @@ if __name__ == "__main__":
     result = ompl_solver.solve()
     print(result.time_elapsed)
     assert result.traj is not None
+    print(result.traj)
 
     n_wp = 40
     if smooth_by_nlp:
