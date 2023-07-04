@@ -132,10 +132,13 @@ class ParallelSolver(AbstractSolver, Generic[ConfigT, ResultT, ReplanInfoT]):
             processes.append(p)
             p.start()
 
-        result = result_queue.get()
-        for p in processes:
-            p.terminate()
-        return result
+        for _ in range(self.n_process):
+            result = result_queue.get()
+            if result.traj is not None:
+                for p in processes:
+                    p.terminate()
+                return result
+        return result.abnormal()
 
 
 class AbstractScratchSolver(AbstractSolver[ConfigT, ResultT, Trajectory]):
