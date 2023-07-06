@@ -1,5 +1,6 @@
 import multiprocessing
 import os
+import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
@@ -122,8 +123,10 @@ class ParallelSolver(AbstractSolver, Generic[ConfigT, ResultT, ReplanInfoT]):
             return self.internal_solver.solve(replan_info)
 
     def solve(self, replan_info: Optional[ReplanInfoT] = None) -> ResultT:
+        ts = time.time()
+
         processes = []
-        result_queue = multiprocessing.Queue()  # type: ignore
+        result_queue: multiprocessing.Queue[ResultT] = multiprocessing.Queue()
 
         for i in range(self.n_process):
             p = multiprocessing.Process(
@@ -137,8 +140,11 @@ class ParallelSolver(AbstractSolver, Generic[ConfigT, ResultT, ReplanInfoT]):
             if result.traj is not None:
                 for p in processes:
                     p.terminate()
+                for p in processes:
+                    p.join()
+                result.time_elapsed = time.time() - ts
                 return result
-        return result.abnormal()
+        return result.abnormal(time_elapsed=time.time() - ts)
 
 
 class AbstractScratchSolver(AbstractSolver[ConfigT, ResultT, Trajectory]):
