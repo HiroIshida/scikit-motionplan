@@ -156,7 +156,7 @@ class InteractiveSolutionVisualizer(SolutionVisualizerBase[TrimeshSceneViewer]):
         q_end = trajectory.numpy()[-1]
         self.update_robot_state(q_end)
 
-        for q in trajectory.numpy()[:-1]:
+        for q in trajectory.numpy():
             self.update_robot_state(q)
             self.viewer.redraw()
             time.sleep(t_interval)
