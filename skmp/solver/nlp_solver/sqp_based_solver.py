@@ -218,7 +218,7 @@ class SQPBasedSolver(AbstractScratchSolver[SQPBasedSolverConfig, SQPBasedSolverR
                 if self.config.motion_step_satisfaction == "post":
                     success = False
                 elif self.config.motion_step_satisfaction == "debug_ignore":
-                    print("motion step constraint is not satisfied but ignore")
+                    pass
                 else:
                     assert False
 
