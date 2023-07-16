@@ -9,7 +9,12 @@ from typing import Any, Generic, List, Optional, Protocol, Tuple, Type, TypeVar,
 import numpy as np
 import threadpoolctl
 
-from skmp.constraint import AbstractEqConst, AbstractIneqConst, BoxConst
+from skmp.constraint import (
+    AbstractEqConst,
+    AbstractIneqConst,
+    BoxConst,
+    IneqCompositeConst,
+)
 from skmp.solver.motion_step_box import is_valid_motion_step
 from skmp.trajectory import Trajectory
 
@@ -32,6 +37,21 @@ class Problem:
     global_eq_const: Optional[AbstractEqConst]
     eqconst_admissible_mse: float = 1e-6
     motion_step_box_: Union[float, np.ndarray] = 0.1
+
+    def __post_init__(self) -> None:
+        # check if initial configuration is feasible
+        if not np.all(self.start < self.box_const.ub):
+            raise RuntimeError("q_start doesn't satisfy BoxConst upper")
+        if not np.all(self.start > self.box_const.lb):
+            raise RuntimeError("q_start doesn't satisfy BoxConst lower")
+        if self.global_ineq_const is not None:
+            if not self.global_ineq_const.is_valid(self.start):
+                if isinstance(self.global_ineq_const, IneqCompositeConst):
+                    for c in self.global_ineq_const.const_list:
+                        if not c.is_valid(self.start):
+                            raise RuntimeError("q_start doesn't satisfy {}".format(c))
+                else:
+                    raise RuntimeError("q_start doesn't satisfy {}".format(self.global_ineq_const))
 
     @property
     def motion_step_box(self) -> np.ndarray:
