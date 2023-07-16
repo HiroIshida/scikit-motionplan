@@ -90,7 +90,7 @@ class MyRRTSolverBase(AbstractScratchSolver[MyRRTConfig, MyRRTResult]):
 
 @dataclass
 class MyRRTSolver(MyRRTSolverBase):
-    def solve(self, init_traj: Optional[Trajectory] = None) -> MyRRTResult:
+    def _solve(self, init_traj: Optional[Trajectory] = None) -> MyRRTResult:
         """solve problem with maybe a solution guess"""
         assert init_traj is None, "don't support replanning"
         assert self.problem is not None
@@ -145,7 +145,7 @@ class MyRRTSolver(MyRRTSolverBase):
 
 @dataclass
 class MyRRTConnectSolver(MyRRTSolverBase):
-    def solve(self, init_traj: Optional[Trajectory] = None) -> MyRRTResult:
+    def _solve(self, init_traj: Optional[Trajectory] = None) -> MyRRTResult:
         """solve problem with maybe a solution guess"""
 
         if init_traj is not None:

@@ -183,7 +183,7 @@ class SQPBasedSolver(AbstractScratchSolver[SQPBasedSolverConfig, SQPBasedSolverR
         self.post_motion_step_validator = post_motion_step_validator
         self.problem = problem
 
-    def solve(self, init_traj: Optional[Trajectory] = None) -> "SQPBasedSolverResult":
+    def _solve(self, init_traj: Optional[Trajectory] = None) -> "SQPBasedSolverResult":
         assert self.solver is not None, "setup is not called yet"
         assert self.problem is not None
         # TODO: add motion step constraint

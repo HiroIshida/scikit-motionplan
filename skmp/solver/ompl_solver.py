@@ -132,7 +132,7 @@ class OMPLSolverBase(AbstractSolver[OMPLSolverConfig, OMPLSolverResult, Trajecto
     def create_planner(self, **kwargs) -> _OMPLPlannerBase:
         ...
 
-    def solve(self, init_traj: Optional[Trajectory] = None) -> OMPLSolverResult:
+    def _solve(self, init_traj: Optional[Trajectory] = None) -> OMPLSolverResult:
         assert self.problem is not None, "setup is not called yet"
         assert self.planner is not None
 
@@ -239,7 +239,7 @@ class OMPLDataDrivenSolver(AbstractDataDrivenSolver[OMPLSolverConfig, OMPLSolver
         internal_solver = OMPLSolver(config, None, None, None, n_call_dict)
         return cls(internal_solver, vec_descs, trajectories)
 
-    def solve(self, query_desc: Optional[np.ndarray] = None) -> OMPLSolverResult:
+    def _solve(self, query_desc: Optional[np.ndarray] = None) -> OMPLSolverResult:
         ts = time.time()
         if query_desc is not None:
             sqdists = np.sum((self.vec_descs - query_desc) ** 2, axis=1)
@@ -247,7 +247,7 @@ class OMPLDataDrivenSolver(AbstractDataDrivenSolver[OMPLSolverConfig, OMPLSolver
             reuse_traj = self.trajectories[idx_closest]
         else:
             reuse_traj = None
-        result = self.internal_solver.solve(reuse_traj)
+        result = self.internal_solver._solve(reuse_traj)
         result.time_elapsed = time.time() - ts  # overwrite
         return result
 

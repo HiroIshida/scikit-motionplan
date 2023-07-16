@@ -25,7 +25,7 @@ SolverT = TypeVar("SolverT", bound="AbstractSolver")
 DataDrivenSolverT = TypeVar("DataDrivenSolverT", bound="AbstractDataDrivenSolver")
 ConfigT = TypeVar("ConfigT", bound="ConfigProtocol")
 ResultT = TypeVar("ResultT", bound="ResultProtocol")
-ReplanInfoT = TypeVar("ReplanInfoT", bound=Any)
+GuidingTrajT = TypeVar("GuidingTrajT", bound=Any)
 
 
 @dataclass
@@ -107,7 +107,7 @@ class ResultProtocol(Protocol):
         ...
 
 
-class AbstractSolver(ABC, Generic[ConfigT, ResultT, ReplanInfoT]):
+class AbstractSolver(ABC, Generic[ConfigT, ResultT, GuidingTrajT]):
     problem: Optional[Problem]
 
     @abstractmethod
@@ -123,18 +123,21 @@ class AbstractSolver(ABC, Generic[ConfigT, ResultT, ReplanInfoT]):
     def _setup(self, problem: Problem):
         ...
 
-    @abstractmethod
-    def solve(self, replan_info: Optional[ReplanInfoT] = None) -> ResultT:
+    def solve(self, guiding_traj: Optional[GuidingTrajT] = None) -> ResultT:
         """solve problem with maybe a solution guess"""
+        return self._solve(guiding_traj)
+
+    @abstractmethod
+    def _solve(self, guiding_traj: Optional[GuidingTrajT] = None) -> ResultT:
         ...
 
-    def as_parallel_solver(self, n_process=4) -> "ParallelSolver[ConfigT, ResultT, ReplanInfoT]":
+    def as_parallel_solver(self, n_process=4) -> "ParallelSolver[ConfigT, ResultT, GuidingTrajT]":
         return ParallelSolver(self, n_process)
 
 
 @dataclass
-class ParallelSolver(AbstractSolver, Generic[ConfigT, ResultT, ReplanInfoT]):
-    internal_solver: AbstractSolver[ConfigT, ResultT, ReplanInfoT]
+class ParallelSolver(AbstractSolver, Generic[ConfigT, ResultT, GuidingTrajT]):
+    internal_solver: AbstractSolver[ConfigT, ResultT, GuidingTrajT]
     n_process: int = 4
 
     def get_result_type(self) -> Type[ResultT]:
@@ -143,15 +146,15 @@ class ParallelSolver(AbstractSolver, Generic[ConfigT, ResultT, ReplanInfoT]):
     def _setup(self, problem: Problem) -> None:
         self.internal_solver.setup(problem)
 
-    def _parallel_solve_inner(self, replan_info: Optional[ReplanInfoT] = None) -> ResultT:
+    def _parallel_solve_inner(self, replan_info: Optional[GuidingTrajT] = None) -> ResultT:
         """assume to be used in multi processing"""
         # prevend numpy from using multi-thread
         unique_seed = datetime.now().microsecond + os.getpid()
         np.random.seed(unique_seed)
         with threadpoolctl.threadpool_limits(limits=1, user_api="blas"):
-            return self.internal_solver.solve(replan_info)
+            return self.internal_solver._solve(replan_info)
 
-    def solve(self, replan_info: Optional[ReplanInfoT] = None) -> ResultT:
+    def _solve(self, replan_info: Optional[GuidingTrajT] = None) -> ResultT:
         ts = time.time()
 
         processes = []

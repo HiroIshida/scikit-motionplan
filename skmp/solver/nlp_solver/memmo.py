@@ -168,12 +168,12 @@ class AbstractMemmoSolver(AbstractDataDrivenSolver[SQPBasedSolverConfig, SQPBase
     def _setup(self, problem: Problem) -> None:
         pass
 
-    def solve(self, replan_info: Optional[np.ndarray] = None) -> SQPBasedSolverResult:
+    def _solve(self, replan_info: Optional[np.ndarray] = None) -> SQPBasedSolverResult:
         ts = time.time()
         init_traj = None
         if replan_info is not None:
             init_traj = self.regressor.predict(replan_info)
-        result = self.solver.solve(init_traj)
+        result = self.solver._solve(init_traj)
         result.time_elapsed = time.time() - ts
         return result
 
