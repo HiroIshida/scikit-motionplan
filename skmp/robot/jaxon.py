@@ -92,7 +92,12 @@ class JaxonConfig:
         return joint_names
 
     def get_endeffector_kin(
-        self, rleg: bool = True, lleg: bool = True, rarm: bool = True, larm: bool = True
+        self,
+        rleg: bool = True,
+        lleg: bool = True,
+        rarm: bool = True,
+        larm: bool = True,
+        rot_type: RotationType = RotationType.XYZW,
     ):
         endeffector_names = []
         if rleg:
@@ -109,7 +114,7 @@ class JaxonConfig:
             self._get_control_joint_names(),
             endeffector_names,
             base_type=BaseType.FLOATING,
-            rot_type=RotationType.XYZW,
+            rot_type=rot_type,
             fksolver_init_hook=self.add_end_coords,
         )
         return kinmap
