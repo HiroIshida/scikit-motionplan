@@ -38,20 +38,23 @@ class Problem:
     eqconst_admissible_mse: float = 1e-6
     motion_step_box_: Union[float, np.ndarray] = 0.1
 
-    def __post_init__(self) -> None:
-        # check if initial configuration is feasible
+    def check_init_feasibility(self) -> Tuple[bool, str]:
+        msg_list = []
         if not np.all(self.start < self.box_const.ub):
-            raise RuntimeError("q_start doesn't satisfy BoxConst upper")
+            msg_list.append("q_start doesn't satisfy BoxConst upper")
         if not np.all(self.start > self.box_const.lb):
-            raise RuntimeError("q_start doesn't satisfy BoxConst lower")
+            msg_list.append("q_start doesn't satisfy BoxConst lower")
         if self.global_ineq_const is not None:
             if not self.global_ineq_const.is_valid(self.start):
                 if isinstance(self.global_ineq_const, IneqCompositeConst):
                     for c in self.global_ineq_const.const_list:
                         if not c.is_valid(self.start):
-                            raise RuntimeError("q_start doesn't satisfy {}".format(c))
+                            msg_list.append("q_start doesn't satisfy {}".format(c))
                 else:
-                    raise RuntimeError("q_start doesn't satisfy {}".format(self.global_ineq_const))
+                    msg_list.append("q_start doesn't satisfy {}".format(self.global_ineq_const))
+        is_init_feasible = len(msg_list) == 0
+        msg_concat = ", ".join(msg_list)
+        return is_init_feasible, msg_concat
 
     @property
     def motion_step_box(self) -> np.ndarray:
