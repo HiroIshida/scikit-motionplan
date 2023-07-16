@@ -137,7 +137,7 @@ class SQPBasedSolver(AbstractScratchSolver[SQPBasedSolverConfig, SQPBasedSolverR
     ) -> "SQPBasedSolver":
         return cls(config, None, None, None)
 
-    def setup(self, problem: Problem) -> None:
+    def _setup(self, problem: Problem) -> None:
         config = self.config
         traj_eq_const, traj_ineq_const = translate(problem, config.n_wp)
         n_dof = len(problem.start)

@@ -74,7 +74,7 @@ class OMPLSolverBase(AbstractSolver[OMPLSolverConfig, OMPLSolverResult, Trajecto
     def get_result_type(cls) -> Type[OMPLSolverResult]:
         return OMPLSolverResult
 
-    def setup(self, problem: Problem) -> None:
+    def _setup(self, problem: Problem) -> None:
         self._n_call_dict["count"] = 0  # reset count
 
         def is_valid(q_: List[float]) -> bool:
@@ -100,10 +100,9 @@ class OMPLSolverBase(AbstractSolver[OMPLSolverConfig, OMPLSolverResult, Trajecto
             cs_type=self.config.const_state_type,
         )
 
-        self.problem = problem
         self.planner = planner
 
-        if self.problem.global_eq_const is None:
+        if problem.global_eq_const is None:
             # NOTE: lightning repair planner can handle only
             # planning in euclidean space
             if self.config.expbased_planner_backend == "ertconnect":
@@ -256,5 +255,5 @@ class OMPLDataDrivenSolver(AbstractDataDrivenSolver[OMPLSolverConfig, OMPLSolver
     def get_result_type(cls) -> Type[OMPLSolverResult]:
         return OMPLSolverResult
 
-    def setup(self, problem: Problem) -> None:
+    def _setup(self, problem: Problem) -> None:
         self.internal_solver.setup(problem)

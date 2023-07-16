@@ -165,8 +165,8 @@ class AbstractMemmoSolver(AbstractDataDrivenSolver[SQPBasedSolverConfig, SQPBase
     def get_result_type(cls) -> Type[SQPBasedSolverResult]:
         return SQPBasedSolverResult
 
-    def setup(self, problem: Problem) -> None:
-        self.solver.setup(problem)
+    def _setup(self, problem: Problem) -> None:
+        pass
 
     def solve(self, replan_info: Optional[np.ndarray] = None) -> SQPBasedSolverResult:
         ts = time.time()

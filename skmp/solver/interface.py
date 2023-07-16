@@ -108,13 +108,19 @@ class ResultProtocol(Protocol):
 
 
 class AbstractSolver(ABC, Generic[ConfigT, ResultT, ReplanInfoT]):
+    problem: Optional[Problem]
+
     @abstractmethod
     def get_result_type(self) -> Type[ResultT]:
         ...
 
-    @abstractmethod
     def setup(self, problem: Problem) -> None:
         """setup solver for a paticular problem"""
+        self._setup(problem)
+        self.problem = problem
+
+    @abstractmethod
+    def _setup(self, problem: Problem):
         ...
 
     @abstractmethod
@@ -134,7 +140,7 @@ class ParallelSolver(AbstractSolver, Generic[ConfigT, ResultT, ReplanInfoT]):
     def get_result_type(self) -> Type[ResultT]:
         return self.internal_solver.get_result_type()
 
-    def setup(self, problem: Problem) -> None:
+    def _setup(self, problem: Problem) -> None:
         self.internal_solver.setup(problem)
 
     def _parallel_solve_inner(self, replan_info: Optional[ReplanInfoT] = None) -> ResultT:

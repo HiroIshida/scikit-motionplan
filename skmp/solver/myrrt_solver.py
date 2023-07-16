@@ -62,8 +62,8 @@ class MyRRTSolverBase(AbstractScratchSolver[MyRRTConfig, MyRRTResult]):
     def init(cls: Type[MyRRTSolverT], config: MyRRTConfig) -> MyRRTSolverT:
         return cls(config)
 
-    def setup(self, problem: Problem) -> None:
-        self.problem = problem
+    def _setup(self, problem: Problem) -> None:
+        pass
 
     def project(self, q: np.ndarray, collision_aware: bool = False) -> Optional[np.ndarray]:
         assert self.problem is not None
