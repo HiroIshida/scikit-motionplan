@@ -119,55 +119,28 @@ def test_configpoint_const():
     assert isinstance(const.id_value, str)
 
 
-def test_pose_const_rpy():
+def test_pose_const():
     config = PR2Config(base_type=BaseType.FIXED)
     efkin = config.get_endeffector_kin()
 
-    target = Coordinates(pos=[0.8, -0.6, 1.1])
-    const = PoseConstraint.from_skrobot_coords([target], efkin, PR2())
-    check_jacobian(const, 7)
+    rot_types = [RotationType.IGNORE, RotationType.RPY, RotationType.XYZW]
+    dofs = [3, 6, 7]
 
-    q = np.random.randn(len(config._get_control_joint_names()))
-    val, jac = const.evaluate_single(q, True)
-    assert val.shape == (6,)
-    assert jac.shape == (6, len(q))
+    for rot_type, dof in zip(rot_types, dofs):
+        efkin.update_rotation_type(rot_type)
 
-    # check if id_value is assigned
-    assert isinstance(const.id_value, str)
+        target = Coordinates(pos=[0.8, -0.6, 1.1])
+        const = PoseConstraint.from_skrobot_coords([target], efkin, PR2())
 
+        check_jacobian(const, 7)
 
-def test_pose_const_xyzw():
-    config = PR2Config(base_type=BaseType.FIXED)
-    efkin = config.get_endeffector_kin()
-    efkin.update_rotation_type(RotationType.XYZW)
-    target = Coordinates(pos=[0.8, -0.6, 1.1])
-    const = PoseConstraint.from_skrobot_coords([target], efkin, PR2())
-    check_jacobian(const, 7)
+        q = np.random.randn(len(config._get_control_joint_names()))
+        val, jac = const.evaluate_single(q, True)
+        assert val.shape == (dof,)
+        assert jac.shape == (dof, len(q))
 
-    q = np.random.randn(len(config._get_control_joint_names()))
-    val, jac = const.evaluate_single(q, True)
-    assert val.shape == (7,)
-    assert jac.shape == (7, len(q))
-
-    # check if id_value is assigned
-    assert isinstance(const.id_value, str)
-
-
-def test_pose_const_position():
-    config = PR2Config(base_type=BaseType.FIXED)
-    efkin = config.get_endeffector_kin()
-    efkin.update_rotation_type(RotationType.IGNORE)
-    target = Coordinates(pos=[0.8, -0.6, 1.1])
-    const = PoseConstraint.from_skrobot_coords([target], efkin, PR2())
-    check_jacobian(const, 7)
-
-    q = np.random.randn(len(config._get_control_joint_names()))
-    val, jac = const.evaluate_single(q, True)
-    assert val.shape == (3,)
-    assert jac.shape == (3, len(q))
-
-    # check if id_value is assigned
-    assert isinstance(const.id_value, str)
+        # check if id_value is assigned
+        assert isinstance(const.id_value, str)
 
 
 def test_realtive_pose_const():
