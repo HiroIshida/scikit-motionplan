@@ -3,7 +3,17 @@ import itertools
 import uuid
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Callable, List, Optional, Protocol, Tuple, TypeVar, runtime_checkable
+from typing import (
+    Callable,
+    Generic,
+    List,
+    Optional,
+    Protocol,
+    Tuple,
+    TypeVar,
+    Union,
+    runtime_checkable,
+)
 
 import numpy as np
 from selcol.file import default_pretrained_basepath
@@ -101,12 +111,13 @@ class VectorDescriptable(Protocol):
 
 
 CompositeConstT = TypeVar("CompositeConstT", bound="_CompositeConst")
+InnerConstT = TypeVar("InnerConstT", bound=Union[AbstractIneqConst, AbstractEqConst])
 
 
-class _CompositeConst(AbstractConst):
-    const_list: List[AbstractConst]
+class _CompositeConst(AbstractConst, Generic[InnerConstT]):
+    const_list: List[InnerConstT]
 
-    def __init__(self, const_list: List[AbstractConst]) -> None:
+    def __init__(self, const_list: List[InnerConstT]) -> None:
         for const in const_list:
             assert const.is_equality() == self.is_equality()
         self.const_list = const_list
@@ -148,7 +159,7 @@ class _CompositeConst(AbstractConst):
         self.const_list = const_list
 
 
-class IneqCompositeConst(AbstractIneqConst, _CompositeConst):
+class IneqCompositeConst(AbstractIneqConst, _CompositeConst[AbstractIneqConst]):
     """
     Order of the list of constraints affects lot to performance.
     See the comment in is_valid function.
@@ -166,7 +177,7 @@ class IneqCompositeConst(AbstractIneqConst, _CompositeConst):
         return True
 
 
-class EqCompositeConst(AbstractEqConst, _CompositeConst):
+class EqCompositeConst(AbstractEqConst, _CompositeConst[AbstractEqConst]):
     ...
 
 
