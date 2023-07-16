@@ -1,5 +1,4 @@
 import copy
-import time
 from dataclasses import dataclass
 from typing import Any, Literal, Optional, Tuple, Type
 
@@ -111,13 +110,13 @@ class SQPBasedSolverConfig:
 @dataclass
 class SQPBasedSolverResult:
     traj: Optional[Trajectory]
-    time_elapsed: float
+    time_elapsed: Optional[float]
     n_call: int
     osqpsqp_raw_result: Optional[OsqpSqpResult]
 
     @classmethod
-    def abnormal(cls, time_elapsed: float) -> "SQPBasedSolverResult":
-        return cls(None, time_elapsed, -1, None)
+    def abnormal(cls) -> "SQPBasedSolverResult":
+        return cls(None, None, -1, None)
 
 
 @dataclass
@@ -187,7 +186,6 @@ class SQPBasedSolver(AbstractScratchSolver[SQPBasedSolverConfig, SQPBasedSolverR
         assert self.solver is not None, "setup is not called yet"
         assert self.problem is not None
         # TODO: add motion step constraint
-        ts = time.time()
 
         if init_traj is None:
 
@@ -203,7 +201,7 @@ class SQPBasedSolver(AbstractScratchSolver[SQPBasedSolverConfig, SQPBasedSolverR
                     break
             assert satisfy_result is not None
             if not satisfy_result.success:
-                return SQPBasedSolverResult(None, time.time() - ts, -1, None)
+                return SQPBasedSolverResult(None, None, -1, None)
 
             q_goal = satisfy_result.q
             init_traj = Trajectory.from_two_points(self.problem.start, q_goal, self.config.n_wp)
@@ -226,4 +224,4 @@ class SQPBasedSolver(AbstractScratchSolver[SQPBasedSolverConfig, SQPBasedSolverR
         if success:
             traj_solution = Trajectory(list(raw_result.x.reshape(self.config.n_wp, -1)))
 
-        return SQPBasedSolverResult(traj_solution, time.time() - ts, raw_result.nit, raw_result)
+        return SQPBasedSolverResult(traj_solution, None, raw_result.nit, raw_result)

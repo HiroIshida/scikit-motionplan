@@ -97,11 +97,11 @@ class ConfigProtocol(Protocol):
 
 class ResultProtocol(Protocol):
     traj: Optional[Trajectory]
-    time_elapsed: float
+    time_elapsed: Optional[float]
     n_call: int
 
     @classmethod
-    def abnormal(cls: Type[ResultT], time_elapsed: float) -> ResultT:
+    def abnormal(cls: Type[ResultT]) -> ResultT:
         """create result when solver failed without calling the core-solver
         and could not get n_call and other stuff"""
         ...
@@ -125,7 +125,15 @@ class AbstractSolver(ABC, Generic[ConfigT, ResultT, GuidingTrajT]):
 
     def solve(self, guiding_traj: Optional[GuidingTrajT] = None) -> ResultT:
         """solve problem with maybe a solution guess"""
-        return self._solve(guiding_traj)
+        ts = time.time()
+        assert self.problem is not None
+        is_init_feasible, _ = self.problem.check_init_feasibility()
+        if not is_init_feasible:
+            return self.get_result_type().abnormal()
+
+        ret = self._solve(guiding_traj)
+        ret.time_elapsed = time.time() - ts
+        return ret
 
     @abstractmethod
     def _solve(self, guiding_traj: Optional[GuidingTrajT] = None) -> ResultT:
@@ -155,8 +163,6 @@ class ParallelSolver(AbstractSolver, Generic[ConfigT, ResultT, GuidingTrajT]):
             return self.internal_solver._solve(replan_info)
 
     def _solve(self, replan_info: Optional[GuidingTrajT] = None) -> ResultT:
-        ts = time.time()
-
         processes = []
         result_queue: multiprocessing.Queue[ResultT] = multiprocessing.Queue()
 
@@ -174,9 +180,8 @@ class ParallelSolver(AbstractSolver, Generic[ConfigT, ResultT, GuidingTrajT]):
                     p.terminate()
                 for p in processes:
                     p.join()
-                result.time_elapsed = time.time() - ts
                 return result
-        return result.abnormal(time_elapsed=time.time() - ts)
+        return result.abnormal()
 
 
 class AbstractScratchSolver(AbstractSolver[ConfigT, ResultT, Trajectory]):

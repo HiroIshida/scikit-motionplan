@@ -1,4 +1,3 @@
-import time
 from dataclasses import dataclass
 from enum import Enum
 from typing import Optional, Type, TypeVar
@@ -37,13 +36,13 @@ class TerminateState(Enum):
 @dataclass
 class MyRRTResult:
     traj: Optional[Trajectory]
-    time_elapsed: float
+    time_elapsed: Optional[float]
     n_call: int
     terminate_state: TerminateState
 
     @classmethod
-    def abnormal(cls, time_elapsed: float) -> "MyRRTResult":
-        return cls(None, time_elapsed, -1, TerminateState.FAIL_SATISFACTION)
+    def abnormal(cls) -> "MyRRTResult":
+        return cls(None, None, -1, TerminateState.FAIL_SATISFACTION)
 
 
 MyRRTSolverT = TypeVar("MyRRTSolverT", bound="MyRRTSolverBase")
@@ -95,8 +94,6 @@ class MyRRTSolver(MyRRTSolverBase):
         assert init_traj is None, "don't support replanning"
         assert self.problem is not None
 
-        ts = time.time()
-
         inner_conf = ManifoldRRTConfig(self.config.n_max_call)
 
         assert not self.config.sample_goal_first  # TODO
@@ -134,13 +131,9 @@ class MyRRTSolver(MyRRTSolverBase):
         is_success = rrt.solve()
         if is_success:
             traj = Trajectory(list(rrt.get_solution()))
-            return MyRRTResult(
-                traj, time.time() - ts, rrt.n_extension_trial, TerminateState.SUCCESS
-            )
+            return MyRRTResult(traj, None, rrt.n_extension_trial, TerminateState.SUCCESS)
         else:
-            return MyRRTResult(
-                None, time.time() - ts, self.config.n_max_call, TerminateState.FAIL_PLANNING
-            )
+            return MyRRTResult(None, None, self.config.n_max_call, TerminateState.FAIL_PLANNING)
 
 
 @dataclass
@@ -152,8 +145,6 @@ class MyRRTConnectSolver(MyRRTSolverBase):
             return self.solve_with_initial_solution(init_traj)
 
         assert self.problem is not None
-
-        ts = time.time()
 
         assert self.config.sample_goal_first, "goal must be sampled before in rrt-connect"
         satisfy_result: SatisfactionResult
@@ -168,7 +159,7 @@ class MyRRTConnectSolver(MyRRTSolverBase):
                 break
 
         if not satisfy_result.success:
-            return MyRRTResult.abnormal(time.time() - ts)
+            return MyRRTResult.abnormal()
 
         conf = ManifoldRRTConfig(self.config.n_max_call)
 
@@ -185,20 +176,15 @@ class MyRRTConnectSolver(MyRRTSolverBase):
         try:
             is_success = rrtconnect.solve()
         except InvalidStartPosition:
-            return MyRRTResult.abnormal(time.time() - ts)
+            return MyRRTResult.abnormal()
 
         if is_success:
             traj = Trajectory(list(rrtconnect.get_solution()))
-            return MyRRTResult(
-                traj, time.time() - ts, rrtconnect.n_extension_trial, TerminateState.SUCCESS
-            )
+            return MyRRTResult(traj, None, rrtconnect.n_extension_trial, TerminateState.SUCCESS)
         else:
-            return MyRRTResult(
-                None, time.time() - ts, self.config.n_max_call, TerminateState.FAIL_PLANNING
-            )
+            return MyRRTResult(None, None, self.config.n_max_call, TerminateState.FAIL_PLANNING)
 
     def solve_with_initial_solution(self, init_traj: Trajectory):
-        ts = time.time()
         n_subgoal = self.config.n_subgoal
         subgoal_cands = init_traj.resample(n_subgoal + 1)[1:]  # +1 for initial state
 
@@ -226,7 +212,7 @@ class MyRRTConnectSolver(MyRRTSolverBase):
                 )
 
             if not satisfy_result.success:
-                return MyRRTResult.abnormal(time.time() - ts)
+                return MyRRTResult.abnormal()
 
             conf = ManifoldRRTConfig(self.config.n_max_call - n_call_sofar)
 
@@ -243,14 +229,12 @@ class MyRRTConnectSolver(MyRRTSolverBase):
             try:
                 is_success = rrtconnect.solve()
             except InvalidStartPosition:
-                return MyRRTResult.abnormal(time.time() - ts)
+                return MyRRTResult.abnormal()
 
             n_call_sofar += rrtconnect.n_extension_trial
 
             if not is_success:
-                return MyRRTResult(
-                    None, time.time() - ts, n_call_sofar, TerminateState.FAIL_PLANNING
-                )
+                return MyRRTResult(None, None, n_call_sofar, TerminateState.FAIL_PLANNING)
             q_seq = rrtconnect.get_solution()
             q_start = q_seq[-1]
             if i == 1:
@@ -260,4 +244,4 @@ class MyRRTConnectSolver(MyRRTSolverBase):
 
         traj = Trajectory(list(np.vstack(q_seq_list)))
         # all sub goal solved
-        return MyRRTResult(traj, time.time() - ts, n_call_sofar, TerminateState.SUCCESS)
+        return MyRRTResult(traj, None, n_call_sofar, TerminateState.SUCCESS)

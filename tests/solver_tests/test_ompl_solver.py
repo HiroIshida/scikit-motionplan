@@ -21,6 +21,8 @@ def test_ompl_solver():  # noqa
         solver = OMPLSolver.init(conf)
         solver.setup(problem)
         result_with_guess = solver.solve(result.traj)
+        assert result_with_guess.time_elapsed is not None
+        assert result.time_elapsed is not None
         assert result_with_guess.time_elapsed < result.time_elapsed
         assert result_with_guess.n_call < result.n_call
 

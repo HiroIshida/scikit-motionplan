@@ -1,4 +1,3 @@
-import time
 from abc import abstractmethod
 from dataclasses import dataclass
 from enum import Enum
@@ -48,13 +47,13 @@ class TerminateState(Enum):
 @dataclass
 class OMPLSolverResult:
     traj: Optional[Trajectory]
-    time_elapsed: float
+    time_elapsed: Optional[float]
     n_call: int
     terminate_state: TerminateState
 
     @classmethod
-    def abnormal(cls, time_elapsed: float) -> "OMPLSolverResult":
-        return cls(None, time_elapsed, -1, TerminateState.FAIL_SATISFACTION)
+    def abnormal(cls) -> "OMPLSolverResult":
+        return cls(None, None, -1, TerminateState.FAIL_SATISFACTION)
 
 
 OMPLSolverT = TypeVar("OMPLSolverT", bound="OMPLSolver")
@@ -136,8 +135,6 @@ class OMPLSolverBase(AbstractSolver[OMPLSolverConfig, OMPLSolverResult, Trajecto
         assert self.problem is not None, "setup is not called yet"
         assert self.planner is not None
 
-        ts = time.time()
-
         planner: _OMPLPlannerBase
         satisfy_result: Optional[SatisfactionResult] = None
 
@@ -163,7 +160,7 @@ class OMPLSolverBase(AbstractSolver[OMPLSolverConfig, OMPLSolverResult, Trajecto
             assert satisfy_result is not None
 
         if not satisfy_result.success:
-            return OMPLSolverResult(None, time.time() - ts, -1, TerminateState.FAIL_SATISFACTION)
+            return OMPLSolverResult(None, None, -1, TerminateState.FAIL_SATISFACTION)
 
         if init_traj is not None:
             message = "replanner could not be defind for this problem."
@@ -179,7 +176,7 @@ class OMPLSolverBase(AbstractSolver[OMPLSolverConfig, OMPLSolverResult, Trajecto
             plan_result = planner.solve(q_start, q_goal, self.config.simplify)
         except InvalidProblemError:
             # TODO: this should not happen...
-            return OMPLSolverResult(None, time.time() - ts, -1, TerminateState.FAIL_SATISFACTION)
+            return OMPLSolverResult(None, None, -1, TerminateState.FAIL_SATISFACTION)
 
         traj: Optional[Trajectory] = None
         if plan_result is not None:
@@ -196,7 +193,7 @@ class OMPLSolverBase(AbstractSolver[OMPLSolverConfig, OMPLSolverResult, Trajecto
         valid_func_call_count = self._n_call_dict["count"]
         self._n_call_dict["count"] = 0
         self.problem = None
-        return OMPLSolverResult(traj, time.time() - ts, valid_func_call_count, terminate_state)
+        return OMPLSolverResult(traj, None, valid_func_call_count, terminate_state)
 
 
 class OMPLSolver(AbstractScratchSolver[OMPLSolverConfig, OMPLSolverResult], OMPLSolverBase):
@@ -240,7 +237,6 @@ class OMPLDataDrivenSolver(AbstractDataDrivenSolver[OMPLSolverConfig, OMPLSolver
         return cls(internal_solver, vec_descs, trajectories)
 
     def _solve(self, query_desc: Optional[np.ndarray] = None) -> OMPLSolverResult:
-        ts = time.time()
         if query_desc is not None:
             sqdists = np.sum((self.vec_descs - query_desc) ** 2, axis=1)
             idx_closest = np.argmin(sqdists)
@@ -248,7 +244,6 @@ class OMPLDataDrivenSolver(AbstractDataDrivenSolver[OMPLSolverConfig, OMPLSolver
         else:
             reuse_traj = None
         result = self.internal_solver._solve(reuse_traj)
-        result.time_elapsed = time.time() - ts  # overwrite
         return result
 
     @classmethod
