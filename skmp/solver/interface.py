@@ -1,5 +1,6 @@
 import multiprocessing
 import os
+import signal
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -123,15 +124,37 @@ class AbstractSolver(ABC, Generic[ConfigT, ResultT, GuidingTrajT]):
     def _setup(self, problem: Problem):
         ...
 
-    def solve(self, guiding_traj: Optional[GuidingTrajT] = None) -> ResultT:
+    def solve(
+        self, guiding_traj: Optional[GuidingTrajT] = None, timeout: Optional[int] = None
+    ) -> ResultT:
         """solve problem with maybe a solution guess"""
         ts = time.time()
-        assert self.problem is not None
-        is_init_feasible, _ = self.problem.check_init_feasibility()
-        if not is_init_feasible:
-            return self.get_result_type().abnormal()
 
-        ret = self._solve(guiding_traj)
+        class TimeoutException(Exception):
+            ...
+
+        if timeout is not None:
+            assert timeout > 0
+
+            def handler(sig, frame):
+                raise TimeoutException()
+
+            signal.signal(signal.SIGALRM, handler)
+            signal.alarm(timeout)
+
+        try:
+            assert self.problem is not None
+            is_init_feasible, _ = self.problem.check_init_feasibility()
+            if is_init_feasible:
+                ret = self._solve(guiding_traj)
+            else:
+                ret = self.get_result_type().abnormal()
+        except TimeoutException:
+            ret = self.get_result_type().abnormal()
+
+        if timeout is not None:
+            signal.alarm(0)  # reset alarm
+
         ret.time_elapsed = time.time() - ts
         return ret
 
