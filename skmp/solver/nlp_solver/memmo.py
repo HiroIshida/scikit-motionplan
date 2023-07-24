@@ -166,7 +166,7 @@ class AbstractMemmoSolver(AbstractDataDrivenSolver[SQPBasedSolverConfig, SQPBase
         return SQPBasedSolverResult
 
     def _setup(self, problem: Problem) -> None:
-        pass
+        self.solver.setup(problem)
 
     def _solve(self, replan_info: Optional[np.ndarray] = None) -> SQPBasedSolverResult:
         init_traj = None
