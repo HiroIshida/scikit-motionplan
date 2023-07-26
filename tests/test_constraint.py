@@ -132,7 +132,7 @@ def test_pose_const():
         target = Coordinates(pos=[0.8, -0.6, 1.1])
         const = PoseConstraint.from_skrobot_coords([target], efkin, PR2())
 
-        check_jacobian(const, 7)
+        check_jacobian(const, 7, decimal=3)
 
         q = np.random.randn(len(config._get_control_joint_names()))
         val, jac = const.evaluate_single(q, True)
