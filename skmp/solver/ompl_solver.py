@@ -222,6 +222,7 @@ class OMPLSolver(AbstractScratchSolver[OMPLSolverConfig, OMPLSolverResult], OMPL
 
 @dataclass
 class OMPLDataDrivenSolver(AbstractDataDrivenSolver[OMPLSolverConfig, OMPLSolverResult]):
+    config: OMPLSolverConfig
     internal_solver: OMPLSolverBase
     vec_descs: np.ndarray
     trajectories: List[Trajectory]
@@ -234,7 +235,7 @@ class OMPLDataDrivenSolver(AbstractDataDrivenSolver[OMPLSolverConfig, OMPLSolver
         vec_descs = np.array([p[0] for p in dataset])
         trajectories = [p[1] for p in dataset]
         internal_solver = OMPLSolver(config, None, None, None, n_call_dict)
-        return cls(internal_solver, vec_descs, trajectories)
+        return cls(config, internal_solver, vec_descs, trajectories)
 
     def _solve(self, query_desc: Optional[np.ndarray] = None) -> OMPLSolverResult:
         if query_desc is not None:

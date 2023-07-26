@@ -140,6 +140,7 @@ class PCAGPRRegressor(GPRRegressorBase):
 
 @dataclass
 class AbstractMemmoSolver(AbstractDataDrivenSolver[SQPBasedSolverConfig, SQPBasedSolverResult]):
+    config: SQPBasedSolverConfig
     solver: SQPBasedSolver
     regressor: Regressor
     problem_vector_description: Optional[np.ndarray]
@@ -158,7 +159,7 @@ class AbstractMemmoSolver(AbstractDataDrivenSolver[SQPBasedSolverConfig, SQPBase
         solver = SQPBasedSolver.init(config)
         regressor_type = cls.get_regressor_type()
         regressor = regressor_type.fit_from_dataset(dataset)
-        return cls(solver, regressor, None)
+        return cls(config, solver, regressor, None)
 
     @classmethod
     def get_result_type(cls) -> Type[SQPBasedSolverResult]:

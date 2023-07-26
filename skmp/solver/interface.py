@@ -109,6 +109,7 @@ class ResultProtocol(Protocol):
 
 
 class AbstractSolver(ABC, Generic[ConfigT, ResultT, GuidingTrajT]):
+    config: ConfigT
     problem: Optional[Problem]
 
     @abstractmethod
@@ -163,11 +164,12 @@ class AbstractSolver(ABC, Generic[ConfigT, ResultT, GuidingTrajT]):
         ...
 
     def as_parallel_solver(self, n_process=4) -> "ParallelSolver[ConfigT, ResultT, GuidingTrajT]":
-        return ParallelSolver(self, n_process)
+        return ParallelSolver(self.config, self, n_process)
 
 
 @dataclass
 class ParallelSolver(AbstractSolver, Generic[ConfigT, ResultT, GuidingTrajT]):
+    config: ConfigT
     internal_solver: AbstractSolver[ConfigT, ResultT, GuidingTrajT]
     n_process: int = 4
 
