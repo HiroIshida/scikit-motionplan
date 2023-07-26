@@ -184,16 +184,13 @@ class ManifoldRRT(ABC):
                 q_rand = self.sample()
                 res = self.extend(q_rand)
                 if res == ExtensionResult.ADVANCED:
-                    print("advanced")
                     q_project = self.f_goal_project(self.nodes[-1].q)
                     if q_project is not None:
-                        print("projected")
                         if self.f_is_valid(q_project):
                             result_connect = self.connect(q_project)
                             if result_connect is not None:
                                 new_node = Node(q_project, self.nodes[-1])
                                 self.nodes.append(new_node)
-                                print("connected")
                                 return True
         except TerminationException:
             return False
