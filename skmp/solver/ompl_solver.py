@@ -35,6 +35,7 @@ class OMPLSolverConfig:
     expbased_planner_backend: Literal["ertconnect", "lightning"] = "lightning"
     ertconnect_eps: float = 5.0  # used only when ertconnect is selected
     const_state_type: ConstStateType = ConstStateType.PROJECTION
+    timeout: Optional[int] = None
 
 
 class TerminateState(Enum):

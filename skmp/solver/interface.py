@@ -94,6 +94,7 @@ class Problem:
 
 class ConfigProtocol(Protocol):
     n_max_call: int
+    timeout: Optional[int]  # second
 
 
 class ResultProtocol(Protocol):
@@ -125,23 +126,21 @@ class AbstractSolver(ABC, Generic[ConfigT, ResultT, GuidingTrajT]):
     def _setup(self, problem: Problem):
         ...
 
-    def solve(
-        self, guiding_traj: Optional[GuidingTrajT] = None, timeout: Optional[int] = None
-    ) -> ResultT:
+    def solve(self, guiding_traj: Optional[GuidingTrajT] = None) -> ResultT:
         """solve problem with maybe a solution guess"""
         ts = time.time()
 
         class TimeoutException(Exception):
             ...
 
-        if timeout is not None:
-            assert timeout > 0
+        if self.config.timeout is not None:
+            assert self.config.timeout > 0
 
             def handler(sig, frame):
                 raise TimeoutException()
 
             signal.signal(signal.SIGALRM, handler)
-            signal.alarm(timeout)
+            signal.alarm(self.config.timeout)
 
         try:
             assert self.problem is not None
@@ -153,7 +152,7 @@ class AbstractSolver(ABC, Generic[ConfigT, ResultT, GuidingTrajT]):
         except TimeoutException:
             ret = self.get_result_type().abnormal()
 
-        if timeout is not None:
+        if self.config.timeout is not None:
             signal.alarm(0)  # reset alarm
 
         ret.time_elapsed = time.time() - ts

@@ -21,6 +21,7 @@ class MyRRTConfig:
     n_max_satisfaction_trial: int = 100
     satisfaction_conf: Optional[SatisfactionConfig] = SatisfactionConfig()
     n_subgoal: int = 4  # used only when init_traj is specified
+    timeout: Optional[int] = None
 
     @property
     def sample_goal_first(self) -> bool:

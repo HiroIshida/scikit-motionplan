@@ -94,6 +94,7 @@ class SQPBasedSolverConfig:
         2.0  # NOTE: in some large problem like humanoid planning, this value should be zero
     )
     _osqpsqp_config: OsqpSqpConfig = OsqpSqpConfig()  # don't directly access this
+    timeout: Optional[int] = None
 
     @property
     def osqpsqp_config(self) -> OsqpSqpConfig:
