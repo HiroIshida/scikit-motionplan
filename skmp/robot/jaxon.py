@@ -320,6 +320,14 @@ class JaxonConfig:
         link_wise_sphere_collection[link_name] = lambda mesh: sc_chest_link2
         collision_link_names.append(link_name)
 
+        link_name = "HEAD_LINK0"
+        collection = []
+        collection.append((np.array([0.0, 0.0, 0.1]), 0.15, str(uuid.uuid4())))
+        collection.append((np.array([0.0, 0.0, 0.2]), 0.15, str(uuid.uuid4())))
+        sc_head_link = copy.deepcopy(SphereCollection(*list(zip(*collection))))
+        link_wise_sphere_collection[link_name] = lambda mesh: sc_head_link
+        collision_link_names.append(link_name)
+
         kinmap = ArticulatedCollisionKinematicsMap(
             self.urdf_path(),
             self._get_control_joint_names(),
