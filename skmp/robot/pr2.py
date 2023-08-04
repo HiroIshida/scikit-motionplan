@@ -33,6 +33,7 @@ class PR2Config:
     control_arm: Literal["rarm", "larm", "dual"] = "rarm"
     collision_mode: CollisionMode = CollisionMode.DEFAULT
     base_type: BaseType = BaseType.FIXED
+    use_torso: bool = False
 
     @classmethod
     def urdf_path(cls) -> Path:
@@ -138,6 +139,10 @@ class PR2Config:
             joint_names = self.rarm_joint_names() + self.larm_joint_names()
         else:
             assert False
+
+        if self.use_torso:
+            joint_names.append("torso_lift_joint")
+
         return joint_names
 
     def _get_endeffector_names(self) -> List[str]:
