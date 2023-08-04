@@ -167,7 +167,7 @@ class PR2Config:
 
     def get_box_const(self) -> BoxConst:
         if self.base_type == BaseType.PLANER:
-            base_bounds = np.array([-0.5, -1.0, -1.0]), np.array([0.5, 1.0, 1.0])
+            base_bounds = np.array([-1.0, -2.0, -1.0]), np.array([2.0, 2.0, 1.0])
         elif self.base_type == BaseType.FLOATING:
             base_bounds = -np.ones(6), np.ones(6)
         else:
