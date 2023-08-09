@@ -27,6 +27,7 @@ jobs:
                 python-version: ${{ matrix.python-version }}
             - name: install this package
               run: |
+                  sudo apt-get update -qq -y
                   sudo apt-get install libspatialindex-dev freeglut3-dev libsuitesparse-dev libblas-dev liblapack-dev libeigen3-dev
                   pip3 install scikit-build
                   python3 -m pip install -e .
