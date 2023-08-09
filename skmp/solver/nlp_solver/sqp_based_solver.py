@@ -95,6 +95,7 @@ class SQPBasedSolverConfig:
     )
     _osqpsqp_config: OsqpSqpConfig = OsqpSqpConfig()  # don't directly access this
     timeout: Optional[int] = None
+    return_osqp_result: bool = False  # helpful for debugging but memory footprint is large
 
     @property
     def osqpsqp_config(self) -> OsqpSqpConfig:
@@ -225,4 +226,7 @@ class SQPBasedSolver(AbstractScratchSolver[SQPBasedSolverConfig, SQPBasedSolverR
         if success:
             traj_solution = Trajectory(list(raw_result.x.reshape(self.config.n_wp, -1)))
 
-        return SQPBasedSolverResult(traj_solution, None, raw_result.nit, raw_result)
+        if self.config.return_osqp_result:
+            return SQPBasedSolverResult(traj_solution, None, raw_result.nit, raw_result)
+        else:
+            return SQPBasedSolverResult(traj_solution, None, raw_result.nit, None)

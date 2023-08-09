@@ -74,7 +74,9 @@ def test_sqp_based_solver():
         assert result.traj is not None
         assert problem.is_satisfied(result.traj)
 
-    config3 = SQPBasedSolverConfig(n_wp=15, motion_step_satisfaction="post")
+    config3 = SQPBasedSolverConfig(
+        n_wp=15, motion_step_satisfaction="post", return_osqp_result=True
+    )
     solver = SQPBasedSolver.init(config3)
     solver.setup(problem)
     result = solver.solve(init_traj.resample(config3.n_wp))
