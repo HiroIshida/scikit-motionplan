@@ -97,6 +97,9 @@ class ArticulatedKinematicsMapBase:
         self, joint_name_to_angle_table: Dict[str, float], base_pose: Optional[np.ndarray] = None
     ):
         """Update internal joint angles"""
+        # FIXME: base_type should not be involved here, as base_type is considered only
+        # in computing the fk phase, and not in reflecting phase
+
         joint_names = list(joint_name_to_angle_table.keys())
         angles = list(joint_name_to_angle_table.values())
         joint_ids = self.fksolver.get_joint_ids(joint_names)
@@ -148,6 +151,9 @@ class ArticulatedKinematicsMapBase:
 
     def reflect_skrobot_model(self, robot_model: RobotModel):
         """reflecting skrobot model configuratin to tinyfk solver configuration"""
+        # FIXME: base_type should not be involved here, as base_type is considered only
+        # in computing the fk phase, and not in reflecting phase
+
         table = {name: robot_model.__dict__[name].joint_angle() for name in robot_model.joint_names}
         if self._base_type == BaseType.PLANER:
             x, y, _ = robot_model.translation
