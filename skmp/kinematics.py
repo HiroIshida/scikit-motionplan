@@ -94,25 +94,11 @@ class ArticulatedKinematicsMapBase:
         return self._base_type
 
     def update_joint_angles(
-        self, joint_name_to_angle_table: Dict[str, float], base_pose: Optional[np.ndarray] = None
-    ):
+        self, joint_name_to_angle_table: Dict[str, float], base_pose_6d: np.ndarray
+    ) -> None:
         """Update internal joint angles"""
-        # FIXME: base_type should not be involved here, as base_type is considered only
-        # in computing the fk phase, and not in reflecting phase
 
-        joint_names = list(joint_name_to_angle_table.keys())
-        angles = list(joint_name_to_angle_table.values())
-        joint_ids = self.fksolver.get_joint_ids(joint_names)
-
-        if self._base_type != BaseType.FIXED:
-            assert base_pose is not None
-            if self._base_type == BaseType.PLANER:
-                assert len(base_pose) == 3
-            if self._base_type == BaseType.FLOATING:
-                assert len(base_pose) == 6
-            angles = angles + list(base_pose)
-
-        self.fksolver.set_q(joint_ids, angles, base_type=self._base_type)
+        assert len(base_pose_6d) == 6
 
     def map(self, points_cspace: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         n_point, n_dim_cspace = points_cspace.shape
@@ -151,24 +137,15 @@ class ArticulatedKinematicsMapBase:
 
     def reflect_skrobot_model(self, robot_model: RobotModel):
         """reflecting skrobot model configuratin to tinyfk solver configuration"""
-        # FIXME: base_type should not be involved here, as base_type is considered only
-        # in computing the fk phase, and not in reflecting phase
-
-        table = {name: robot_model.__dict__[name].joint_angle() for name in robot_model.joint_names}
-        if self._base_type == BaseType.PLANER:
-            x, y, _ = robot_model.translation
-            rpy = rpy_angle(robot_model.rotation)[0]
-            theta = rpy[0]
-            base_pose = np.array([x, y, theta])
-        elif self._base_type == BaseType.FLOATING:
-            xyz = robot_model.translation
-            ypr = rpy_angle(robot_model.rotation)[0]
-            base_pose = np.hstack([xyz, np.flip(ypr)])
-        elif self._base_type == BaseType.FIXED:
-            base_pose = None
-        else:
-            assert False
-        self.update_joint_angles(table, base_pose)
+        xyz = robot_model.translation
+        ypr = rpy_angle(robot_model.rotation)[0]
+        base_pose = np.hstack([xyz, np.flip(ypr)])
+        joint_angles = [
+            robot_model.__dict__[name].joint_angle() for name in robot_model.joint_names
+        ]
+        angles = joint_angles + base_pose.tolist()
+        joint_ids = self.fksolver.get_joint_ids(robot_model.joint_names)
+        self.fksolver.set_q(joint_ids, angles, base_type=BaseType.FLOATING)
 
     def add_new_feature_point(
         self,
