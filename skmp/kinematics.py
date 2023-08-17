@@ -109,7 +109,7 @@ class ArticulatedKinematicsMapBase:
                 assert len(base_pose) == 6
             angles = angles + list(base_pose)
 
-        self.fksolver.set_q(joint_ids, angles)
+        self.fksolver.set_q(joint_ids, angles, base_type=self._base_type)
 
     def map(self, points_cspace: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         n_point, n_dim_cspace = points_cspace.shape
