@@ -3,18 +3,13 @@ import uuid
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Callable, Dict, List, Literal, Union
+from typing import Dict, List, Literal
 
 import numpy as np
 from skrobot.models import PR2
 from tinyfk import BaseType
-from trimesh import Trimesh
 
-from skmp.collision import (
-    SphereCollection,
-    SphereCreatorConfig,
-    create_sphere_collection,
-)
+from skmp.collision import SphereCollection
 from skmp.constraint import BoxConst, NeuralSelfCollFreeConst
 from skmp.kinematics import (
     ArticulatedCollisionKinematicsMap,
@@ -200,19 +195,7 @@ class PR2Config:
             assert False
 
     def get_collision_kin(self) -> ArticulatedCollisionKinematicsMap:
-        link_wise_sphere_collection: Dict[
-            str, Union[Callable[[Trimesh], SphereCollection], SphereCollection]
-        ] = {}
-
-        def create_creator(radius_scale: float):
-            config_tiny = SphereCreatorConfig(tol=0.2, radius_scale=radius_scale)
-
-            def f(mesh: Trimesh) -> SphereCollection:
-                return create_sphere_collection(mesh, config_tiny)
-
-            return f
-
-        link_wise_sphere_collection["r_shoulder_lift_link"] = create_creator(0.8)
+        link_wise_sphere_collection: Dict[str, SphereCollection] = {}
 
         # r_upper_arm_link
         collection = []
@@ -335,13 +318,11 @@ class PR2Config:
         link_wise_sphere_collection["base_link"] = base_link_sphere_collection
 
         control_joint_names = self._get_control_joint_names()
-        collision_link_names = self._get_collision_link_names()
 
         kinmap = ArticulatedCollisionKinematicsMap(
             self.urdf_path(),
             control_joint_names,
-            collision_link_names,
-            link_wise_sphere_collection=link_wise_sphere_collection,
+            link_wise_sphere_collection,
             base_type=self.base_type,
         )
         return kinmap

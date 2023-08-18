@@ -312,8 +312,7 @@ class JaxonConfig:
         kinmap = ArticulatedCollisionKinematicsMap(
             self.urdf_path(),
             self._get_control_joint_names(),
-            collision_link_names,
-            link_wise_sphere_collection=link_wise_sphere_collection,
+            link_wise_sphere_collection,
             base_type=BaseType.FLOATING,
         )
         return kinmap

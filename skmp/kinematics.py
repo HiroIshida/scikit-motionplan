@@ -7,9 +7,8 @@ import numpy as np
 from skrobot.coordinates.math import rpy_angle
 from skrobot.model import RobotModel
 from tinyfk import BaseType, KinematicModel, RotationType
-from trimesh import Trimesh
 
-from skmp.collision import SphereCollection, create_sphere_collection
+from skmp.collision import SphereCollection
 from skmp.utils import load_urdf_model_using_cache
 
 
@@ -223,18 +222,10 @@ class ArticulatedCollisionKinematicsMap(ArticulatedKinematicsMapBase):
         self,
         urdfpath: Path,
         joint_names: List[str],
-        collision_link_names: List[str],
+        link_wise_sphere_collection: Dict[str, SphereCollection],
         base_type: BaseType = BaseType.FIXED,
-        link_wise_sphere_collection: Optional[
-            Dict[str, Union[Callable[[Trimesh], SphereCollection], SphereCollection]]
-        ] = None,
         fksolver_init_hook: Optional[Callable[[KinematicModel], None]] = None,
     ):
-        if link_wise_sphere_collection is None:
-            link_wise_sphere_collection = {}
-        for ln in collision_link_names:
-            if ln not in link_wise_sphere_collection:
-                link_wise_sphere_collection[ln] = create_sphere_collection
 
         dim_cspace = (
             len(joint_names)
@@ -249,24 +240,14 @@ class ArticulatedCollisionKinematicsMap(ArticulatedKinematicsMapBase):
         if fksolver_init_hook is not None:
             fksolver_init_hook(fksolver)
 
-        require_urdf_with_geometry = False
-        for sphere_collection in link_wise_sphere_collection.values():
-            if isinstance(sphere_collection, Callable):  # type: ignore
-                require_urdf_with_geometry = True
-        urdf = load_urdf_model_using_cache(urdfpath, with_geometry=require_urdf_with_geometry)
+        load_urdf_model_using_cache(urdfpath)
 
         radius_list = []
         sphere_name_list = []
         sphere_center_list = []
 
-        for ln in collision_link_names:
-            mesh: Trimesh = urdf.link_map[ln].collision_mesh
-            sphere_collection_like = link_wise_sphere_collection[ln]
-            if isinstance(sphere_collection_like, SphereCollection):
-                sphere_collection = sphere_collection_like
-            else:
-                sphere_collection = sphere_collection_like(mesh)
-
+        for ln in link_wise_sphere_collection.keys():
+            sphere_collection = link_wise_sphere_collection[ln]
             coll_link_id = fksolver.get_link_ids([ln])[0]
 
             for i in range(len(sphere_collection)):
