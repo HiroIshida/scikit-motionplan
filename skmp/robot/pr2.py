@@ -1,3 +1,5 @@
+import copy
+import uuid
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -211,21 +213,96 @@ class PR2Config:
             return f
 
         link_wise_sphere_collection["r_shoulder_lift_link"] = create_creator(0.8)
-        link_wise_sphere_collection["r_forearm_link"] = create_creator(0.7)
-        link_wise_sphere_collection["r_gripper_palm_link"] = create_creator(0.7)
-        link_wise_sphere_collection["r_gripper_r_finger_link"] = create_creator(0.7)
-        link_wise_sphere_collection["r_gripper_l_finger_link"] = create_creator(0.7)
-        link_wise_sphere_collection["r_forearm_link"] = create_creator(0.9)
-        link_wise_sphere_collection["r_upper_arm_link"] = create_creator(0.9)
 
-        # link_wise_sphere_creator["l_shoulder_pan_link"] = create_creator(0.9)
-        link_wise_sphere_collection["l_shoulder_lift_link"] = create_creator(0.8)
-        link_wise_sphere_collection["l_forearm_link"] = create_creator(0.7)
-        link_wise_sphere_collection["l_gripper_palm_link"] = create_creator(0.7)
-        link_wise_sphere_collection["l_gripper_r_finger_link"] = create_creator(0.7)
-        link_wise_sphere_collection["l_gripper_l_finger_link"] = create_creator(0.7)
-        link_wise_sphere_collection["l_forearm_link"] = create_creator(0.9)
-        link_wise_sphere_collection["l_upper_arm_link"] = create_creator(0.9)
+        # r_upper_arm_link
+        collection = []
+        collection.append((np.array([0.0, 0.0, 0.0]), 0.2, str(uuid.uuid4())))
+        collection.append((np.array([0.20, 0.0, 0.0]), 0.1, str(uuid.uuid4())))
+        collection.append((np.array([0.26, 0.0, -0.03]), 0.082, str(uuid.uuid4())))
+        collection.append((np.array([0.33, 0.0, -0.03]), 0.082, str(uuid.uuid4())))
+        tmp = copy.deepcopy(SphereCollection(*list(zip(*collection))))
+        link_wise_sphere_collection["r_upper_arm_link"] = tmp
+
+        # l_upper_arm_link
+        collection = []
+        collection.append((np.array([0.0, 0.0, 0.0]), 0.2, str(uuid.uuid4())))
+        collection.append((np.array([0.20, 0.0, 0.0]), 0.1, str(uuid.uuid4())))
+        collection.append((np.array([0.26, 0.0, -0.03]), 0.082, str(uuid.uuid4())))
+        collection.append((np.array([0.33, 0.0, -0.03]), 0.082, str(uuid.uuid4())))
+        tmp = copy.deepcopy(SphereCollection(*list(zip(*collection))))
+        link_wise_sphere_collection["l_upper_arm_link"] = tmp
+
+        # r_forearm_link
+        collection = []
+        collection.append((np.array([0.0, 0.0, 0.0]), 0.1, str(uuid.uuid4())))
+        collection.append((np.array([0.1, 0.0, 0.0]), 0.08, str(uuid.uuid4())))
+        collection.append((np.array([0.16, 0.0, 0.0]), 0.08, str(uuid.uuid4())))
+        collection.append((np.array([0.23, 0.02, -0.01]), 0.06, str(uuid.uuid4())))
+        collection.append((np.array([0.23, -0.02, -0.01]), 0.06, str(uuid.uuid4())))
+        collection.append((np.array([0.30, 0.02, 0.0]), 0.06, str(uuid.uuid4())))
+        collection.append((np.array([0.30, -0.02, 0.0]), 0.06, str(uuid.uuid4())))
+        tmp = copy.deepcopy(SphereCollection(*list(zip(*collection))))
+        link_wise_sphere_collection["r_forearm_link"] = tmp
+
+        # l_forearm_link
+        collection = []
+        collection.append((np.array([0.0, 0.0, 0.0]), 0.1, str(uuid.uuid4())))
+        collection.append((np.array([0.1, 0.0, 0.0]), 0.08, str(uuid.uuid4())))
+        collection.append((np.array([0.16, 0.0, 0.0]), 0.08, str(uuid.uuid4())))
+        collection.append((np.array([0.23, 0.02, -0.01]), 0.06, str(uuid.uuid4())))
+        collection.append((np.array([0.23, -0.02, -0.01]), 0.06, str(uuid.uuid4())))
+        collection.append((np.array([0.30, 0.02, 0.0]), 0.06, str(uuid.uuid4())))
+        collection.append((np.array([0.30, -0.02, 0.0]), 0.06, str(uuid.uuid4())))
+        tmp = copy.deepcopy(SphereCollection(*list(zip(*collection))))
+        link_wise_sphere_collection["l_forearm_link"] = tmp
+
+        # r_gripper_palm_link
+        collection = []
+        collection.append((np.array([0.07, 0.02, 0.0]), 0.04, str(uuid.uuid4())))
+        collection.append((np.array([0.06, 0.00, 0.0]), 0.04, str(uuid.uuid4())))
+        collection.append((np.array([0.07, -0.02, 0.0]), 0.04, str(uuid.uuid4())))
+        collection.append((np.array([0.1, 0.025, 0.0]), 0.04, str(uuid.uuid4())))
+        collection.append((np.array([0.1, -0.025, 0.0]), 0.04, str(uuid.uuid4())))
+        tmp = copy.deepcopy(SphereCollection(*list(zip(*collection))))
+        link_wise_sphere_collection["r_gripper_palm_link"] = tmp
+
+        collection = []
+        collection.append((np.array([0.105, 0.0, 0.0]), 0.02, str(uuid.uuid4())))
+        collection.append((np.array([0.0805, -0.01, 0.0]), 0.02, str(uuid.uuid4())))
+        collection.append((np.array([0.06, -0.02, 0.0]), 0.03, str(uuid.uuid4())))
+        tmp = copy.deepcopy(SphereCollection(*list(zip(*collection))))
+        link_wise_sphere_collection["r_gripper_r_finger_link"] = tmp
+
+        collection = []
+        collection.append((np.array([0.105, 0.0, 0.0]), 0.02, str(uuid.uuid4())))
+        collection.append((np.array([0.0805, 0.01, 0.0]), 0.02, str(uuid.uuid4())))
+        collection.append((np.array([0.06, 0.02, 0.0]), 0.03, str(uuid.uuid4())))
+        tmp = copy.deepcopy(SphereCollection(*list(zip(*collection))))
+        link_wise_sphere_collection["r_gripper_l_finger_link"] = tmp
+
+        # l_gripper_palm_link
+        collection = []
+        collection.append((np.array([0.07, 0.02, 0.0]), 0.04, str(uuid.uuid4())))
+        collection.append((np.array([0.06, 0.00, 0.0]), 0.04, str(uuid.uuid4())))
+        collection.append((np.array([0.07, -0.02, 0.0]), 0.04, str(uuid.uuid4())))
+        collection.append((np.array([0.1, 0.025, 0.0]), 0.04, str(uuid.uuid4())))
+        collection.append((np.array([0.1, -0.025, 0.0]), 0.04, str(uuid.uuid4())))
+        tmp = copy.deepcopy(SphereCollection(*list(zip(*collection))))
+        link_wise_sphere_collection["l_gripper_palm_link"] = tmp
+
+        collection = []
+        collection.append((np.array([0.105, 0.0, 0.0]), 0.02, str(uuid.uuid4())))
+        collection.append((np.array([0.0805, -0.01, 0.0]), 0.02, str(uuid.uuid4())))
+        collection.append((np.array([0.06, -0.02, 0.0]), 0.03, str(uuid.uuid4())))
+        tmp = copy.deepcopy(SphereCollection(*list(zip(*collection))))
+        link_wise_sphere_collection["l_gripper_r_finger_link"] = tmp
+
+        collection = []
+        collection.append((np.array([0.105, 0.0, 0.0]), 0.02, str(uuid.uuid4())))
+        collection.append((np.array([0.0805, 0.01, 0.0]), 0.02, str(uuid.uuid4())))
+        collection.append((np.array([0.06, 0.02, 0.0]), 0.03, str(uuid.uuid4())))
+        tmp = copy.deepcopy(SphereCollection(*list(zip(*collection))))
+        link_wise_sphere_collection["l_gripper_l_finger_link"] = tmp
 
         r_shoulder_collection = SphereCollection(
             [np.array([0.0, 0.0, 0.0]), np.array([0.0, 0.0, -0.25]), np.array([0.0, 0.0, -0.4])],
