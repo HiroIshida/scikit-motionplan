@@ -573,10 +573,9 @@ class PairWiseSelfCollFreeConst(AbstractIneqConst):
         self,
         colkin: ArticulatedCollisionKinematicsMap,
         robot_model: RobotModel,
+        id_pairs: Optional[List[Tuple[int, int]]] = None,
         only_closest_feature: bool = False,
     ) -> None:
-        # here in this constructor, we will filter out collision pair which is already collide
-        # at the initial pose np.zeros(n_dof)
 
         # create sphere_id_raius_table
         sphere_id_raius_table = {}
@@ -592,34 +591,42 @@ class PairWiseSelfCollFreeConst(AbstractIneqConst):
             r2 = sphere_id_raius_table[sphere_id2]
             pair_pair_dist_table[pair] = r1 + r2
 
-        # compute inter-sphere distances when q = np.zeros(n_dof)
-        q_init = np.zeros(colkin.dim_cspace)
-        sqdists, _ = colkin.fksolver.compute_inter_link_sqdists(
-            [q_init], all_index_pairs, colkin.tinyfk_joint_ids, base_type=colkin.base_type
-        )
-        dists = np.sqrt(sqdists)
+        if id_pairs is None:
+            # here in this constructor, we will filter out collision pair which is already collide
+            # at the initial pose np.zeros(n_dof)
 
-        # determine collision pairs
-        # because for cpython >= 3.6, dict is orderd...
-        rs = np.array(list(pair_pair_dist_table.values()))
+            # compute inter-sphere distances when q = np.zeros(n_dof)
+            q_init = np.zeros(colkin.dim_cspace)
+            sqdists, _ = colkin.fksolver.compute_inter_link_sqdists(
+                [q_init], all_index_pairs, colkin.tinyfk_joint_ids, base_type=colkin.base_type
+            )
+            dists = np.sqrt(sqdists)
 
-        # multiplying rs seems good heuristics.
-        # for example, if sphere is large, the margin must be large
-        # but for small one, we don't need large margin.
-        rs_with_margin = rs * 3
-        collision_pair_indices = np.where(dists - rs_with_margin < 0)[0]
-        collision_pairs = [all_index_pairs[idx] for idx in collision_pair_indices]
+            # determine collision pairs
+            # because for cpython >= 3.6, dict is orderd...
+            rs = np.array(list(pair_pair_dist_table.values()))
 
-        # subtract collision pairs from the all pairs
-        valid_sphere_id_pair_set = set(all_index_pairs).difference(set(collision_pairs))
-        valid_sphere_id_pairs = list(valid_sphere_id_pair_set)
-        valid_sphere_pair_dists = np.array(
-            [pair_pair_dist_table[pair] for pair in valid_sphere_id_pairs]
-        )
+            # multiplying rs seems good heuristics.
+            # for example, if sphere is large, the margin must be large
+            # but for small one, we don't need large margin.
+            rs_with_margin = rs * 3
+            collision_pair_indices = np.where(dists - rs_with_margin < 0)[0]
+            collision_pairs = [all_index_pairs[idx] for idx in collision_pair_indices]
+
+            # subtract collision pairs from the all pairs
+            valid_sphere_id_pair_set = set(all_index_pairs).difference(set(collision_pairs))
+            valid_sphere_id_pairs = list(valid_sphere_id_pair_set)
+            valid_sphere_pair_dists = np.array(
+                [pair_pair_dist_table[pair] for pair in valid_sphere_id_pairs]
+            )
+            id_pairs = valid_sphere_id_pairs
+            pair_dists = valid_sphere_pair_dists
+        else:
+            pair_dists = np.array([pair_pair_dist_table[pair] for pair in id_pairs])
 
         self.colkin = colkin
-        self.check_sphere_id_pairs = valid_sphere_id_pairs
-        self.check_sphere_pair_sqdists = valid_sphere_pair_dists**2
+        self.check_sphere_id_pairs = id_pairs
+        self.check_sphere_pair_sqdists = pair_dists**2
         self.reflect_skrobot_model(robot_model)
         self.only_closest_feature = only_closest_feature
         self.assign_id_value()
