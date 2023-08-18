@@ -113,17 +113,3 @@ class Trajectory:
         assert diff_contact < 1e-6
         points = copy.deepcopy(self._points) + copy.deepcopy(other._points[1:])
         return Trajectory(points)
-
-    def is_simplified(self) -> bool:
-        """check if intra-waypoint distances are simliar"""
-        if len(self) < 3:
-            return True
-
-        P = self.numpy()
-        diffs = P[1:] - P[:-1]
-
-        for i in range(len(self) - 2):
-            inpro = diffs[i].dot(diffs[i + 1])
-            if inpro < 0:
-                return False
-        return True

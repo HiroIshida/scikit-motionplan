@@ -42,7 +42,6 @@ class TerminateState(Enum):
     SUCCESS = 1
     FAIL_SATISFACTION = 2
     FAIL_PLANNING = 3
-    FAIL_SIMPLIFYING = 4
 
 
 @dataclass
@@ -182,11 +181,7 @@ class OMPLSolverBase(AbstractSolver[OMPLSolverConfig, OMPLSolverResult, Trajecto
         traj: Optional[Trajectory] = None
         if plan_result is not None:
             traj = Trajectory(plan_result)
-            if not self.config.simplify or traj.is_simplified():
-                terminate_state = TerminateState.SUCCESS
-            else:
-                traj = None
-                terminate_state = TerminateState.FAIL_SIMPLIFYING
+            terminate_state = TerminateState.SUCCESS
         else:
             terminate_state = TerminateState.FAIL_PLANNING
             traj = None
