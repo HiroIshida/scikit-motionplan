@@ -2,6 +2,7 @@ import copy
 import uuid
 from dataclasses import dataclass
 from enum import Enum
+from itertools import product
 from pathlib import Path
 from typing import Dict, List, Literal
 
@@ -345,4 +346,32 @@ class PR2Config:
     def get_neural_selcol_const(self, robot_model: PR2) -> NeuralSelfCollFreeConst:
         return NeuralSelfCollFreeConst.load(
             self.urdf_path(), self._get_control_joint_names(), robot_model, self.base_type
+        )
+
+    def get_pairwise_selcol_consts(self, robot_model: PR2) -> PairWiseSelfCollFreeConst:
+        # NOTE: this feature is not tested well
+        colkin = self.get_collision_kin()
+
+        rarm_group = [
+            name for name in colkin.sphere_name_list if ("r_gripper" in name or "r_forearm" in name)
+        ]
+        anti_rarm_group = [name for name in colkin.sphere_name_list if not name.startswith("r_")]
+
+        larm_group = [
+            name for name in colkin.sphere_name_list if ("l_gripper" in name or "l_forearm" in name)
+        ]
+        anti_larm_group = [name for name in colkin.sphere_name_list if not name.startswith("l_")]
+
+        table = {name: fid for name, fid in zip(colkin.sphere_name_list, colkin.tinyfk_feature_ids)}
+        pairs = set()
+        for name1, name2 in product(rarm_group, anti_rarm_group):
+            id1, id2 = table[name1], table[name2]
+            pairs.add((min(id1, id2), max(id1, id2)))
+
+        for name1, name2 in product(larm_group, anti_larm_group):
+            id1, id2 = table[name1], table[name2]
+            pairs.add((min(id1, id2), max(id1, id2)))
+
+        return PairWiseSelfCollFreeConst(
+            colkin, robot_model, id_pairs=pairs, only_closest_feature=True
         )
