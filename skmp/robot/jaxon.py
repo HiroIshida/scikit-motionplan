@@ -34,6 +34,10 @@ class Jaxon(RobotModelFromURDF):
         self.rarm_end_coords.translate([0, 0, -0.220])
         self.rarm_end_coords.rotate_with_matrix(matrix, wrt="local")
 
+        self.rarm_tip_coords = CascadedCoords(self.RARM_LINK7, name="rarm_end_coords")
+        self.rarm_tip_coords.translate([0, 0, -0.3])
+        self.rarm_tip_coords.rotate_with_matrix(matrix, wrt="local")
+
         self.larm_end_coords = CascadedCoords(self.LARM_LINK7, name="larm_end_coords")
         self.larm_end_coords.translate([0, 0, -0.220])
         self.larm_end_coords.rotate_with_matrix(matrix, wrt="local")
@@ -73,6 +77,7 @@ class JaxonConfig:
         rpy = np.flip(rpy_angle(matrix)[0])
         kin.add_new_link("rarm_end_coords", rarm_id, [0, 0, -0.220], rpy=rpy)
         kin.add_new_link("larm_end_coords", larm_id, [0, 0, -0.220], rpy=rpy)
+        kin.add_new_link("rarm_tip_coords", rarm_id, [0, 0, -0.30], rpy=rpy)
 
         rleg_id, lleg_id = kin.get_link_ids(["RLEG_LINK5", "LLEG_LINK5"])
         kin.add_new_link("rleg_end_coords", rleg_id, [0, 0, -0.1])
