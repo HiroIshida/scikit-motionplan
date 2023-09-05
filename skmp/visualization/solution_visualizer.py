@@ -102,6 +102,7 @@ class SolutionVisualizerBase(Generic[ViewerT]):
     robot_model: RobotModel
     _robot_updator: Optional[Callable[[RobotModel, np.ndarray], None]]
     _show_called: bool
+    _flags: Dict
 
     @classmethod
     @abstractmethod
@@ -114,6 +115,7 @@ class SolutionVisualizerBase(Generic[ViewerT]):
         geometry: Optional[Geometry] = None,
         visualizable: Optional[Visualizable] = None,
         robot_updator: Optional[Callable[[RobotModel, np.ndarray], None]] = None,
+        show_wireframe: bool = False,
     ):
 
         viewer = self.viewer_type()()
@@ -132,10 +134,15 @@ class SolutionVisualizerBase(Generic[ViewerT]):
 
         viewer.add(robot)
 
+        flags = {}
+        if show_wireframe:
+            flags["wireframe"] = True
+
         self.robot_model = robot
         self.viewer = viewer
         self._robot_updator = robot_updator
         self._show_called = False
+        self.flags = flags
 
     def update_robot_state(self, q: np.ndarray) -> None:
         # please overwrite this
@@ -145,13 +152,14 @@ class SolutionVisualizerBase(Generic[ViewerT]):
 
 class InteractiveSolutionVisualizer(SolutionVisualizerBase[TrimeshSceneViewer]):
     def show(self) -> None:
-        self.viewer.show()
-        time.sleep(1.0)
-        self._show_called = True
+        if not self._show_called:
+            # NOTE: wire frame is not supporeted yet. Just ignore
+            self.viewer.show()
+            time.sleep(1.0)
+            self._show_called = True
 
     def visualize_trajectory(self, trajectory: Trajectory, t_interval: float = 0.6) -> None:
-        if not self._show_called:
-            self.show()
+        self.show()
 
         q_end = trajectory.numpy()[-1]
         self.update_robot_state(q_end)
@@ -179,7 +187,8 @@ class StaticSolutionVisualizer(SolutionVisualizerBase[SceneWrapper]):
     def save_image(self, path: Union[Path, str]) -> None:
         if isinstance(path, str):
             path = Path(path)
-        png = self.viewer.save_image(resolution=[640, 480], visible=True)
+
+        png = self.viewer.save_image(resolution=[640, 480], visible=True, flags=self.flags)
         with path.open(mode="wb") as f:
             f.write(png)
 
