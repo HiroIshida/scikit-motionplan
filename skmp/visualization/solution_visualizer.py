@@ -22,7 +22,9 @@ import trimesh
 from skrobot.model import CascadedLink, Link, RobotModel
 from skrobot.viewers import TrimeshSceneViewer
 
+from skmp.kinematics import ArticulatedCollisionKinematicsMap
 from skmp.trajectory import Trajectory
+from skmp.visualization.collision_visualizer import CollisionSphereVisualizationManager
 
 
 class SceneWrapper(trimesh.Scene):
@@ -103,6 +105,7 @@ class SolutionVisualizerBase(Generic[ViewerT]):
     _robot_updator: Optional[Callable[[RobotModel, np.ndarray], None]]
     _show_called: bool
     _flags: Dict
+    _colvis: Optional[CollisionSphereVisualizationManager]
 
     @classmethod
     @abstractmethod
@@ -116,6 +119,9 @@ class SolutionVisualizerBase(Generic[ViewerT]):
         visualizable: Optional[Visualizable] = None,
         robot_updator: Optional[Callable[[RobotModel, np.ndarray], None]] = None,
         show_wireframe: bool = False,
+        enable_colvis: bool = False,
+        colkin: Optional[ArticulatedCollisionKinematicsMap] = None,
+        sdf: Optional[Callable[[np.ndarray], np.ndarray]] = None,
     ):
 
         viewer = self.viewer_type()()
@@ -138,6 +144,13 @@ class SolutionVisualizerBase(Generic[ViewerT]):
         if show_wireframe:
             flags["wireframe"] = True
 
+        if enable_colvis:
+            assert colkin is not None
+            assert sdf is not None
+            self._colvis = CollisionSphereVisualizationManager(colkin, viewer, sdf)
+        else:
+            self._colvis = None
+
         self.robot_model = robot
         self.viewer = viewer
         self._robot_updator = robot_updator
@@ -148,6 +161,8 @@ class SolutionVisualizerBase(Generic[ViewerT]):
         # please overwrite this
         assert self._robot_updator is not None
         self._robot_updator(self.robot_model, q)
+        if self._colvis is not None:
+            self._colvis.update(self.robot_model)
 
 
 class InteractiveSolutionVisualizer(SolutionVisualizerBase[TrimeshSceneViewer]):

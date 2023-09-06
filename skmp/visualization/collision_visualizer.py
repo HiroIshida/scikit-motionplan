@@ -18,8 +18,14 @@ class CollisionSphereVisualizationManager:
     kinmap: ArticulatedCollisionKinematicsMap
     viewer: TrimeshSceneViewer
     sphere_list: List[Sphere]
+    sdf: Optional[Callable[[np.ndarray], np.ndarray]]
 
-    def __init__(self, kinmap: ArticulatedCollisionKinematicsMap, viewer: TrimeshSceneViewer):
+    def __init__(
+        self,
+        kinmap: ArticulatedCollisionKinematicsMap,
+        viewer: TrimeshSceneViewer,
+        sdf: Optional[Callable[[np.ndarray], np.ndarray]] = None,
+    ):
         sphere_list = []
         for i in range(kinmap.n_feature):
             kinmap.sphere_name_list[i]
@@ -34,10 +40,15 @@ class CollisionSphereVisualizationManager:
         self.kinmap = kinmap
         self.viewer = viewer
         self.sphere_list = sphere_list
+        self.sdf = sdf
 
     def update(
-        self, robot: RobotModel, sdf: Optional[Callable[[np.ndarray], np.ndarray]] = None
+        self, robot: RobotModel, sdf_latest: Optional[Callable[[np.ndarray], np.ndarray]] = None
     ) -> None:
+
+        if sdf_latest is not None:
+            self.sdf = sdf_latest
+
         tmp, _ = self.kinmap.map_skrobot_model(robot)
         points_tspace = tmp[0]
         assert len(points_tspace) == len(self.sphere_list)
@@ -46,12 +57,12 @@ class CollisionSphereVisualizationManager:
             co = Coordinates(point)
             sphere.newcoords(co)
 
-        if sdf is not None:
+        if self.sdf is not None:
             # warn collision state by chaning the color
             for sphere in self.sphere_list:
                 point = sphere.worldpos()
                 radius = sphere.visual_mesh.metadata["radius"]
-                val = sdf(np.expand_dims(point, axis=0)).item() - radius
+                val = self.sdf(np.expand_dims(point, axis=0)).item() - radius
                 if val < 0.0:
                     n_facet = len(sphere._visual_mesh.visual.face_colors)
                     sphere._visual_mesh.visual.face_colors = np.array(
