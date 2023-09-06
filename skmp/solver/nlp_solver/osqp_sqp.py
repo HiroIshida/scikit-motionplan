@@ -193,7 +193,7 @@ class OsqpSqpSolver:
                 )
                 n_eq_violation = sum(np.abs(val_eq) > config.ctol_eq)
                 eq_max_vilation = np.max(np.abs(val_eq))
-                n_ineq_violation = sum(val_ineq > -config.ctol_ineq)
+                n_ineq_violation = sum(val_ineq < -config.ctol_ineq)
                 ineq_max_violation = np.min(val_ineq)
                 print(
                     "eq max violation: {}, ineq max violation: {}".format(
