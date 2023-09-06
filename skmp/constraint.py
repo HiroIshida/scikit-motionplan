@@ -285,14 +285,13 @@ class CollFreeConst(AbstractIneqConst):
         values = np.zeros([n_point, 1])
         Js = np.zeros([n_point, 1, dim_cspace])
 
+        radii = np.array(self.colkin.radius_list)
         for i in range(n_point):
             xs = xss[i]
             sds_stacked = self.sdf(xs)
-            idx_closest = np.argmin(sds_stacked)
-            sd_closest = sds_stacked[idx_closest]
-            sd_with_margin = sd_closest - self.colkin.radius_list[idx_closest]
-
-            values[i] = sd_with_margin
+            sds_stacked_sphere_considered = sds_stacked - radii
+            idx_closest = np.argmin(sds_stacked_sphere_considered)
+            values[i] = sds_stacked_sphere_considered[idx_closest]
 
             if with_jacobian:
                 eps = 1e-7
@@ -305,7 +304,7 @@ class CollFreeConst(AbstractIneqConst):
                     xs_closest_plus = copy.deepcopy(xs_closest)
                     xs_closest_plus[j] += eps
                     sd_closest_plus = self.sdf(np.expand_dims(xs_closest_plus, axis=0))[0]
-                    grad[j] = (sd_closest_plus - sd_closest) / eps
+                    grad[j] = (sd_closest_plus - sds_stacked[idx_closest]) / eps
                 Js[i, 0, :] = grad.dot(jac_closest)
 
         return values, Js
