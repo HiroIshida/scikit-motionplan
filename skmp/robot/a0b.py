@@ -1,14 +1,13 @@
 import copy
 import uuid
 from pathlib import Path
-from typing import Callable, Dict, List, Union
+from typing import Dict, List
 
 import numpy as np
 from skrobot.coordinates import CascadedCoords
 from skrobot.model.primitives import Box
 from skrobot.models.urdf import RobotModelFromURDF
 from tinyfk import BaseType, KinematicModel, RotationType
-from trimesh import Trimesh
 
 from skmp.collision import SphereCollection
 from skmp.constraint import BoxConst
@@ -61,7 +60,9 @@ class A0BConfig:
     @staticmethod
     def add_end_coords(robot_model: KinematicModel) -> None:
         rarm_id = robot_model.get_link_ids(["RARM_LINK5"])[0]
-        robot_model.add_new_link("rarm_end_coords", rarm_id, [END_COORDS_TRANSLATION, 0, 0.0])
+        robot_model.add_new_link(
+            "rarm_end_coords", rarm_id, np.array([END_COORDS_TRANSLATION, 0, 0.0])
+        )
 
     def get_endeffector_kin(self):
         kinmap = ArticulatedEndEffectorKinematicsMap(
@@ -77,9 +78,7 @@ class A0BConfig:
     def get_collision_kin(self) -> ArticulatedCollisionKinematicsMap:
         collision_link_names = ["RARM_LINK{}".format(i) for i in range(6)]
 
-        link_wise_sphere_collection: Dict[
-            str, Union[Callable[[Trimesh], SphereCollection], SphereCollection]
-        ] = {}
+        link_wise_sphere_collection: Dict[str, SphereCollection] = {}
 
         link_name = "RARM_LINK0"
         collection = []
@@ -128,7 +127,6 @@ class A0BConfig:
         kinmap = ArticulatedCollisionKinematicsMap(
             self.urdf_path,
             self._get_control_joint_names(),
-            ["RARM_LINK{}".format(i) for i in range(6)],
             link_wise_sphere_collection=link_wise_sphere_collection,
             base_type=BaseType.FIXED,
         )

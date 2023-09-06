@@ -373,5 +373,5 @@ class PR2Config:
             pairs.add((min(id1, id2), max(id1, id2)))
 
         return PairWiseSelfCollFreeConst(
-            colkin, robot_model, id_pairs=pairs, only_closest_feature=True
+            colkin, robot_model, id_pairs=list(pairs), only_closest_feature=True
         )

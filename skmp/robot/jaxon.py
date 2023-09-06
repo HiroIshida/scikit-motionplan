@@ -1,7 +1,7 @@
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Union
+from typing import Dict, List, Optional
 
 import numpy as np
 from robot_descriptions.jaxon_description import URDF_PATH as JAXON_URDF_PATH
@@ -10,7 +10,6 @@ from skrobot.coordinates.math import rotation_matrix, rpy_angle
 from skrobot.model.primitives import Box
 from skrobot.models.urdf import RobotModelFromURDF
 from tinyfk import BaseType, KinematicModel, RotationType
-from trimesh import Trimesh
 
 from skmp.collision import SphereCollection
 from skmp.constraint import BoxConst, COMStabilityConst, NeuralSelfCollFreeConst
@@ -75,13 +74,13 @@ class JaxonConfig:
         rarm_id, larm_id = kin.get_link_ids(["RARM_LINK7", "LARM_LINK7"])
         matrix = rotation_matrix(np.pi * 0.5, [0, 0, 1.0])
         rpy = np.flip(rpy_angle(matrix)[0])
-        kin.add_new_link("rarm_end_coords", rarm_id, [0, 0, -0.220], rpy=rpy)
-        kin.add_new_link("larm_end_coords", larm_id, [0, 0, -0.220], rpy=rpy)
-        kin.add_new_link("rarm_tip_coords", rarm_id, [0, 0, -0.30], rpy=rpy)
+        kin.add_new_link("rarm_end_coords", rarm_id, np.array([0, 0, -0.220]), rpy=rpy)
+        kin.add_new_link("larm_end_coords", larm_id, np.array([0, 0, -0.220]), rpy=rpy)
+        kin.add_new_link("rarm_tip_coords", rarm_id, np.array([0, 0, -0.30]), rpy=rpy)
 
         rleg_id, lleg_id = kin.get_link_ids(["RLEG_LINK5", "LLEG_LINK5"])
-        kin.add_new_link("rleg_end_coords", rleg_id, [0, 0, -0.1])
-        kin.add_new_link("lleg_end_coords", lleg_id, [0, 0, -0.1])
+        kin.add_new_link("rleg_end_coords", rleg_id, np.array([0, 0, -0.1]))
+        kin.add_new_link("lleg_end_coords", lleg_id, np.array([0, 0, -0.1]))
 
     def _get_control_joint_names(self) -> List[str]:
         joint_names = []
@@ -126,9 +125,7 @@ class JaxonConfig:
     def get_collision_kin(
         self, rsole: bool = True, lsole: bool = True, rgripper: bool = True, lgripper: bool = True
     ) -> ArticulatedCollisionKinematicsMap:
-        link_wise_sphere_collection: Dict[
-            str, Union[Callable[[Trimesh], SphereCollection], SphereCollection]
-        ] = {}
+        link_wise_sphere_collection: Dict[str, SphereCollection] = {}
 
         collision_link_names = []
 
