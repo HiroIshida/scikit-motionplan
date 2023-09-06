@@ -68,15 +68,18 @@ def test_collfree_const():
     box = Box(extents=[0.7, 0.5, 1.2], with_sdf=True)
     box.translate(np.array([0.85, -0.2, 0.9]))
     assert box.sdf is not None
-    collfree_const = CollFreeConst(colkin, box.sdf, PR2())
+    collfree_const = CollFreeConst(colkin, box.sdf, PR2(), only_closest_feature=False)
     collfree_const.only_closest_feature = False
     check_jacobian(collfree_const, 7)
 
-    collfree_const.only_closest_feature = True
-    check_jacobian(collfree_const, 7)
+    collfree_const_oc = CollFreeConst(colkin, box.sdf, PR2(), only_closest_feature=True)
+    check_jacobian(collfree_const_oc, 7)
 
-    # check if id_value is assigned
-    assert isinstance(collfree_const.id_value, str)
+    for _ in range(20):
+        q = np.random.randn(7)
+        values = collfree_const.evaluate_single(q, False)[0]
+        closest_value = collfree_const_oc.evaluate_single(q, False)[0][0]
+        assert np.min(values) == closest_value
 
 
 def test_reduced_collfree_const():
@@ -167,16 +170,24 @@ def test_pair_wise_selfcollfree_const():
 
     const = PairWiseSelfCollFreeConst(colkin, PR2(), only_closest_feature=False)
     check_jacobian(const, 7)
-
-    const = PairWiseSelfCollFreeConst(colkin, PR2(), only_closest_feature=True)
-    check_jacobian(const, 7)
-
     q_init = np.zeros(7)
     values, _ = const.evaluate_single(q_init, with_jacobian=False)
     assert np.all(values > 0)
-
-    # check if id_value is assigned
     assert isinstance(const.id_value, str)
+
+    const_only_closest = PairWiseSelfCollFreeConst(colkin, PR2(), only_closest_feature=True)
+    check_jacobian(const_only_closest, 7)
+    q_init = np.zeros(7)
+    values, _ = const_only_closest.evaluate_single(q_init, with_jacobian=False)
+    assert np.all(values > 0)
+    assert isinstance(const_only_closest.id_value, str)
+
+    # check consistency
+    for _ in range(10):
+        q = np.random.randn(7)
+        values, _ = const.evaluate_single(q, with_jacobian=False)
+        closest_value, _ = const_only_closest.evaluate_single(q, with_jacobian=False)
+        np.testing.assert_almost_equal(np.min(values), closest_value[0])
 
 
 def test_com_stability_const():
