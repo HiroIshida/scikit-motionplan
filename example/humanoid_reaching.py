@@ -81,7 +81,7 @@ if __name__ == "__main__":
     print("start solving rrt (with ik)")
     ts = time.time()
 
-    rrt_conf = MyRRTConfig(2000, satisfaction_conf=SatisfactionConfig(n_max_eval=50))
+    rrt_conf = MyRRTConfig(10000, satisfaction_conf=SatisfactionConfig(n_max_eval=50))
     rrt = MyRRTConnectSolver.init(rrt_conf)
     rrt_parallel = rrt.as_parallel_solver(12)
     rrt_parallel.setup(problem)
