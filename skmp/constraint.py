@@ -9,6 +9,7 @@ from typing import (
     List,
     Optional,
     Protocol,
+    Set,
     Tuple,
     TypeVar,
     Union,
@@ -29,6 +30,7 @@ from skmp.kinematics import (
     ArticulatedCollisionKinematicsMap,
     ArticulatedEndEffectorKinematicsMap,
 )
+from skmp.robot.utils import set_robot_state
 from skmp.utils import load_urdf_model_using_cache
 
 
@@ -560,6 +562,40 @@ class RelativePoseConstraint(AbstractEqConst):
     def _reflect_skrobot_model(self, robot_model: Optional[RobotModel]) -> None:
         assert robot_model is not None
         self.efkin.reflect_skrobot_model(robot_model)
+
+
+class MeshSelfCollFreeConst(AbstractIneqConst):
+    robot_model: RobotModel
+    joint_names: List[str]
+    ignore_pairs: Set[Tuple[str, str]]
+
+    def __init__(
+        self,
+        robot_model: RobotModel,
+        joint_names: List[str],
+        ignore_pairs: Optional[Set[Tuple[str, str]]] = None,
+    ):
+
+        if ignore_pairs is None:
+            ignore_pairs = set()
+
+        self.reflect_skrobot_model(robot_model)
+        self.robot_model = robot_model
+        self.joint_names = joint_names
+        self.ignore_pairs = ignore_pairs
+
+    def _evaluate(self, qs: np.ndarray, with_jacobian: bool) -> Tuple[np.ndarray, np.ndarray]:
+        values = []
+        for q in qs:
+            set_robot_state(self.robot_model, self.joint_names, q)
+            _, collision_pairs = self.robot_model.self_collision_check()
+            is_valid = len(set(collision_pairs) - self.ignore_pairs) == 0
+            values.append(float(is_valid) - 0.5)
+        assert not with_jacobian
+        return np.array(values), self.dummy_jacobian()
+
+    def _reflect_skrobot_model(self, robot_model: Optional[RobotModel]) -> None:
+        pass
 
 
 class PairWiseSelfCollFreeConst(AbstractIneqConst):
