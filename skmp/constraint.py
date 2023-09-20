@@ -1,12 +1,10 @@
 import copy
 import itertools
 import uuid
-import xml.etree.ElementTree as ET
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import (
     Callable,
-    Dict,
     Generic,
     List,
     Optional,
@@ -19,7 +17,6 @@ from typing import (
 )
 
 import numpy as np
-import pybullet as pb
 from selcol.file import default_pretrained_basepath
 from selcol.runtime import OrtSelColInferencer
 from skrobot.coordinates import Coordinates, matrix2quaternion, rpy_angle
@@ -33,7 +30,7 @@ from skmp.kinematics import (
     ArticulatedCollisionKinematicsMap,
     ArticulatedEndEffectorKinematicsMap,
 )
-from skmp.robot.utils import set_robot_state
+from skmp.robot.utils import FCLCollisionManager, set_robot_state
 from skmp.utils import load_urdf_model_using_cache
 
 
@@ -567,119 +564,40 @@ class RelativePoseConstraint(AbstractEqConst):
         self.efkin.reflect_skrobot_model(robot_model)
 
 
-class MeshSelfCollFreeConst(AbstractIneqConst):
-    robot_id: int
-    collision_check_link_id_pairs: Set[Tuple[int, int]]
-    dist_th: float
-    control_joint_ids: List[int]
-    joint_name_id_table: Dict[str, int]
-    link_id_name_table: Dict[int, str]
+class FCLSelfCollFreeConst(AbstractIneqConst):
+    robot_model: RobotModel
+    joint_names: List[str]
+    fcl_col_manager: FCLCollisionManager
 
     def __init__(
         self,
-        urdf_path: Path,
         robot_model: RobotModel,
         link_name_group: List[str],
         joint_names: List[str],
         ignore_pairs: Optional[Set[Tuple[str, str]]] = None,
-        dist_th: float = 0.1,
     ):
-
-        if ignore_pairs is None:
-            ignore_pairs = set()
-
-        if not pb.isConnected():
-            pb.connect(pb.DIRECT)
-
-        urdf_path_concaved = urdf_path.parent / "concaved.urdf"
-        if not urdf_path_concaved.exists():
-            tree = ET.parse(urdf_path)
-            root = tree.getroot()
-            for collision in root.findall(".//collision"):
-                collision.set("concave", "yes")
-            tree.write(urdf_path_concaved)
-        robot = pb.loadURDF(str(urdf_path_concaved))
-
-        def construct_tables():
-            # construct tables
-            # table (joint_name -> id) (link_name -> id)
-            link_table = {pb.getBodyInfo(robot)[0].decode("UTF-8"): -1}
-            joint_table = {}
-            heck = lambda path: "_".join(path.split("/"))
-            for _id in range(pb.getNumJoints(robot)):
-                joint_info = pb.getJointInfo(robot, _id)
-                joint_id = joint_info[0]
-
-                joint_name = joint_info[1].decode("UTF-8")
-                joint_table[joint_name] = joint_id
-                name_ = joint_info[12].decode("UTF-8")
-                name = heck(name_)
-                link_table[name] = _id
-            return link_table, joint_table
-
-        link_name_id_table, joint_name_id_table = construct_tables()
-        joint_id_name_table = {v: k for k, v in joint_name_id_table.items()}
-        link_id_name_table = {v: k for k, v in link_name_id_table.items()}
-
-        # compute collision check link id pairs
-        link_id_group1 = set([link_name_id_table[name] for name in link_name_group])
-        link_id_group2 = set(link_name_id_table.values()) - link_id_group1
-
-        pairs = [(i, j) for i in link_id_group1 for j in link_id_group2]
-        collision_check_link_id_pairs = set([(i, j) if i < j else (j, i) for i, j in pairs])
-
-        tmp = set([(link_name_id_table[n1], link_name_id_table[n2]) for n1, n2 in ignore_pairs])
-        ignore_link_id_pairs = set([(i, j) if i < j else (j, i) for i, j in tmp])
-
-        collision_check_link_id_pairs = collision_check_link_id_pairs - ignore_link_id_pairs
-
-        # joint ids
-        control_joint_ids = [joint_name_id_table[name] for name in joint_names]
-
-        self.robot_id = robot
-        self.collision_check_link_id_pairs = collision_check_link_id_pairs
-        self.dist_th = dist_th
-        self.control_joint_ids = control_joint_ids
-        self.joint_name_id_table = joint_name_id_table
-        self.link_id_name_table = link_id_name_table
+        manager = FCLCollisionManager(robot_model, link_name_group, ignore_pairs)
+        self.robot_model = robot_model
+        self.joint_names = joint_names
+        self.fcl_col_manager = manager
 
         self.reflect_skrobot_model(robot_model)
-
-    def _compute_minimum_distance(self) -> float:
-        min_dist = self.dist_th
-        for i, j in self.collision_check_link_id_pairs:
-            cps = pb.getClosestPoints(
-                bodyA=self.robot_id,
-                bodyB=self.robot_id,
-                distance=self.dist_th,
-                linkIndexA=i,
-                linkIndexB=j,
-            )
-            if len(cps) > 0:
-                dist = min(cp[8] for cp in cps)
-                if dist < min_dist:
-                    min_dist = dist
-        return min_dist
-
-    def _set_configuration(self, q: np.ndarray) -> None:
-        assert len(q) == len(self.control_joint_ids)
-        for i, joint_id in enumerate(self.control_joint_ids):
-            pb.resetJointState(self.robot_id, joint_id, q[i])
 
     def _evaluate(self, qs: np.ndarray, with_jacobian: bool) -> Tuple[np.ndarray, np.ndarray]:
         values = []
         for q in qs:
-            self._set_configuration(q)
-            dist = self._compute_minimum_distance()
-            values.append(dist)
-        values = np.array(values)
+            set_robot_state(self.robot_model, self.joint_names, q)
+            # TODO: currenlty refection of skrobot model is too slow.
+            # consider replacing this with tinyfk
+            self.fcl_col_manager.reflect_skrobot(self.robot_model)
+            is_valid = not self.fcl_col_manager.check_self_collision()
+            values.append(float(is_valid) - 0.5)
         assert not with_jacobian
-        return values, self.dummy_jacobian()
+        return np.array(values), self.dummy_jacobian()
 
     def _reflect_skrobot_model(self, robot_model: RobotModel) -> None:
-        for joint in robot_model.joint_list:
-            joint_id = self.joint_name_id_table[joint.name]
-            pb.resetJointState(self.robot_id, joint_id, joint.joint_angle())
+        for joint_self, joint_other in zip(self.robot_model.joint_list, robot_model.joint_list):
+            joint_self.joint_angle(joint_other.joint_angle())
 
 
 class SkrobotMeshSelfCollFreeConst(AbstractIneqConst):

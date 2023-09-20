@@ -4,11 +4,7 @@ from typing import List, Set, Tuple
 
 from skrobot.models import Fetch
 
-from skmp.constraint import (
-    BoxConst,
-    MeshSelfCollFreeConst,
-    SkrobotMeshSelfCollFreeConst,
-)
+from skmp.constraint import BoxConst, FCLSelfCollFreeConst
 
 
 @dataclass
@@ -39,9 +35,6 @@ class FetchConfig:
         bounds = BoxConst.from_urdf(self.urdf_path(), self.joint_names)
         return bounds
 
-    def get_selcol_consts_old(self, robot_model: Fetch):
-        return SkrobotMeshSelfCollFreeConst(robot_model, self.joint_names, self.ignore_pairs)
-
     def get_selcol_consts(self, robot_model: Fetch):
         arm_links = [
             "shoulder_pan_link",
@@ -55,9 +48,7 @@ class FetchConfig:
             "r_gripper_finger_link",
             "l_gripper_finger_link",
         ]
-        return MeshSelfCollFreeConst(
-            self.urdf_path(), robot_model, arm_links, self.joint_names, self.ignore_pairs
-        )
+        return FCLSelfCollFreeConst(robot_model, arm_links, self.joint_names, self.ignore_pairs)
 
     @property
     def ignore_pairs(self) -> Set[Tuple[str, str]]:

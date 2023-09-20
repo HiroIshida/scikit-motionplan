@@ -17,8 +17,10 @@ from skmp.constraint import (
     ReducedCollisionFreeConst,
     RelativePoseConstraint,
 )
+from skmp.robot.fetch import Fetch, FetchConfig
 from skmp.robot.jaxon import Jaxon, JaxonConfig
 from skmp.robot.pr2 import PR2Config
+from skmp.robot.utils import get_robot_state
 
 
 def jac_numerical(const: AbstractConst, q0: np.ndarray, eps: float) -> np.ndarray:
@@ -188,6 +190,19 @@ def test_pair_wise_selfcollfree_const():
         values, _ = const.evaluate_single(q, with_jacobian=False)
         closest_value, _ = const_only_closest.evaluate_single(q, with_jacobian=False)
         np.testing.assert_almost_equal(np.min(values), closest_value[0])
+
+
+def test_fcl_mesh_self_collfree_const():
+    fetch_conf = FetchConfig()
+    fetch = Fetch()
+    fetch.reset_pose()
+    selcol = fetch_conf.get_selcol_consts_old(fetch)
+    q = get_robot_state(fetch, fetch_conf.joint_names)
+    assert selcol.is_valid(q)
+
+    fetch.shoulder_lift_joint.joint_angle(0.5)
+    q = get_robot_state(fetch, fetch_conf.joint_names)
+    assert not selcol.is_valid(q)
 
 
 def test_com_stability_const():
