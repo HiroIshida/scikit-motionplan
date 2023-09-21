@@ -10,7 +10,7 @@ from scipy.sparse import csc_matrix
 
 
 class Differentiable(Protocol):
-    def __call__(self, x: np.ndarray) -> Tuple[np.ndarray, Union[np.ndarray, csc_matrix]]:
+    def __call__(self, __x: np.ndarray) -> Tuple[np.ndarray, Union[np.ndarray, csc_matrix]]:
         """return value and jacobian (or grad)"""
         ...
 
