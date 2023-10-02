@@ -41,11 +41,10 @@ if __name__ == "__main__":
         Coordinates([0.7, -0.2, 1.5], rot=[0, -0.5 * np.pi, 0]),
         Coordinates([0.7, +0.2, 1.5], rot=[0, -0.5 * np.pi, 0]),
     ]
-    selcol_const = config.get_neural_selcol_const(jaxon)
     colkin = config.get_collision_kin()
     col_const = CollFreeConst(colkin, box.sdf, jaxon, only_closest_feature=False)
     com_const = config.get_com_stability_const(jaxon, com_box)
-    ineq_const = IneqCompositeConst([selcol_const, com_const, col_const])
+    ineq_const = IneqCompositeConst([com_const, col_const])
 
     # solve ik to determine start state (random)
     efkin = config.get_endeffector_kin()
