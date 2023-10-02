@@ -19,7 +19,7 @@ install_requires = [
 
 setup(
     name="scikit-motionplan",
-    version="0.0.0",
+    version="0.0.1",
     description="scipy based robot planning framework",
     author="Hirokazu Ishida",
     author_email="h-ishida@jsk.imi.i.u-tokyo.ac.jp",
