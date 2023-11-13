@@ -222,24 +222,42 @@ class PR2Config:
         link_name = "r_forearm_link"
         collection = []
         collection.append((np.array([0.0, 0.0, 0.0]), 0.1, unique_name(link_name)))
-        collection.append((np.array([0.1, 0.0, 0.0]), 0.08, unique_name(link_name)))
-        collection.append((np.array([0.16, 0.0, 0.0]), 0.08, unique_name(link_name)))
-        collection.append((np.array([0.23, 0.02, -0.01]), 0.06, unique_name(link_name)))
-        collection.append((np.array([0.23, -0.02, -0.01]), 0.06, unique_name(link_name)))
-        collection.append((np.array([0.30, 0.02, 0.0]), 0.06, unique_name(link_name)))
-        collection.append((np.array([0.30, -0.02, 0.0]), 0.06, unique_name(link_name)))
+        collection.append((np.array([0.12, 0.0, 0.005]), 0.07, unique_name(link_name)))
+        collection.append((np.array([0.16, 0.02, -0.005]), 0.05, unique_name(link_name)))
+        collection.append((np.array([0.16, -0.02, -0.005]), 0.05, unique_name(link_name)))
+        collection.append((np.array([0.19, 0.02, -0.005]), 0.05, unique_name(link_name)))
+        collection.append((np.array([0.19, -0.02, -0.005]), 0.05, unique_name(link_name)))
+        collection.append((np.array([0.22, 0.02, -0.015]), 0.05, unique_name(link_name)))
+        collection.append((np.array([0.22, -0.02, -0.014]), 0.05, unique_name(link_name)))
+        collection.append((np.array([0.25, 0.025, -0.015]), 0.045, unique_name(link_name)))
+        collection.append((np.array([0.25, -0.025, -0.015]), 0.045, unique_name(link_name)))
+        collection.append((np.array([0.28, 0.025, -0.016]), 0.044, unique_name(link_name)))
+        collection.append((np.array([0.28, -0.025, -0.016]), 0.044, unique_name(link_name)))
+        collection.append((np.array([0.31, 0.025, -0.005]), 0.045, unique_name(link_name)))
+        collection.append((np.array([0.31, -0.025, -0.005]), 0.045, unique_name(link_name)))
+        collection.append((np.array([0.32, 0.023, -0.002]), 0.045, unique_name(link_name)))
+        collection.append((np.array([0.32, -0.023, -0.002]), 0.045, unique_name(link_name)))
         tmp = copy.deepcopy(SphereCollection(*list(zip(*collection))))
         link_wise_sphere_collection[link_name] = tmp
 
         link_name = "l_forearm_link"
         collection = []
         collection.append((np.array([0.0, 0.0, 0.0]), 0.1, unique_name(link_name)))
-        collection.append((np.array([0.1, 0.0, 0.0]), 0.08, unique_name(link_name)))
-        collection.append((np.array([0.16, 0.0, 0.0]), 0.08, unique_name(link_name)))
-        collection.append((np.array([0.23, 0.02, -0.01]), 0.06, unique_name(link_name)))
-        collection.append((np.array([0.23, -0.02, -0.01]), 0.06, unique_name(link_name)))
-        collection.append((np.array([0.30, 0.02, 0.0]), 0.06, unique_name(link_name)))
-        collection.append((np.array([0.30, -0.02, 0.0]), 0.06, unique_name(link_name)))
+        collection.append((np.array([0.12, 0.0, 0.005]), 0.07, unique_name(link_name)))
+        collection.append((np.array([0.16, 0.02, -0.005]), 0.05, unique_name(link_name)))
+        collection.append((np.array([0.16, -0.02, -0.005]), 0.05, unique_name(link_name)))
+        collection.append((np.array([0.19, 0.02, -0.005]), 0.05, unique_name(link_name)))
+        collection.append((np.array([0.19, -0.02, -0.005]), 0.05, unique_name(link_name)))
+        collection.append((np.array([0.22, 0.02, -0.015]), 0.05, unique_name(link_name)))
+        collection.append((np.array([0.22, -0.02, -0.014]), 0.05, unique_name(link_name)))
+        collection.append((np.array([0.25, 0.025, -0.015]), 0.045, unique_name(link_name)))
+        collection.append((np.array([0.25, -0.025, -0.015]), 0.045, unique_name(link_name)))
+        collection.append((np.array([0.28, 0.025, -0.016]), 0.044, unique_name(link_name)))
+        collection.append((np.array([0.28, -0.025, -0.016]), 0.044, unique_name(link_name)))
+        collection.append((np.array([0.31, 0.025, -0.005]), 0.045, unique_name(link_name)))
+        collection.append((np.array([0.31, -0.025, -0.005]), 0.045, unique_name(link_name)))
+        collection.append((np.array([0.32, 0.023, -0.002]), 0.045, unique_name(link_name)))
+        collection.append((np.array([0.32, -0.023, -0.002]), 0.045, unique_name(link_name)))
         tmp = copy.deepcopy(SphereCollection(*list(zip(*collection))))
         link_wise_sphere_collection[link_name] = tmp
 
@@ -261,13 +279,13 @@ class PR2Config:
         tmp = copy.deepcopy(SphereCollection(*list(zip(*collection))))
         link_wise_sphere_collection[link_name] = tmp
 
-        link_name = "l_gripper_r_finger_link"
+        link_name = "r_gripper_l_finger_link"
         collection = []
         collection.append((np.array([0.105, 0.0, 0.0]), 0.02, unique_name(link_name)))
         collection.append((np.array([0.0805, 0.01, 0.0]), 0.02, unique_name(link_name)))
         collection.append((np.array([0.06, 0.02, 0.0]), 0.03, unique_name(link_name)))
         tmp = copy.deepcopy(SphereCollection(*list(zip(*collection))))
-        link_wise_sphere_collection["l_gripper_r_finger_link"] = tmp
+        link_wise_sphere_collection[link_name] = tmp
 
         link_name = "l_gripper_palm_link"
         collection = []
