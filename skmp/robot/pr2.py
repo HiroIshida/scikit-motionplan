@@ -212,7 +212,7 @@ class PR2Config:
 
         link_name = "l_upper_arm_link"
         collection = []
-        collection.append((np.array([0.0, 0.0, 0.0]), 0.2, unique_name(link_name)))
+        collection.append((np.array([0.0, 0.0, 0.0]), 0.19, unique_name(link_name)))
         collection.append((np.array([0.20, 0.0, 0.0]), 0.1, unique_name(link_name)))
         collection.append((np.array([0.26, 0.0, -0.03]), 0.082, unique_name(link_name)))
         collection.append((np.array([0.33, 0.0, -0.03]), 0.082, unique_name(link_name)))
@@ -337,16 +337,16 @@ class PR2Config:
 
         base_link_sphere_collection = SphereCollection(
             [
-                np.array([0.23, 0.23, 0.1]),
-                np.array([0.23, -0.23, 0.1]),
-                np.array([0.16, 0.0, 0.1]),
-                np.array([-0.23, 0.23, 0.1]),
-                np.array([-0.23, -0.23, 0.1]),
-                np.array([-0.16, 0.0, 0.1]),
-                np.array([0.0, 0.16, 0.1]),
-                np.array([0.0, -0.16, 0.1]),
+                np.array([0.20, 0.20, 0.1]),
+                np.array([0.20, -0.20, 0.1]),
+                np.array([-0.20, 0.20, 0.1]),
+                np.array([-0.20, -0.20, 0.1]),
+                np.array([0.21, 0.0, 0.1]),
+                np.array([-0.21, 0.0, 0.1]),
+                np.array([0.0, 0.21, 0.1]),
+                np.array([0.0, -0.21, 0.1]),
             ],
-            [0.15, 0.15, 0.23, 0.15, 0.15, 0.23, 0.23, 0.23],
+            [0.16, 0.16, 0.16, 0.16, 0.15, 0.15, 0.15, 0.15],
             ["base{}".format(i) for i in range(8)],
         )
         link_wise_sphere_collection["base_link"] = base_link_sphere_collection
