@@ -11,7 +11,7 @@ from skrobot.models import PR2
 from tinyfk import BaseType
 
 from skmp.collision import SphereCollection
-from skmp.constraint import BoxConst, NeuralSelfCollFreeConst, PairWiseSelfCollFreeConst
+from skmp.constraint import BoxConst, PairWiseSelfCollFreeConst
 from skmp.kinematics import (
     ArticulatedCollisionKinematicsMap,
     ArticulatedEndEffectorKinematicsMap,
@@ -30,6 +30,7 @@ class CollisionMode(Enum):
 class PR2Config:
     control_arm: Literal["rarm", "larm", "dual"] = "rarm"
     collision_mode: CollisionMode = CollisionMode.DEFAULT
+    selcol_mode: Literal["easy", "normal"] = "easy"
     base_type: BaseType = BaseType.FIXED
     use_torso: bool = False
 
@@ -486,11 +487,6 @@ class PR2Config:
         )
         return kinmap
 
-    def get_neural_selcol_const(self, robot_model: PR2) -> NeuralSelfCollFreeConst:
-        return NeuralSelfCollFreeConst.load(
-            self.urdf_path(), self._get_control_joint_names(), robot_model, self.base_type
-        )
-
     def get_pairwise_selcol_consts(self, robot_model: PR2) -> PairWiseSelfCollFreeConst:
         # NOTE: this feature is not tested well
         colkin = self.get_collision_kin()
@@ -498,12 +494,27 @@ class PR2Config:
         rarm_group = [
             name for name in colkin.sphere_name_list if ("r_gripper" in name or "r_forearm" in name)
         ]
-        anti_rarm_group = [name for name in colkin.sphere_name_list if not name.startswith("r_")]
-
         larm_group = [
             name for name in colkin.sphere_name_list if ("l_gripper" in name or "l_forearm" in name)
         ]
-        anti_larm_group = [name for name in colkin.sphere_name_list if not name.startswith("l_")]
+
+        if self.selcol_mode == "easy":
+            shoulder_sphere_names = [
+                name
+                for name in colkin.sphere_name_list
+                if name.startswith("l_shoulder_pan_link") or name.startswith("r_shoulder_pan_link")
+            ]
+            anti_rarm_group = shoulder_sphere_names
+            anti_larm_group = shoulder_sphere_names
+        elif self.selcol_mode == "normal":
+            anti_rarm_group = [
+                name for name in colkin.sphere_name_list if not name.startswith("r_")
+            ]
+            anti_larm_group = [
+                name for name in colkin.sphere_name_list if not name.startswith("l_")
+            ]
+        else:
+            assert False
 
         table = {name: fid for name, fid in zip(colkin.sphere_name_list, colkin.tinyfk_feature_ids)}
         pairs = set()
