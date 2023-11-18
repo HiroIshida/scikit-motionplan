@@ -504,17 +504,26 @@ class PR2Config:
                 for name in colkin.sphere_name_list
                 if name.startswith("l_shoulder_pan_link") or name.startswith("r_shoulder_pan_link")
             ]
-            anti_rarm_group = shoulder_sphere_names
-            anti_larm_group = shoulder_sphere_names
+            anti_rarm_group_cand = shoulder_sphere_names
+            anti_larm_group_cand = shoulder_sphere_names
+
         elif self.selcol_mode == "normal":
-            anti_rarm_group = [
+            anti_rarm_group_cand = [
                 name for name in colkin.sphere_name_list if not name.startswith("r_")
             ]
-            anti_larm_group = [
+            anti_larm_group_cand = [
                 name for name in colkin.sphere_name_list if not name.startswith("l_")
             ]
         else:
             assert False
+
+        # NOTE: we dont care larm-vs-anti if we are controlling only rarm. Same for rarm-vs-anti
+        anti_rarm_group = []
+        anti_larm_group = []
+        if self.control_arm in ("rarm", "dual"):
+            anti_rarm_group.extend(anti_rarm_group_cand)
+        if self.control_arm in ("larm", "dual"):
+            anti_larm_group.extend(anti_larm_group_cand)
 
         table = {name: fid for name, fid in zip(colkin.sphere_name_list, colkin.tinyfk_feature_ids)}
         pairs = set()
