@@ -503,8 +503,11 @@ class PR2Config:
                 for name in colkin.sphere_name_list
                 if name.startswith("l_shoulder_pan_link") or name.startswith("r_shoulder_pan_link")
             ]
-            anti_rarm_group_cand = shoulder_sphere_names
-            anti_larm_group_cand = shoulder_sphere_names
+            base_link_sphere_names = [
+                name for name in colkin.sphere_name_list if name.startswith("base_link")
+            ]
+            anti_rarm_group_cand = shoulder_sphere_names + base_link_sphere_names
+            anti_larm_group_cand = shoulder_sphere_names + base_link_sphere_names
 
         elif self.selcol_mode == "normal":
             anti_rarm_group_cand = [
