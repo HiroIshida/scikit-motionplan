@@ -461,19 +461,21 @@ class PR2Config:
         tmp = copy.deepcopy(SphereCollection(*list(zip(*collection))))
         link_wise_sphere_collection[link_name] = tmp
 
+        h_base_sphere = 0.12
         base_link_sphere_collection = SphereCollection(
             [
-                np.array([0.20, 0.20, 0.1]),
-                np.array([0.20, -0.20, 0.1]),
-                np.array([-0.20, 0.20, 0.1]),
-                np.array([-0.20, -0.20, 0.1]),
-                np.array([0.21, 0.0, 0.1]),
-                np.array([-0.21, 0.0, 0.1]),
-                np.array([0.0, 0.21, 0.1]),
-                np.array([0.0, -0.21, 0.1]),
+                np.array([0.20, 0.20, h_base_sphere]),
+                np.array([0.20, -0.20, h_base_sphere]),
+                np.array([-0.20, 0.20, h_base_sphere]),
+                np.array([-0.20, -0.20, h_base_sphere]),
+                np.array([0.21, 0.0, h_base_sphere]),
+                np.array([-0.21, 0.0, h_base_sphere]),
+                np.array([0.0, 0.21, h_base_sphere]),
+                np.array([0.0, -0.21, h_base_sphere]),
+                np.array([0.245, 0.0, 0.26]),
             ],
-            [0.16, 0.16, 0.16, 0.16, 0.15, 0.15, 0.15, 0.15],
-            ["base{}".format(i) for i in range(8)],
+            [0.16, 0.16, 0.16, 0.16, 0.15, 0.15, 0.15, 0.15, 0.07],
+            ["base{}".format(i) for i in range(9)],
         )
         link_wise_sphere_collection["base_link"] = base_link_sphere_collection
 
