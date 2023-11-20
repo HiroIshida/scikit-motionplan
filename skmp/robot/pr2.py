@@ -200,7 +200,7 @@ class PR2Config:
         link_wise_sphere_collection: Dict[str, SphereCollection] = {}
 
         def unique_name(link_name) -> str:
-            return link_name + str(uuid.uuid4())[:8]
+            return link_name + str(uuid.uuid4())[:13]
 
         link_name = "r_upper_arm_link"
         collection = []
