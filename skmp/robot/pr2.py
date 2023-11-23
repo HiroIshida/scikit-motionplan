@@ -196,7 +196,7 @@ class PR2Config:
         else:
             assert False
 
-    def get_collision_kin(self, whole: bool = False) -> ArticulatedCollisionKinematicsMap:
+    def get_collision_kin(self, whole_body: bool = False) -> ArticulatedCollisionKinematicsMap:
         link_wise_sphere_collection: Dict[str, SphereCollection] = {}
 
         def unique_name(link_name) -> str:
@@ -476,7 +476,7 @@ class PR2Config:
         tmp = copy.deepcopy(SphereCollection(*list(zip(*collection))))
         link_wise_sphere_collection[link_name] = tmp
 
-        if not whole:
+        if not whole_body:
             # remove irrelevant spheres
             if self.control_arm == "rarm":
                 for key in list(link_wise_sphere_collection.keys()):
@@ -505,7 +505,7 @@ class PR2Config:
 
     def get_pairwise_selcol_consts(self, robot_model: PR2) -> PairWiseSelfCollFreeConst:
         # NOTE: this feature is not tested well
-        colkin = self.get_collision_kin(whole=True)
+        colkin = self.get_collision_kin(whole_body=True)
 
         rarm_group = [
             name for name in colkin.sphere_name_list if ("r_gripper" in name or "r_forearm" in name)
