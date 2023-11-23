@@ -196,7 +196,7 @@ class PR2Config:
         else:
             assert False
 
-    def get_collision_kin(self) -> ArticulatedCollisionKinematicsMap:
+    def get_collision_kin(self, whole: bool = False) -> ArticulatedCollisionKinematicsMap:
         link_wise_sphere_collection: Dict[str, SphereCollection] = {}
 
         def unique_name(link_name) -> str:
@@ -347,7 +347,7 @@ class PR2Config:
 
         link_name = "r_forearm_link"
         collection = []
-        # collection.append((np.array([0.0, 0.0, 0.0]), 0.1, unique_name(link_name)))
+        collection.append((np.array([0.0, 0.0, 0.0]), 0.1, unique_name(link_name)))
         collection.append((np.array([0.12, 0.0, 0.005]), 0.07, unique_name(link_name)))
         collection.append((np.array([0.16, 0.02, -0.005]), 0.05, unique_name(link_name)))
         collection.append((np.array([0.16, -0.02, -0.005]), 0.05, unique_name(link_name)))
@@ -476,6 +476,23 @@ class PR2Config:
         tmp = copy.deepcopy(SphereCollection(*list(zip(*collection))))
         link_wise_sphere_collection[link_name] = tmp
 
+        if not whole:
+            # remove irrelevant spheres
+            if self.control_arm == "rarm":
+                for key in list(link_wise_sphere_collection.keys()):
+                    if key.startswith("l_"):
+                        del link_wise_sphere_collection[key]
+
+            if self.control_arm == "larm":
+                for key in list(link_wise_sphere_collection.keys()):
+                    if key.startswith("r_"):
+                        del link_wise_sphere_collection[key]
+
+            if self.base_type == BaseType.FIXED:
+                for key in list(link_wise_sphere_collection.keys()):
+                    if key.startswith("base_link"):
+                        del link_wise_sphere_collection[key]
+
         control_joint_names = self._get_control_joint_names()
 
         kinmap = ArticulatedCollisionKinematicsMap(
@@ -488,7 +505,7 @@ class PR2Config:
 
     def get_pairwise_selcol_consts(self, robot_model: PR2) -> PairWiseSelfCollFreeConst:
         # NOTE: this feature is not tested well
-        colkin = self.get_collision_kin()
+        colkin = self.get_collision_kin(whole=True)
 
         rarm_group = [
             name for name in colkin.sphere_name_list if ("r_gripper" in name or "r_forearm" in name)
