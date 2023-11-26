@@ -8,7 +8,7 @@ from typing import Dict, List, Literal
 
 import numpy as np
 from skrobot.models import PR2
-from tinyfk import BaseType
+from tinyfk import BaseType, RotationType
 
 from skmp.collision import SphereCollection
 from skmp.constraint import BoxConst, PairWiseSelfCollFreeConst
@@ -155,7 +155,9 @@ class PR2Config:
             assert False
         return endeffector_names
 
-    def get_endeffector_kin(self):
+    def get_endeffector_kin(
+        self, rot_type: RotationType = RotationType.RPY
+    ) -> ArticulatedEndEffectorKinematicsMap:
         kinmap = ArticulatedEndEffectorKinematicsMap(
             self.urdf_path(),
             self._get_control_joint_names(),
