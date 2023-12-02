@@ -174,10 +174,31 @@ class PR2Config:
         else:
             base_bounds = None
 
-        bounds = BoxConst.from_urdf(
-            self.urdf_path(), self._get_control_joint_names(), base_bounds=base_bounds
-        )
-        return bounds
+        pr2 = PR2()
+        lb_list = []
+        ub_list = []
+        for joint_name in self._get_control_joint_names():
+            joint = pr2.__dict__[joint_name]
+            min_angle = joint.min_angle
+            max_angle = joint.max_angle
+            if not np.isfinite(min_angle):
+                min_angle = -2 * np.pi
+            if not np.isfinite(max_angle):
+                max_angle = 2 * np.pi
+            lb_list.append(min_angle)
+            ub_list.append(max_angle)
+
+        if base_bounds is not None:
+            lb, ub = base_bounds
+            n_dof_base = len(lb)
+            assert n_dof_base in (3, 6)
+            for i in range(n_dof_base):
+                lb_list.append(lb[i])
+                ub_list.append(ub[i])
+        box_const = BoxConst(np.array(lb_list), np.array(ub_list))
+        print(box_const.lb)
+        print(box_const.ub)
+        return box_const
 
     def _get_collision_link_names(self):
         mode = self.collision_mode
