@@ -152,7 +152,7 @@ class SolutionVisualizerBase(Generic[ViewerT]):
             self._colvis = None
 
         self.robot_model = robot
-        self.viewer = viewer
+        self.viewer = viewer  # type: ignore[assignment]
         self._robot_updator = robot_updator
         self._show_called = False
         self.flags = flags

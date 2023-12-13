@@ -26,7 +26,7 @@ set_ompl_random_seed(0)
 
 
 if __name__ == "__main__":
-    pr2 = PR2(use_tight_joint_limit=False)
+    pr2 = PR2()
     pr2.reset_manip_pose()
     pr2.torso_lift_joint.joint_angle(0.1)
 
@@ -37,7 +37,7 @@ if __name__ == "__main__":
     efkin.reflect_skrobot_model(pr2)
     colkin.reflect_skrobot_model(pr2)
 
-    selcol_const = robot_config.get_neural_selcol_const(pr2)
+    selcol_const = robot_config.get_pairwise_selcol_consts(pr2)
 
     relative_position = np.array([0, 0, -0.2])
     box_const = robot_config.get_box_const()
