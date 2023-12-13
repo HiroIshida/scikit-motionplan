@@ -74,25 +74,24 @@ def test_sqp_based_solver():
         assert result.traj is not None
         assert problem.is_satisfied(result.traj)
 
-    # config3 = SQPBasedSolverConfig(
-    #     n_wp=15, motion_step_satisfaction="post", return_osqp_result=True
-    # )
-    config3 = deepcopy(config2)
-    config3.return_osqp_result = True
-    solver = SQPBasedSolver.init(config3)
-    solver.setup(problem)
-    result = solver.solve(init_traj.resample(config3.n_wp))
-    assert result.osqpsqp_raw_result is not None
-    # currently post is not tested well see the commit which added this comment
 
-
-def test_sqp_based_solver_without_init():
+def test_sqp_based_solver_post_check():
     problem = create_standard_problem(easy=True)
-    config = SQPBasedSolverConfig(n_wp=100, motion_step_satisfaction="implicit")
+    config = SQPBasedSolverConfig(
+        n_wp=100, motion_step_satisfaction="post", return_osqp_result=True
+    )
     solver = SQPBasedSolver.init(config)
-    solver.setup(problem)
-    res = solver.solve()
-    assert res.traj is not None
+    for _ in range(10):
+        solver.setup(problem)
+        result = solver.solve()
+        assert result.traj is not None
+
+    config = SQPBasedSolverConfig(n_wp=10, motion_step_satisfaction="post", return_osqp_result=True)
+    solver = SQPBasedSolver.init(config)
+    for _ in range(10):
+        solver.setup(problem)
+        result = solver.solve()
+        assert result.traj is None
 
 
 def test_memmo_solvers():

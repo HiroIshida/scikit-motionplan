@@ -136,7 +136,6 @@ class SQPBasedSolver(AbstractScratchSolver[SQPBasedSolverConfig, SQPBasedSolverR
     def init(
         cls, config: SQPBasedSolverConfig, data_path: Optional[Any] = None
     ) -> "SQPBasedSolver":
-        assert config.motion_step_satisfaction != "post", "not tested well"
         return cls(config, None, None, None)
 
     def _setup(self, problem: Problem) -> None:

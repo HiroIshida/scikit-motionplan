@@ -31,9 +31,10 @@ def create_standard_problem(easy: bool = False, feasible: bool = True) -> Proble
     # global ineq
     if easy:
         obstacle = Box(extents=[0.3, 0.1, 0.3], with_sdf=True)
+        obstacle.translate(np.array([2.0, -0.2, 0.9]))
     else:
         obstacle = Box(extents=[0.7, 0.5, 1.2], with_sdf=True)
-    obstacle.translate(np.array([0.85, -0.2, 0.9]))
+        obstacle.translate(np.array([0.85, -0.2, 0.9]))
     assert obstacle.sdf is not None
     global_ienq_const = CollFreeConst(colkin, obstacle.sdf, pr2)
 
