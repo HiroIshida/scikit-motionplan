@@ -17,7 +17,7 @@ from skmp.solver.myrrt_solver import MyRRTConfig, MyRRTConnectSolver
 from skmp.solver.nlp_solver import SQPBasedSolver, SQPBasedSolverConfig
 from skmp.visualization.collision_visualizer import CollisionSphereVisualizationManager
 
-# np.random.seed(5)
+np.random.seed(5)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
