@@ -196,8 +196,6 @@ class PR2Config:
                 lb_list.append(lb[i])
                 ub_list.append(ub[i])
         box_const = BoxConst(np.array(lb_list), np.array(ub_list))
-        print(box_const.lb)
-        print(box_const.ub)
         return box_const
 
     def _get_collision_link_names(self):
