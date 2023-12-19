@@ -241,6 +241,50 @@ class TrajectoryInequalityConstraint(TrajectoryConstraint[AbstractIneqConst]):
             return value, jacobi
 
 
+class ApproxTrajectoryInequalityConstraint:  # highly experimental
+    n_dof: int
+    global_consts: List[AbstractIneqConst]
+    motion_step_box: np.ndarray
+
+    def __init__(self, n_dof: int, global_const: AbstractIneqConst, motion_step_box: np.ndarray):
+        if isinstance(global_const, IneqCompositeConst):
+            self.global_consts = global_const.const_list
+        else:
+            self.global_consts = [global_const]
+        self.n_dof = n_dof
+        self.motion_step_box = motion_step_box
+
+    def _get_eval_points(self, traj_vector: np.ndarray) -> List[np.ndarray]:
+        assert self.motion_step_box is not None
+        traj = traj_vector.reshape(-1, self.n_dof)
+        points = []
+        for i in range(len(traj) - 1):
+            q1, q2 = traj[i], traj[i + 1]
+            include_q1 = i == 0
+            fractions = np.array(interpolate_fractions(self.motion_step_box, q1, q2, include_q1))
+            Q = q1[:, None] * (1 - fractions) + q2[:, None] * fractions
+            points.extend(list(Q.T))
+        return points
+
+    def evaluate(self, traj_vector: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+        eval_points = self._get_eval_points(traj_vector)
+
+        value_closest_list = []
+        grad_closest_list = []
+
+        for cons in self.global_consts:
+            valuess_tmp, _ = cons.evaluate(np.array(eval_points), False)
+            assert valuess_tmp.shape[1] == 1, "currently only support 1-dim constraint"
+            idx_min = np.argmin(valuess_tmp.flatten())
+            values_closest, jacobi_closest = cons.evaluate_single(eval_points[idx_min], True)
+
+            value_closest_list.append(values_closest[0])
+            grad_closest_list.append(jacobi_closest[0])
+        f = np.hstack(value_closest_list)
+        jac = np.vstack(grad_closest_list)
+        return f, jac
+
+
 @dataclass
 class MotionStepInequalityConstraint:
     """NOTE: this is not TrajectoryConstraint in the sense that
