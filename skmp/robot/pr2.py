@@ -130,6 +130,10 @@ class PR2Config:
         return ["base_link"]
 
     def _get_control_joint_names(self) -> List[str]:
+        # !!solely for backward compatibility
+        return self.get_control_joint_names()
+
+    def get_control_joint_names(self) -> List[str]:
         if self.control_arm == "rarm":
             joint_names = self.rarm_joint_names()
         elif self.control_arm == "larm":
@@ -160,7 +164,7 @@ class PR2Config:
     ) -> ArticulatedEndEffectorKinematicsMap:
         kinmap = ArticulatedEndEffectorKinematicsMap(
             self.urdf_path(),
-            self._get_control_joint_names(),
+            self.get_control_joint_names(),
             self._get_endeffector_names(),
             base_type=self.base_type,
         )
@@ -177,7 +181,7 @@ class PR2Config:
         pr2 = PR2()
         lb_list = []
         ub_list = []
-        for joint_name in self._get_control_joint_names():
+        for joint_name in self.get_control_joint_names():
             joint = pr2.__dict__[joint_name]
             min_angle = joint.min_angle
             max_angle = joint.max_angle
@@ -514,7 +518,7 @@ class PR2Config:
                     if key.startswith("base_link"):
                         del link_wise_sphere_collection[key]
 
-        control_joint_names = self._get_control_joint_names()
+        control_joint_names = self.get_control_joint_names()
 
         kinmap = ArticulatedCollisionKinematicsMap(
             self.urdf_path(),
