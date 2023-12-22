@@ -49,6 +49,7 @@ class CollisionSphereVisualizationManager:
         if sdf_latest is not None:
             self.sdf = sdf_latest
 
+        self.kinmap.reflect_skrobot_model(robot)
         tmp, _ = self.kinmap.map_skrobot_model(robot)
         points_tspace = tmp[0]
         assert len(points_tspace) == len(self.sphere_list)
