@@ -126,7 +126,9 @@ class AbstractSolver(ABC, Generic[ConfigT, ResultT, GuidingTrajT]):
     def _setup(self, problem: Problem):
         ...
 
-    def solve(self, guiding_traj: Optional[GuidingTrajT] = None) -> ResultT:
+    def solve(
+        self, guiding_traj: Optional[GuidingTrajT] = None, raise_init_infeasible: bool = True
+    ) -> ResultT:
         """solve problem with maybe a solution guess"""
         ts = time.time()
 
@@ -144,10 +146,12 @@ class AbstractSolver(ABC, Generic[ConfigT, ResultT, GuidingTrajT]):
 
         try:
             assert self.problem is not None
-            is_init_feasible, _ = self.problem.check_init_feasibility()
+            is_init_feasible, msg = self.problem.check_init_feasibility()
             if is_init_feasible:
                 ret = self._solve(guiding_traj)
             else:
+                if raise_init_infeasible:
+                    raise RuntimeError(f"initial state is already infeasible: {msg}")
                 ret = self.get_result_type().abnormal()
         except TimeoutException:
             ret = self.get_result_type().abnormal()
