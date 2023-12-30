@@ -167,6 +167,7 @@ class PR2Config:
             self.get_control_joint_names(),
             self._get_endeffector_names(),
             base_type=self.base_type,
+            rot_type=rot_type,
         )
         return kinmap
 
