@@ -37,17 +37,23 @@ class Trajectory:
     are not accurate. They are just approximations. Because geodesic distance is
     not linearly additive. To obtain accurate results, you should first prepare
     trajectory with many waypoints, and then resample it with metric.
-    e.g. traj.resample(100).resample(100, your_metric)
     """
 
     _points: List[np.ndarray]
+    metric: Callable[[np.ndarray, np.ndarray], float]
 
-    def __init__(self, points: List[np.ndarray]):
+    def __init__(
+        self,
+        points: List[np.ndarray],
+        metric: Callable[[np.ndarray, np.ndarray], float] = EuclideanMetric(),
+    ):
         self._points = points
+        self.metric = metric
 
-    def get_length(
-        self, metric: Callable[[np.ndarray, np.ndarray], float] = EuclideanMetric()
-    ) -> float:
+    def get_metric_changed(self, metric: Callable[[np.ndarray, np.ndarray], float]) -> "Trajectory":
+        return Trajectory(self._points, metric)
+
+    def get_length(self) -> float:
         # NOTE: see NOTE in class docstring if metric is non-euclidean
 
         n_point = len(self._points)
@@ -55,46 +61,40 @@ class Trajectory:
         for i in range(n_point - 1):
             p0 = self._points[i]
             p1 = self._points[i + 1]
-            total += metric(p0, p1)
+            total += self.metric(p0, p1)
         return total
 
-    def sample_point(
-        self,
-        dist_from_start: float,
-        metric: Callable[[np.ndarray, np.ndarray], float] = EuclideanMetric(),
-    ) -> np.ndarray:
+    def sample_point(self, dist_from_start: float) -> np.ndarray:
         # NOTE: see NOTE in class docstring if metric is non-euclidean
 
-        L = self.get_length(metric)
+        L = self.get_length()
         if dist_from_start > L + 1e-6:
             raise InvalidSamplePointError("exceed total length")
 
         dist_from_start = min(dist_from_start, L)
         edge_dist_sum = 0.0
         for i in range(len(self) - 1):
-            edge_dist_sum += metric(self._points[i + 1], self._points[i])
+            edge_dist_sum += self.metric(self._points[i + 1], self._points[i])
             if dist_from_start <= edge_dist_sum:
                 diff = edge_dist_sum - dist_from_start
                 vec_to_prev = self._points[i] - self._points[i + 1]
-                vec_to_prev_unit = vec_to_prev / metric(self._points[i], self._points[i + 1])
+                vec_to_prev_unit = vec_to_prev / self.metric(self._points[i], self._points[i + 1])
                 point_new = self._points[i + 1] + vec_to_prev_unit * diff
                 return point_new
         raise InvalidSamplePointError()
 
-    def resample(
-        self, n_waypoint: int, metric: Callable[[np.ndarray, np.ndarray], float] = EuclideanMetric()
-    ) -> "Trajectory":
+    def resample(self, n_waypoint: int) -> "Trajectory":
         # NOTE: see NOTE in class docstring if metric is non-euclidean
 
         # yeah, it's inefficient. n^2 instead of n ...
-        L = self.get_length(metric)
+        L = self.get_length()
         point_new_list = []
         partial_length = L / (n_waypoint - 1)
         for i in range(n_waypoint):
             dist_from_start = partial_length * i
-            point_new = self.sample_point(dist_from_start, metric)
+            point_new = self.sample_point(dist_from_start)
             point_new_list.append(point_new)
-        return Trajectory(point_new_list)
+        return Trajectory(point_new_list, self.metric)
 
     def get_duplicate_removed(self) -> "Trajectory":
         point_new_list: List[np.ndarray] = []
@@ -106,7 +106,7 @@ class Trajectory:
                 diff_from_prev = self._points[-1] - point
                 if np.all(np.abs(diff_from_prev) > eps):
                     point_new_list.append(point)
-        return Trajectory(point_new_list)
+        return Trajectory(point_new_list, self.metric)
 
     def numpy(self):
         return np.array(self._points)
@@ -120,7 +120,7 @@ class Trajectory:
     def from_two_points(cls, start: np.ndarray, goal: np.ndarray, n_waypoint) -> "Trajectory":
         diff = goal - start
         points = [start + diff / (n_waypoint - 1) * i for i in range(n_waypoint)]
-        return cls(points)
+        return cls(points, EuclideanMetric())  # only support EuclideanMetric
 
     @overload
     def __getitem__(self, indices: List[int]) -> List[np.ndarray]:
@@ -144,18 +144,9 @@ class Trajectory:
     def __iter__(self):
         return self._points.__iter__()
 
-    def adjusted(self, goal: np.ndarray) -> "Trajectory":
-        dists = np.sum((self._points - goal) ** 2, axis=1)
-        idx_min = np.argmin(dists).item()
-        points_new = self._points[: idx_min + 1] + [goal]
-        traj_new = Trajectory(points_new)
-        return traj_new.resample(len(traj_new) - 1)
-
-    def append(self, point: np.ndarray) -> None:
-        self._points.append(point)
-
     def __add__(self, other: "Trajectory") -> "Trajectory":
+        assert self.metric is other.metric
         diff_contact = np.linalg.norm(self._points[-1] - other._points[0])
         assert diff_contact < 1e-6
         points = copy.deepcopy(self._points) + copy.deepcopy(other._points[1:])
-        return Trajectory(points)
+        return Trajectory(points, self.metric)

@@ -48,7 +48,7 @@ def test_trajectory_with_custom_metric():
     box_const = config.get_box_const()
 
     def draw_an_arc():
-        n = 100
+        n = 200
         angles = np.linspace(0, 2 * np.pi, n)
         xs = np.cos(angles)
         ys = np.sin(angles)
@@ -74,20 +74,13 @@ def test_trajectory_with_custom_metric():
             break
     assert isinstance(traj, Trajectory)
     efmetric = EndEffectorDistanceMetric(efkin)
-    L = traj.get_length(efmetric)
-    np.testing.assert_almost_equal(L, 2 * np.pi, decimal=2)
+    traj_new = traj.get_metric_changed(efmetric)
+    np.testing.assert_almost_equal(traj_new.get_length(), 2 * np.pi, decimal=2)
+    traj_resampled = traj_new.resample(50)
 
-    from pyinstrument import Profiler
-
-    profiler = Profiler()
-    profiler.start()
-    traj_resampled = traj.resample(30, efmetric)
-    profiler.stop()
-    print(profiler.output_text(unicode=True, color=True, show_all=True))
-    np.testing.assert_almost_equal(traj_resampled.get_length(efmetric), 2 * np.pi, decimal=1)
+    np.testing.assert_almost_equal(traj_resampled.get_length(), 2 * np.pi, decimal=1)
 
     # check if resampled trajecoty has almost regular interval wrt the custom metric
-
     for i in range(len(traj_resampled) - 1):
         q1 = traj_resampled[i]
         q2 = traj_resampled[i + 1]
