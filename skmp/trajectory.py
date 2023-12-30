@@ -1,52 +1,85 @@
 import copy
 from dataclasses import dataclass
-from typing import List, Tuple, overload
+from typing import Callable, List, Tuple, overload
 
 import numpy as np
+
+from skmp.kinematics import ArticulatedEndEffectorKinematicsMap
 
 
 class InvalidSamplePointError(Exception):
     pass
 
 
+class EuclideanMetric:
+    def __call__(self, p0: np.ndarray, p1: np.ndarray) -> float:
+        return float(np.linalg.norm(p0 - p1))
+
+
 @dataclass
+class EndEffectorDistanceMetric:
+    efkin: ArticulatedEndEffectorKinematicsMap
+
+    def __post_init__(self):
+        assert self.efkin.n_feature == 1
+
+    def __call__(self, q0: np.ndarray, q1: np.ndarray) -> float:
+        P, _ = self.efkin.map(np.array([q0, q1]))
+        x0 = P[0, 0]
+        x1 = P[1, 0]
+        return float(np.linalg.norm(x0 - x1))
+
+
 class Trajectory:
     _points: List[np.ndarray]
 
-    @property
-    def length(self) -> float:
+    def __init__(self, points: List[np.ndarray]):
+        self._points = points
+
+    def get_length(
+        self, metric: Callable[[np.ndarray, np.ndarray], float] = EuclideanMetric()
+    ) -> float:
         n_point = len(self._points)
         total = 0.0
         for i in range(n_point - 1):
             p0 = self._points[i]
             p1 = self._points[i + 1]
-            total += float(np.linalg.norm(p1 - p0))
+            total += metric(p0, p1)
         return total
 
-    def sample_point(self, dist_from_start: float) -> np.ndarray:
+    def sample_point(
+        self,
+        dist_from_start: float,
+        metric: Callable[[np.ndarray, np.ndarray], float] = EuclideanMetric(),
+    ) -> np.ndarray:
 
-        if dist_from_start > self.length + 1e-6:
+        L = self.get_length(metric)
+        if dist_from_start > L + 1e-6:
             raise InvalidSamplePointError("exceed total length")
 
-        dist_from_start = min(dist_from_start, self.length)
+        dist_from_start = min(dist_from_start, L)
         edge_dist_sum = 0.0
         for i in range(len(self) - 1):
-            edge_dist_sum += float(np.linalg.norm(self._points[i + 1] - self._points[i]))
+            edge_dist_sum += metric(self._points[i + 1], self._points[i])
             if dist_from_start <= edge_dist_sum:
                 diff = edge_dist_sum - dist_from_start
                 vec_to_prev = self._points[i] - self._points[i + 1]
-                vec_to_prev_unit = vec_to_prev / np.linalg.norm(vec_to_prev)
+                vec_to_prev_unit = vec_to_prev / metric(self._points[i], self._points[i + 1])
                 point_new = self._points[i + 1] + vec_to_prev_unit * diff
                 return point_new
         raise InvalidSamplePointError()
 
-    def resample(self, n_waypoint: int) -> "Trajectory":
+    def resample(
+        self, n_waypoint: int, metric: Callable[[np.ndarray, np.ndarray], float] = EuclideanMetric()
+    ) -> "Trajectory":
+
         # yeah, it's inefficient. n^2 instead of n ...
+        L = self.get_length(metric)
         point_new_list = []
-        partial_length = self.length / (n_waypoint - 1)
+        partial_length = L / (n_waypoint - 1)
         for i in range(n_waypoint):
             dist_from_start = partial_length * i
-            point_new = self.sample_point(dist_from_start)
+            point_new = self.sample_point(dist_from_start, metric)
             point_new_list.append(point_new)
         return Trajectory(point_new_list)
 
