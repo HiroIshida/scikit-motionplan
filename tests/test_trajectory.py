@@ -58,8 +58,16 @@ def test_trajectory_with_custom_metric():
     L = traj.get_length(efmetric)
     np.testing.assert_almost_equal(L, 2 * np.pi, decimal=2)
 
-    traj_coarse = traj.resample(30, efmetric)
-    np.testing.assert_almost_equal(traj_coarse.get_length(efmetric), 2 * np.pi, decimal=1)
+    traj_resampled = traj.resample(30, efmetric)
+    np.testing.assert_almost_equal(traj_resampled.get_length(efmetric), 2 * np.pi, decimal=1)
+
+    # check if resampled trajecoty has almost regular interval wrt the custom metric
+
+    for i in range(len(traj_resampled) - 1):
+        q1 = traj_resampled[i]
+        q2 = traj_resampled[i + 1]
+        d = efmetric(q1, q2)
+        np.testing.assert_almost_equal(d, 2 * np.pi / len(traj_resampled), decimal=1)
 
 
 if __name__ == "__main__":
