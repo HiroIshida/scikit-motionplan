@@ -10,7 +10,26 @@ from skmp.satisfy import satisfy_by_optimization
 from skmp.trajectory import EndEffectorDistanceMetric, Trajectory
 
 
-def test_trajectory():
+def test_trajectory_from_two_points():
+    start = np.zeros(2)
+    goal = np.ones(2)
+    traj = Trajectory.from_two_points(start, goal, 10)
+    np.testing.assert_almost_equal(start, traj[0])
+    np.testing.assert_almost_equal(goal, traj[-1])
+
+
+def test_trajectory1():
+    start = np.zeros(2)
+    goal = np.ones(2)
+    traj = Trajectory.from_two_points(start, goal, 10)
+    np.testing.assert_almost_equal(traj.get_length(), np.sqrt(2))
+
+    np.testing.assert_almost_equal(traj.sample_point(0.0), traj[0])
+    np.testing.assert_almost_equal(traj.sample_point(0.1), 0.1 * np.ones(2) / np.sqrt(2))
+    np.testing.assert_almost_equal(traj.sample_point(0.8), 0.8 * np.ones(2) / np.sqrt(2))
+
+
+def test_trajectory2():
     n = 1000
     angles = np.linspace(0, 2 * np.pi, n)
     xs = np.cos(angles)
@@ -58,7 +77,13 @@ def test_trajectory_with_custom_metric():
     L = traj.get_length(efmetric)
     np.testing.assert_almost_equal(L, 2 * np.pi, decimal=2)
 
+    from pyinstrument import Profiler
+
+    profiler = Profiler()
+    profiler.start()
     traj_resampled = traj.resample(30, efmetric)
+    profiler.stop()
+    print(profiler.output_text(unicode=True, color=True, show_all=True))
     np.testing.assert_almost_equal(traj_resampled.get_length(efmetric), 2 * np.pi, decimal=1)
 
     # check if resampled trajecoty has almost regular interval wrt the custom metric
