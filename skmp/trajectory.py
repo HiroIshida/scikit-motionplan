@@ -31,6 +31,15 @@ class EndEffectorDistanceMetric:
 
 
 class Trajectory:
+    """Resamplable Trajectory classs
+
+    NOTE: If metric is non-eucledian, get_length, sample_point, resample
+    are not accurate. They are just approximations. Because geodesic distance is
+    not linearly additive. To obtain accurate results, you should first prepare
+    trajectory with many waypoints, and then resample it with metric.
+    e.g. traj.resample(100).resample(100, your_metric)
+    """
+
     _points: List[np.ndarray]
 
     def __init__(self, points: List[np.ndarray]):
@@ -39,6 +48,8 @@ class Trajectory:
     def get_length(
         self, metric: Callable[[np.ndarray, np.ndarray], float] = EuclideanMetric()
     ) -> float:
+        # NOTE: see NOTE in class docstring if metric is non-euclidean
+
         n_point = len(self._points)
         total = 0.0
         for i in range(n_point - 1):
@@ -52,6 +63,7 @@ class Trajectory:
         dist_from_start: float,
         metric: Callable[[np.ndarray, np.ndarray], float] = EuclideanMetric(),
     ) -> np.ndarray:
+        # NOTE: see NOTE in class docstring if metric is non-euclidean
 
         L = self.get_length(metric)
         if dist_from_start > L + 1e-6:
@@ -72,6 +84,7 @@ class Trajectory:
     def resample(
         self, n_waypoint: int, metric: Callable[[np.ndarray, np.ndarray], float] = EuclideanMetric()
     ) -> "Trajectory":
+        # NOTE: see NOTE in class docstring if metric is non-euclidean
 
         # yeah, it's inefficient. n^2 instead of n ...
         L = self.get_length(metric)
