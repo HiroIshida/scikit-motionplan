@@ -1,6 +1,6 @@
 import copy
 from dataclasses import dataclass
-from typing import Callable, List, Tuple, overload
+from typing import Callable, List, Optional, Tuple, overload
 
 import numpy as np
 
@@ -41,6 +41,7 @@ class Trajectory:
 
     _points: List[np.ndarray]
     metric: Callable[[np.ndarray, np.ndarray], float]
+    _dist_cache: List[Optional[float]]
 
     def __init__(
         self,
@@ -49,22 +50,34 @@ class Trajectory:
     ):
         self._points = points
         self.metric = metric
+        self._dist_cache = [0] + [None] * (len(points) - 1)
 
     def get_metric_changed(self, metric: Callable[[np.ndarray, np.ndarray], float]) -> "Trajectory":
         return Trajectory(self._points, metric)
 
+    def get_length_from_start(self, index: int) -> float:
+        if not 0 <= index < len(self._points):
+            raise IndexError("Index out of bounds")
+
+        cached_value = self._dist_cache[index]
+        if cached_value is not None:
+            return cached_value
+
+        start_index = next(i for i, x in enumerate(self._dist_cache) if x is None)
+        for i in range(start_index, len(self._points)):
+            if i == 0:
+                self._dist_cache[i] = 0
+            else:
+                self._dist_cache[i] = self._dist_cache[i - 1] + self.metric(  # type: ignore[operator]
+                    self._points[i], self._points[i - 1]
+                )
+        return self._dist_cache[index]  # type: ignore[return-value]
+
     def get_length(self) -> float:
         # NOTE: see NOTE in class docstring if metric is non-euclidean
+        return self.get_length_from_start(len(self) - 1)
 
-        n_point = len(self._points)
-        total = 0.0
-        for i in range(n_point - 1):
-            p0 = self._points[i]
-            p1 = self._points[i + 1]
-            total += self.metric(p0, p1)
-        return total
-
-    def sample_point(self, dist_from_start: float) -> np.ndarray:
+    def _sample_point(self, dist_from_start: float) -> np.ndarray:
         # NOTE: see NOTE in class docstring if metric is non-euclidean
 
         L = self.get_length()
@@ -83,10 +96,30 @@ class Trajectory:
                 return point_new
         raise InvalidSamplePointError()
 
+    def sample_point(self, dist_from_start: float) -> np.ndarray:
+        L = self.get_length()
+        if dist_from_start > L + 1e-6:
+            raise InvalidSamplePointError("exceed total length")
+
+        dist_from_start = min(dist_from_start, L)
+
+        # Iterate over segments to find the correct one
+        for i in range(1, len(self)):
+            segment_end_length = self.get_length_from_start(i)
+            if dist_from_start <= segment_end_length:
+                segment_start_length = self.get_length_from_start(i - 1)
+                dist_on_edge = dist_from_start - segment_start_length
+                edge_length = segment_end_length - segment_start_length
+                interpolation_ratio = dist_on_edge / edge_length
+                point_new = self._points[i - 1] + interpolation_ratio * (
+                    self._points[i] - self._points[i - 1]
+                )
+                return point_new
+
+        raise InvalidSamplePointError()
+
     def resample(self, n_waypoint: int) -> "Trajectory":
         # NOTE: see NOTE in class docstring if metric is non-euclidean
-
-        # yeah, it's inefficient. n^2 instead of n ...
         L = self.get_length()
         point_new_list = []
         partial_length = L / (n_waypoint - 1)
