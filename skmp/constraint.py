@@ -251,6 +251,7 @@ class CollFreeConst(AbstractIneqConst):
     colkin: ArticulatedCollisionKinematicsMap
     sdf: Callable[[np.ndarray], np.ndarray]
     only_closest_feature: bool
+    distance_margin: float
 
     def __init__(
         self,
@@ -258,18 +259,22 @@ class CollFreeConst(AbstractIneqConst):
         sdf: Callable[[np.ndarray], np.ndarray],
         robot_model: RobotModel,
         only_closest_feature: bool = False,
+        distance_margin: float = 0.0,
     ) -> None:
         self.colkin = colkin
         self.sdf = sdf
         self.reflect_skrobot_model(robot_model)
         self.only_closest_feature = only_closest_feature
+        self.distance_margin = distance_margin
         self.assign_id_value()
 
     def _evaluate(self, qs: np.ndarray, with_jacobian: bool) -> Tuple[np.ndarray, np.ndarray]:
         if self.only_closest_feature:
-            return self._evaluate_closest(qs, with_jacobian)
+            vals, jacs = self._evaluate_closest(qs, with_jacobian)
         else:
-            return self._evaluate_all(qs, with_jacobian)
+            vals, jacs = self._evaluate_all(qs, with_jacobian)
+        vals -= self.distance_margin
+        return vals, jacs
 
     def _evaluate_closest(
         self, qs: np.ndarray, with_jacobian: bool

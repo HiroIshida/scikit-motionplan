@@ -64,23 +64,28 @@ def test_box_const():
 
 
 def test_collfree_const():
-    config = PR2Config(base_type=BaseType.FIXED)
-    colkin = config.get_collision_kin()
-    box = Box(extents=[0.7, 0.5, 1.2], with_sdf=True)
-    box.translate(np.array([0.85, -0.2, 0.9]))
-    assert box.sdf is not None
-    collfree_const = CollFreeConst(colkin, box.sdf, PR2(), only_closest_feature=False)
-    collfree_const.only_closest_feature = False
-    check_jacobian(collfree_const, 7)
+    for margin in [0.0, -0.05, 0.05]:
+        config = PR2Config(base_type=BaseType.FIXED)
+        colkin = config.get_collision_kin()
+        box = Box(extents=[0.7, 0.5, 1.2], with_sdf=True)
+        box.translate(np.array([0.85, -0.2, 0.9]))
+        assert box.sdf is not None
+        collfree_const = CollFreeConst(
+            colkin, box.sdf, PR2(), only_closest_feature=False, distance_margin=margin
+        )
+        collfree_const.only_closest_feature = False
+        check_jacobian(collfree_const, 7)
 
-    collfree_const_oc = CollFreeConst(colkin, box.sdf, PR2(), only_closest_feature=True)
-    check_jacobian(collfree_const_oc, 7)
+        collfree_const_oc = CollFreeConst(
+            colkin, box.sdf, PR2(), only_closest_feature=True, distance_margin=margin
+        )
+        check_jacobian(collfree_const_oc, 7)
 
-    for _ in range(20):
-        q = np.random.randn(7)
-        values = collfree_const.evaluate_single(q, False)[0]
-        closest_value = collfree_const_oc.evaluate_single(q, False)[0][0]
-        assert np.min(values) == closest_value
+        for _ in range(20):
+            q = np.random.randn(7)
+            values = collfree_const.evaluate_single(q, False)[0]
+            closest_value = collfree_const_oc.evaluate_single(q, False)[0][0]
+            assert np.min(values) == closest_value
 
 
 def test_neural_collfree_const():
