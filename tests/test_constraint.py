@@ -14,7 +14,6 @@ from skmp.constraint import (
     IneqCompositeConst,
     PairWiseSelfCollFreeConst,
     PoseConstraint,
-    ReducedCollisionFreeConst,
     RelativePoseConstraint,
 )
 from skmp.robot.fetch import Fetch, FetchConfig
@@ -82,19 +81,6 @@ def test_collfree_const():
         values = collfree_const.evaluate_single(q, False)[0]
         closest_value = collfree_const_oc.evaluate_single(q, False)[0][0]
         assert np.min(values) == closest_value
-
-
-def test_reduced_collfree_const():
-    config = PR2Config(base_type=BaseType.FIXED)
-    colkin = config.get_collision_kin()
-    box = Box(extents=[0.7, 0.5, 1.2], with_sdf=True)
-    box.translate(np.array([0.85, -0.2, 0.9]))
-    assert box.sdf is not None
-    collfree_const = ReducedCollisionFreeConst(colkin, box.sdf, PR2())
-    check_jacobian(collfree_const, 7)
-
-    # check if id_value is assigned
-    assert isinstance(collfree_const.id_value, str)
 
 
 def test_neural_collfree_const():
