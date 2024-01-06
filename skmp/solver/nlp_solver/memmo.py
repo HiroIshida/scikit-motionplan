@@ -2,7 +2,10 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import List, Optional, Tuple, Type, TypeVar, Union
 
-import GPy
+try:
+    import GPy
+except ImportError:
+    GPy = None
 import numpy as np
 from sklearn.decomposition import PCA
 
@@ -84,58 +87,58 @@ class StraightRegressor(Regressor):
         return traj
 
 
-@dataclass(frozen=True)
-class GPRRegressorBase(Regressor):
-    gp: Union[GPy.models.GPRegression, GPy.models.SparseGPRegression]
-    pca: Optional[PCA] = None
+if GPy is not None:
 
-    @classmethod
-    def _fit(cls, X: np.ndarray, Y: np.ndarray, pca_dim: Optional[int] = None):
-        n_data, n_wp, n_dim = Y.shape
-        n_data, n_input_dim = X.shape
-        Y_flatten = Y.reshape(n_data, -1)
+    @dataclass(frozen=True)
+    class GPRRegressorBase(Regressor):
+        gp: Union[GPy.models.GPRegression, GPy.models.SparseGPRegression]
+        pca: Optional[PCA] = None
 
-        use_pca = pca_dim is not None
-        if use_pca:
-            pca = PCA(pca_dim)
-            pca.fit(Y_flatten)
-            Y_flatten = pca.transform(Y_flatten)
-        else:
-            pca = None
+        @classmethod
+        def _fit(cls, X: np.ndarray, Y: np.ndarray, pca_dim: Optional[int] = None):
+            n_data, n_wp, n_dim = Y.shape
+            n_data, n_input_dim = X.shape
+            Y_flatten = Y.reshape(n_data, -1)
 
-        if n_data < 200:
-            kernel = GPy.kern.RBF(
-                input_dim=n_input_dim, variance=0.1, lengthscale=0.3, ARD=True
-            ) + GPy.kern.White(input_dim=n_input_dim)
-            gp = GPy.models.GPRegression(X, Y_flatten, kernel)
-            num_restarts = 10
-            gp.optimize_restarts(num_restarts=num_restarts)
-        else:
-            Z = X[:100]
-            gp = GPy.models.SparseGPRegression(X, Y_flatten, Z=Z)
-            gp.optimize("bfgs")
-        return n_dim, gp, pca
+            use_pca = pca_dim is not None
+            if use_pca:
+                pca = PCA(pca_dim)
+                pca.fit(Y_flatten)
+                Y_flatten = pca.transform(Y_flatten)
+            else:
+                pca = None
 
-    def _predict(self, x: np.ndarray):
-        y, cov = self.gp.predict(np.expand_dims(x, axis=0))
-        if self.pca is not None:
-            y = self.pca.inverse_transform(np.expand_dims(y, axis=0))[0]
-        return
+            if n_data < 200:
+                kernel = GPy.kern.RBF(
+                    input_dim=n_input_dim, variance=0.1, lengthscale=0.3, ARD=True
+                ) + GPy.kern.White(input_dim=n_input_dim)
+                gp = GPy.models.GPRegression(X, Y_flatten, kernel)
+                num_restarts = 10
+                gp.optimize_restarts(num_restarts=num_restarts)
+            else:
+                Z = X[:100]
+                gp = GPy.models.SparseGPRegression(X, Y_flatten, Z=Z)
+                gp.optimize("bfgs")
+            return n_dim, gp, pca
 
+        def _predict(self, x: np.ndarray):
+            y, cov = self.gp.predict(np.expand_dims(x, axis=0))
+            if self.pca is not None:
+                y = self.pca.inverse_transform(np.expand_dims(y, axis=0))[0]
+            return
 
-@dataclass(frozen=True)
-class GPRRegressor(GPRRegressorBase):
-    @classmethod
-    def fit(cls, X: np.ndarray, Y: np.ndarray) -> "GPRRegressor":
-        return cls(*cls._fit(X, Y, None))
+    @dataclass(frozen=True)
+    class GPRRegressor(GPRRegressorBase):
+        @classmethod
+        def fit(cls, X: np.ndarray, Y: np.ndarray) -> "GPRRegressor":
+            return cls(*cls._fit(X, Y, None))
 
-
-@dataclass(frozen=True)
-class PCAGPRRegressor(GPRRegressorBase):
-    @classmethod
-    def fit(cls, X: np.ndarray, Y: np.ndarray) -> "PCAGPRRegressor":
-        dim_pca = 50  # same as the paper
-        return cls(*cls._fit(X, Y, dim_pca))
+    @dataclass(frozen=True)
+    class PCAGPRRegressor(GPRRegressorBase):
+        @classmethod
+        def fit(cls, X: np.ndarray, Y: np.ndarray) -> "PCAGPRRegressor":
+            dim_pca = 50  # same as the paper
+            return cls(*cls._fit(X, Y, dim_pca))
 
 
 @dataclass
@@ -182,13 +185,14 @@ class NnMemmoSolver(AbstractMemmoSolver):
         return NNRegressor
 
 
-class GprMemmoSolver(AbstractMemmoSolver):
-    @classmethod
-    def get_regressor_type(cls) -> Type[GPRRegressor]:
-        return GPRRegressor
+if GPy is not None:
 
+    class GprMemmoSolver(AbstractMemmoSolver):
+        @classmethod
+        def get_regressor_type(cls) -> Type[GPRRegressor]:
+            return GPRRegressor
 
-class PcaGprMemmoSolver(AbstractMemmoSolver):
-    @classmethod
-    def get_regressor_type(cls) -> Type[PCAGPRRegressor]:
-        return PCAGPRRegressor
+    class PcaGprMemmoSolver(AbstractMemmoSolver):
+        @classmethod
+        def get_regressor_type(cls) -> Type[PCAGPRRegressor]:
+            return PCAGPRRegressor
