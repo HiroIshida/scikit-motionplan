@@ -74,7 +74,7 @@ class SceneWrapper(trimesh.Scene):
             if link_id in self._links:
                 return
             transform = link.worldcoords().T()
-            mesh = link.visual_mesh
+            mesh = link.concatenated_visual_mesh
             # TODO(someone) fix this at trimesh's scene.
             if (isinstance(mesh, list) or isinstance(mesh, tuple)) and len(mesh) > 0:
                 mesh = trimesh.util.concatenate(mesh)
