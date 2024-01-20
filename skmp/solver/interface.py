@@ -38,8 +38,11 @@ class Problem:
     global_eq_const: Optional[AbstractEqConst]
     eqconst_admissible_mse: float = 1e-6
     motion_step_box_: Union[float, np.ndarray] = 0.1
+    skip_init_feasibility_check: bool = False  # just for debug
 
     def check_init_feasibility(self) -> Tuple[bool, str]:
+        if self.skip_init_feasibility_check:
+            return True, ""
         msg_list = []
         if not np.all(self.start < self.box_const.ub):
             msg_list.append("q_start doesn't satisfy BoxConst upper")
