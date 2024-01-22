@@ -33,6 +33,7 @@ class OsqpSqpConfig:
     verbose: bool = False
     relax_step_convex: float = 0.1
     force_deterministic: bool = False
+    step_box: Optional[np.ndarray] = None
 
 
 class OsqpSqpExitMode(Enum):
@@ -105,6 +106,7 @@ class OsqpSqpSolver:
         counter = 0
         copy.deepcopy(eval_cache.val_ineq)
         prob: Optional[osqp.OSQP] = None
+
         while True:
             relax_step_now = relax_step * counter
 
@@ -242,7 +244,13 @@ class OsqpSqpSolver:
                 result.success = False
                 result.status = OsqpSqpExitMode.OSQP_FAIL
                 return result
-            x_guess = subproblem_result
+
+            if config.step_box is not None:
+                lb_clamp = x_guess - config.step_box
+                ub_clamp = x_guess + config.step_box
+                x_guess = np.clip(subproblem_result, lb_clamp, ub_clamp)
+            else:
+                x_guess = subproblem_result
 
         assert result is not None
         result.success = False

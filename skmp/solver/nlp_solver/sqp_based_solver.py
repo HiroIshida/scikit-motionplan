@@ -93,6 +93,7 @@ class SQPBasedSolverConfig:
     ineq_tighten_coef: float = (
         2.0  # NOTE: in some large problem like humanoid planning, this value should be zero
     )
+    step_box: Optional[np.ndarray] = None
     _osqpsqp_config: OsqpSqpConfig = OsqpSqpConfig()  # don't directly access this
     timeout: Optional[int] = None
     return_osqp_result: bool = False  # helpful for debugging but memory footprint is large
@@ -106,6 +107,11 @@ class SQPBasedSolverConfig:
         osqpsqp_config.osqp_verbose = self.osqp_verbose
         osqpsqp_config.ctol_eq = self.ctol_eq
         osqpsqp_config.ctol_ineq = self.ctol_ineq
+        if self.step_box is not None:
+            # self.step_box is for single waypont
+            # thus we need to scale it to n_wp
+            step_box_stacked = np.tile(self.step_box, self.n_wp)
+            osqpsqp_config.step_box = step_box_stacked
         return osqpsqp_config
 
 
