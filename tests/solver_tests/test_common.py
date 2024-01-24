@@ -8,10 +8,8 @@ def test_ompl_solver():  # noqa
     # try to solve infeasible problem with massive computation budget
     # check if interruption by timeout is correctly handled
     problem = create_standard_problem(feasible=False)
-    timeout = 1.0
-    conf = OMPLSolverConfig(
-        n_max_call=100000, n_max_satisfaction_trial=100000, timeout=int(timeout)
-    )
+    timeout = 1.5
+    conf = OMPLSolverConfig(n_max_call=100000, n_max_satisfaction_trial=100000, timeout=timeout)
     solver = OMPLSolver.init(conf)
     solver.setup(problem)
     result = solver.solve()

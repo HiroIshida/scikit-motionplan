@@ -95,7 +95,7 @@ class SQPBasedSolverConfig:
     )
     step_box: Optional[np.ndarray] = None
     _osqpsqp_config: OsqpSqpConfig = OsqpSqpConfig()  # don't directly access this
-    timeout: Optional[int] = None
+    timeout: Optional[float] = None
     return_osqp_result: bool = False  # helpful for debugging but memory footprint is large
 
     @property

@@ -97,7 +97,7 @@ class Problem:
 
 class ConfigProtocol(Protocol):
     n_max_call: int
-    timeout: Optional[int]  # second
+    timeout: Optional[float]  # second
 
 
 class ResultProtocol(Protocol):
@@ -135,17 +135,14 @@ class AbstractSolver(ABC, Generic[ConfigT, ResultT, GuidingTrajT]):
         """solve problem with maybe a solution guess"""
         ts = time.time()
 
-        class TimeoutException(Exception):
-            ...
-
         if self.config.timeout is not None:
             assert self.config.timeout > 0
 
             def handler(sig, frame):
-                raise TimeoutException()
+                raise TimeoutError
 
             signal.signal(signal.SIGALRM, handler)
-            signal.alarm(self.config.timeout)
+            signal.setitimer(signal.ITIMER_REAL, self.config.timeout)
 
         try:
             assert self.problem is not None
@@ -156,7 +153,7 @@ class AbstractSolver(ABC, Generic[ConfigT, ResultT, GuidingTrajT]):
                 if raise_init_infeasible:
                     raise RuntimeError(f"initial state is already infeasible: {msg}")
                 ret = self.get_result_type().abnormal()
-        except TimeoutException:
+        except TimeoutError:
             ret = self.get_result_type().abnormal()
 
         if self.config.timeout is not None:
