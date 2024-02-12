@@ -67,31 +67,18 @@ def test_sqp_based_solver():
 
     config1 = SQPBasedSolverConfig(n_wp=30, motion_step_satisfaction="implicit")
     config2 = SQPBasedSolverConfig(n_wp=100, motion_step_satisfaction="explicit")
-    for config in [config1, config2]:
+    config3 = SQPBasedSolverConfig(n_wp=100, motion_step_satisfaction="post")
+    for config in [config1, config2, config3]:
         solver = SQPBasedSolver.init(config)
         solver.setup(problem)
         result = solver.solve(init_traj.resample(config.n_wp))
         assert result.traj is not None
         assert problem.is_satisfied(result.traj)
 
-
-def test_sqp_based_solver_post_check():
-    problem = create_standard_problem(easy=True)
-    config = SQPBasedSolverConfig(
-        n_wp=100, motion_step_satisfaction="post", return_osqp_result=True
-    )
-    solver = SQPBasedSolver.init(config)
-    for _ in range(10):
+        # the resuling traj should be the same as the initial traj
         solver.setup(problem)
-        result = solver.solve()
-        assert result.traj is not None
-
-    config = SQPBasedSolverConfig(n_wp=10, motion_step_satisfaction="post", return_osqp_result=True)
-    solver = SQPBasedSolver.init(config)
-    for _ in range(10):
-        solver.setup(problem)
-        result = solver.solve()
-        assert result.traj is None
+        result = solver.solve(result.traj)
+        assert result.n_call == 1  # 1 because feasibility check takes single iteration
 
 
 def test_memmo_solvers():
