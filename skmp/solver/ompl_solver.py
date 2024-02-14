@@ -1,7 +1,7 @@
 from abc import abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, List, Literal, Optional, Tuple, Type, TypeVar, Union
+from typing import Dict, List, Literal, Optional, Type, TypeVar, Union
 
 import numpy as np
 from ompl import (
@@ -16,12 +16,7 @@ from ompl import (
 )
 
 from skmp.satisfy import SatisfactionResult, satisfy_by_optimization
-from skmp.solver.interface import (
-    AbstractDataDrivenSolver,
-    AbstractScratchSolver,
-    AbstractSolver,
-    Problem,
-)
+from skmp.solver.interface import AbstractScratchSolver, AbstractSolver, Problem
 from skmp.trajectory import Trajectory
 
 
@@ -214,38 +209,3 @@ class OMPLSolver(AbstractScratchSolver[OMPLSolverConfig, OMPLSolverResult], OMPL
             kwargs["eq_const"] = eq_const
 
             return ConstrainedPlanner(**kwargs)
-
-
-@dataclass
-class OMPLDataDrivenSolver(AbstractDataDrivenSolver[OMPLSolverConfig, OMPLSolverResult]):
-    config: OMPLSolverConfig
-    internal_solver: OMPLSolverBase
-    vec_descs: np.ndarray
-    trajectories: List[Trajectory]
-
-    @classmethod
-    def init(
-        cls, config: OMPLSolverConfig, dataset: List[Tuple[np.ndarray, Trajectory]]
-    ) -> "OMPLDataDrivenSolver":
-        n_call_dict = {"count": 0}
-        vec_descs = np.array([p[0] for p in dataset])
-        trajectories = [p[1] for p in dataset]
-        internal_solver = OMPLSolver(config, None, None, None, n_call_dict)
-        return cls(config, internal_solver, vec_descs, trajectories)
-
-    def _solve(self, query_desc: Optional[np.ndarray] = None) -> OMPLSolverResult:
-        if query_desc is not None:
-            sqdists = np.sum((self.vec_descs - query_desc) ** 2, axis=1)
-            idx_closest = np.argmin(sqdists)
-            reuse_traj = self.trajectories[idx_closest]
-        else:
-            reuse_traj = None
-        result = self.internal_solver._solve(reuse_traj)
-        return result
-
-    @classmethod
-    def get_result_type(cls) -> Type[OMPLSolverResult]:
-        return OMPLSolverResult
-
-    def _setup(self, problem: Problem) -> None:
-        self.internal_solver.setup(problem)
