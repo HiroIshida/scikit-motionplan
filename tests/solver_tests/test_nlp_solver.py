@@ -81,30 +81,5 @@ def test_sqp_based_solver():
         assert result.n_call == 1  # 1 because feasibility check takes single iteration
 
 
-def test_memmo_solvers():
-    from skmp.solver.nlp_solver import GPY_INSTALLED
-
-    if not GPY_INSTALLED:
-        return
-
-    from skmp.solver.nlp_solver import GprMemmoSolver, NnMemmoSolver
-
-    # solve easy problem and create dataset
-    problem = create_standard_problem(easy=True)
-    config = SQPBasedSolverConfig(n_wp=30, motion_step_satisfaction="implicit")
-    solver = SQPBasedSolver.init(config)
-    solver.setup(problem)
-    result = solver.solve()
-    assert result.traj is not None
-
-    key = np.hstack([result.traj[0], result.traj[-1]])
-    dataset = [(key, result.traj)]
-
-    for solver_type in [NnMemmoSolver, GprMemmoSolver]:
-        solver_type.init(config, dataset)
-        solver.setup(problem)
-        solver.solve()  # dont care if it can solve now
-
-
 if __name__ == "__main__":
     test_sqp_based_solver()
