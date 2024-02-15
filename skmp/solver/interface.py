@@ -228,6 +228,8 @@ class NearestNeigborSolver(AbstractSolver[ConfigT, ResultT, np.ndarray]):
     trajectories: List[Optional[Trajectory]]  # None means no trajectory is available
     knn: int
     infeasibility_threshold: float
+    previous_est_positive: Optional[bool] = None
+    previous_false_positive: Optional[bool] = None
 
     @classmethod
     def init(
@@ -280,13 +282,16 @@ class NearestNeigborSolver(AbstractSolver[ConfigT, ResultT, np.ndarray]):
             trajs_without_none = [traj for traj in trajs if traj is not None]
             count_none = len(trajs) - len(trajs_without_none)
             seems_infeasible = count_none >= self.infeasibility_threshold
+            self.previous_est_positive = not seems_infeasible
             if seems_infeasible:
                 return self.get_result_type().abnormal()
 
             for guiding_traj in trajs_without_none:
                 if guiding_traj is not None:
                     result = self.internal_solver._solve(guiding_traj)
+                    self.previous_false_positive = False
                     return result
+            self.previous_false_positive = True
             return self.get_result_type().abnormal()
         else:
             reuse_traj = None
@@ -298,3 +303,5 @@ class NearestNeigborSolver(AbstractSolver[ConfigT, ResultT, np.ndarray]):
 
     def _setup(self, problem: Problem) -> None:
         self.internal_solver.setup(problem)
+        self.previous_est_positive = None
+        self.previous_false_positive = None
