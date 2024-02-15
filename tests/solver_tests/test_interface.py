@@ -36,16 +36,17 @@ def test_nearest_neighbor_solver():
             trajs.append(None)  # type: ignore
 
     dataset = list(zip(descs, trajs))
-    nn_solver = NearestNeigborSolver.init(OMPLSolver, conf, dataset, 5)  # type: ignore
-    nn_solver.setup(problem)
-    ret = nn_solver.solve(np.zeros((1, 1)))
-    assert ret.traj is not None
+    for knn in range(1, 6):
+        nn_solver = NearestNeigborSolver.init(OMPLSolver, conf, dataset, knn)  # type: ignore
+        nn_solver.setup(problem)
+        ret = nn_solver.solve(np.zeros((1, 1)))
+        assert ret.traj is not None
 
-    # shold detec the problem as infeasible...
-    ret = nn_solver.solve(np.ones((1, 1)))
-    assert ret.traj is None
-    ret = nn_solver.solve(-np.ones((1, 1)))
-    assert ret.traj is None
+        # shold detec the problem as infeasible...
+        ret = nn_solver.solve(np.ones((1, 1)))
+        assert ret.traj is None
+        ret = nn_solver.solve(-np.ones((1, 1)))
+        assert ret.traj is None
 
 
 if __name__ == "__main__":
