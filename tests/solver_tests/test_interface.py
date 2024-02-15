@@ -38,8 +38,8 @@ def test_nearest_neighbor_solver():
     dataset = list(zip(descs, trajs))
     nn_solver = NearestNeigborSolver.init(OMPLSolver, conf, dataset, 5)  # type: ignore
     nn_solver.setup(problem)
-    ret = nn_solver.solve(np.zeros(2))
-    # dont care about the result, just check if it runs without error
+    ret = nn_solver.solve(np.zeros((1, 1)))
+    assert ret.traj is not None
 
 
 if __name__ == "__main__":
