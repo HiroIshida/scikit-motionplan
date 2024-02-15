@@ -41,6 +41,12 @@ def test_nearest_neighbor_solver():
     ret = nn_solver.solve(np.zeros((1, 1)))
     assert ret.traj is not None
 
+    # shold detec the problem as infeasible...
+    ret = nn_solver.solve(np.ones((1, 1)))
+    assert ret.traj is None
+    ret = nn_solver.solve(-np.ones((1, 1)))
+    assert ret.traj is None
+
 
 if __name__ == "__main__":
     test_nearest_neighbor_solver()
