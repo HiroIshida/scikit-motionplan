@@ -267,19 +267,23 @@ class NearestNeigborSolver(AbstractSolver[ConfigT, ResultT, np.ndarray]):
             config, internal_solver, vec_descs, list(trajectories), knn, infeasibility_threshold
         )
 
+    def _knn_trajectories(self, query_desc: np.ndarray) -> List[Optional[Trajectory]]:
+        sqdists = np.sum((self.vec_descs - query_desc) ** 2, axis=1)
+        k_nearests = np.argsort(sqdists)[: self.knn]
+        return [self.trajectories[i] for i in k_nearests]
+
     def _solve(self, query_desc: Optional[np.ndarray] = None) -> ResultT:
         if query_desc is not None:
-            sqdists = np.sum((self.vec_descs - query_desc) ** 2, axis=1)
-            k_nearests = np.argsort(sqdists)[: self.knn]
-            infeasible_count = sum(1 for idx in k_nearests if self.trajectories[idx] is None)
-            seems_infeasible = infeasible_count >= self.infeasibility_threshold
+            trajs = self._knn_trajectories(query_desc)
+            trajs_without_none = [traj for traj in trajs if traj is not None]
+            count_none = len(trajs) - len(trajs_without_none)
+            seems_infeasible = count_none >= self.infeasibility_threshold
             if seems_infeasible:
                 return self.get_result_type().abnormal()
 
-            for idx in k_nearests:
-                reuse_traj = self.trajectories[idx]
-                if reuse_traj is not None:
-                    result = self.internal_solver._solve(reuse_traj)
+            for guiding_traj in trajs_without_none:
+                if guiding_traj is not None:
+                    result = self.internal_solver._solve(guiding_traj)
                     return result
             return self.get_result_type().abnormal()
         else:
