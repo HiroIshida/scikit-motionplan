@@ -238,6 +238,8 @@ class NearestNeigborSolver(AbstractSolver[ConfigT, ResultT, np.ndarray]):
         knn: int = 1,
         infeasibility_threshold: Optional[float] = None,
     ) -> "NearestNeigborSolver[ConfigT, ResultT]":
+        assert knn > 0
+
         tmp, trajectories = zip(*dataset)
         vec_descs = np.array(tmp)
         internal_solver = solver_type.init(config)
@@ -249,7 +251,7 @@ class NearestNeigborSolver(AbstractSolver[ConfigT, ResultT, np.ndarray]):
             # actually, the threshold can be tuned wrt specified fp-rate, but what we vary is only integer
             # we have little control over the fp-rate. So just use the best threshold in terms of the accuracy
             errors = []
-            thresholds = list(range(1, knn))
+            thresholds = list(range(1, knn + 1))
             for threshold in thresholds:
                 error = 0
                 for i, (desc, traj) in enumerate(dataset):
