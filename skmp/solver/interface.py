@@ -271,7 +271,7 @@ class NearestNeigborSolver(AbstractSolver[ConfigT, ResultT, np.ndarray]):
         if query_desc is not None:
             sqdists = np.sum((self.vec_descs - query_desc) ** 2, axis=1)
             k_nearests = np.argsort(sqdists)[: self.knn]
-            infeasible_count = sum(1 for idx in k_nearests if self.trajectories[idx] is not None)
+            infeasible_count = sum(1 for idx in k_nearests if self.trajectories[idx] is None)
             seems_infeasible = infeasible_count >= self.infeasibility_threshold
             if seems_infeasible:
                 return self.get_result_type().abnormal()
