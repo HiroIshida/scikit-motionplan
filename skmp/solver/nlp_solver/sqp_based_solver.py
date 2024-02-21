@@ -97,6 +97,8 @@ class SQPBasedSolverConfig:
     _osqpsqp_config: OsqpSqpConfig = OsqpSqpConfig()  # don't directly access this
     timeout: Optional[float] = None
     return_osqp_result: bool = False  # helpful for debugging but memory footprint is large
+    step_size_init: float = 1.0
+    step_size_step: float = 0.0
 
     @property
     def osqpsqp_config(self) -> OsqpSqpConfig:
@@ -107,6 +109,8 @@ class SQPBasedSolverConfig:
         osqpsqp_config.osqp_verbose = self.osqp_verbose
         osqpsqp_config.ctol_eq = self.ctol_eq
         osqpsqp_config.ctol_ineq = self.ctol_ineq
+        osqpsqp_config.step_size_init = self.step_size_init
+        osqpsqp_config.step_size_step = self.step_size_step
         if self.step_box is not None:
             # self.step_box is for single waypont
             # thus we need to scale it to n_wp
