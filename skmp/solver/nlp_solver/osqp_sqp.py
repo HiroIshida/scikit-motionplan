@@ -34,6 +34,8 @@ class OsqpSqpConfig:
     relax_step_convex: float = 0.1
     force_deterministic: bool = False
     step_box: Optional[np.ndarray] = None
+    step_size_init: float = 1.0
+    step_size_step: float = 0.0
 
 
 class OsqpSqpExitMode(Enum):
@@ -161,6 +163,7 @@ class OsqpSqpSolver:
     ) -> OsqpSqpResult:
 
         val_objective_previous = np.inf
+        step_size = config.step_size_init
 
         result: Optional[OsqpSqpResult] = None
         for idx_iter in range(config.n_max_eval):
@@ -246,11 +249,13 @@ class OsqpSqpSolver:
                 return result
 
             if config.step_box is not None:
+                # ignore step size
                 lb_clamp = x_guess - config.step_box
                 ub_clamp = x_guess + config.step_box
                 x_guess = np.clip(subproblem_result, lb_clamp, ub_clamp)
             else:
-                x_guess = subproblem_result
+                x_guess = x_guess + step_size * (subproblem_result - x_guess)
+            step_size = min(1.0, step_size + config.step_size_step)
 
         assert result is not None
         result.success = False
