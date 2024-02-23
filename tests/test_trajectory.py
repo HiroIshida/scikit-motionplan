@@ -1,3 +1,5 @@
+import pickle
+
 import numpy as np
 import tqdm
 from skrobot.coordinates import Coordinates
@@ -40,6 +42,13 @@ def test_trajectory2():
 
     traj_coarse = traj.resample(100)
     np.testing.assert_almost_equal(traj_coarse.get_length(), 2 * np.pi, decimal=2)
+
+
+def test_trajectory_serialization():
+    points = list(np.random.randn(100, 2))
+    traj = Trajectory(points)
+    traj_again = Trajectory.loads(traj.dumps())
+    assert pickle.dumps(traj) == pickle.dumps(traj_again)
 
 
 def test_trajectory_with_custom_metric():
