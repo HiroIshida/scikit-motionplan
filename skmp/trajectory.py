@@ -1,4 +1,5 @@
 import copy
+import json
 from dataclasses import dataclass
 from typing import Callable, List, Optional, Tuple, overload
 
@@ -51,6 +52,18 @@ class Trajectory:
         self._points = points
         self.metric = metric
         self._dist_cache = [0] + [None] * (len(points) - 1)
+
+    def dumps(self) -> str:
+        points = [point.tolist() for point in self._points]
+        assert isinstance(self.metric, EuclideanMetric)
+        return json.dumps({"points": points})
+
+    @classmethod
+    def loads(cls, s: str) -> "Trajectory":
+        data = json.loads(s)
+        points = [np.array(point) for point in data["points"]]
+        [0] + [None] * (len(points) - 1)
+        return cls(points, EuclideanMetric())
 
     def get_metric_changed(self, metric: Callable[[np.ndarray, np.ndarray], float]) -> "Trajectory":
         return Trajectory(self._points, metric)
