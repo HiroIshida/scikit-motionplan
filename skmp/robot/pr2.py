@@ -2,6 +2,7 @@ import copy
 import uuid
 from dataclasses import dataclass
 from enum import Enum
+from functools import lru_cache
 from itertools import product
 from pathlib import Path
 from typing import Dict, List, Literal, Optional, Tuple
@@ -209,21 +210,7 @@ class PR2Config:
         else:
             assert self.base_type == BaseType.FIXED
             assert base_bound is None
-
-        pr2 = PR2()
-        lb_list = []
-        ub_list = []
-        for joint_name in self.get_control_joint_names():
-            joint = pr2.__dict__[joint_name]
-            min_angle = joint.min_angle
-            max_angle = joint.max_angle
-            if not np.isfinite(min_angle):
-                min_angle = -2 * np.pi
-            if not np.isfinite(max_angle):
-                max_angle = 2 * np.pi
-            lb_list.append(min_angle)
-            ub_list.append(max_angle)
-
+        lb_list, ub_list = self._get_box_const_without_base(tuple(self.get_control_joint_names()))
         if base_bound is not None:
             lb, ub = base_bound
             n_dof_base = len(lb)
@@ -233,6 +220,25 @@ class PR2Config:
                 ub_list.append(ub[i])
         box_const = BoxConst(np.array(lb_list), np.array(ub_list))
         return box_const
+
+    @staticmethod
+    @lru_cache
+    def _get_box_const_without_base(joint_names) -> Tuple[List[float], List[float]]:
+        # this quite slow
+        pr2 = PR2()
+        lb_list = []
+        ub_list = []
+        for joint_name in joint_names:
+            joint = pr2.__dict__[joint_name]
+            min_angle = joint.min_angle
+            max_angle = joint.max_angle
+            if not np.isfinite(min_angle):
+                min_angle = -2 * np.pi
+            if not np.isfinite(max_angle):
+                max_angle = 2 * np.pi
+            lb_list.append(min_angle)
+            ub_list.append(max_angle)
+        return lb_list, ub_list
 
     def _get_collision_link_names(self):
         mode = self.collision_mode
