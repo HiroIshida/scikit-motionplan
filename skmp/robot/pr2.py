@@ -533,6 +533,9 @@ class PR2Config:
         tmp = copy.deepcopy(SphereCollection(*list(zip(*collection))))
         link_wise_sphere_collection[link_name] = tmp
 
+        if self.base_type != BaseType.FIXED:
+            whole_body = True
+
         if not whole_body:
             # remove irrelevant spheres
             if self.control_arm == "rarm":
