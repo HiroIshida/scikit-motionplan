@@ -31,8 +31,11 @@ class FetchConfig:
             joint_names = ["torso_lift_joint"] + joint_names
         return joint_names
 
-    def get_box_const(self) -> BoxConst:
+    def get_box_const(self, eps: float = 1e-4) -> BoxConst:
+        # set eps to satisfy that default postion is in the bounds
         bounds = BoxConst.from_urdf(self.urdf_path(), self.joint_names)
+        bounds.lb -= eps
+        bounds.ub += eps
         return bounds
 
     def get_selcol_consts(self, robot_model: Fetch):

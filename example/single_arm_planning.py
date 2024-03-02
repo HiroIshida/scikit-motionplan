@@ -1,5 +1,3 @@
-from typing import Optional
-
 import numpy as np
 from ompl import Algorithm, set_ompl_random_seed
 from skrobot.model.primitives import Axis, Box
@@ -8,7 +6,6 @@ from tinyfk import BaseType
 
 from skmp.constraint import (
     CollFreeConst,
-    ConfigPointConst,
     IneqCompositeConst,
     PairWiseSelfCollFreeConst,
     PoseConstraint,
@@ -24,8 +21,10 @@ np.random.seed(0)
 set_ompl_random_seed(0)
 
 if __name__ == "__main__":
+    smooth_by_nlp = False
     base_type = BaseType.FIXED
 
+    # initial setup
     pr2 = PR2()
     pr2.reset_manip_pose()
     pr2.torso_lift_joint.joint_angle(0.1)
@@ -36,30 +35,17 @@ if __name__ == "__main__":
     efkin.reflect_skrobot_model(pr2)
     colkin.reflect_skrobot_model(pr2)
 
-    use_pose_constraint = True
-    smooth_by_nlp = False
-
+    # define start configuration
     start = np.array([0.564, 0.35, -0.74, -0.7, -0.7, -0.17, -0.63])
     if base_type == BaseType.PLANER:
         start = np.hstack([start, np.zeros(3)])
     elif base_type == BaseType.FLOATING:
         start = np.hstack([start, np.zeros(6)])
-    box_const = robot_config.get_box_const()
 
-    # create equality constraint
-    target: Optional[Axis]
-    if use_pose_constraint:
-        target = Axis(axis_radius=0.01, axis_length=0.05)
-        target.translate([0.7, -0.6, 1.0])
-        goal_eq_const = PoseConstraint.from_skrobot_coords([target], efkin, pr2)
-    else:
-        target = None
-        goal = np.array([-0.78, 0.055, -1.37, -0.59, -0.494, -0.20, 1.87])
-        if base_type == BaseType.PLANER:
-            goal = np.hstack([goal, np.zeros(3)])
-        elif base_type == BaseType.FLOATING:
-            goal = np.hstack([goal, np.zeros(6)])
-        goal_eq_const = ConfigPointConst(goal)  # type: ignore[assignment]
+    # create goal equality constraint
+    target = Axis(axis_radius=0.01, axis_length=0.05)
+    target.translate([0.7, -0.6, 1.0])
+    goal_eq_const = PoseConstraint.from_skrobot_coords([target], efkin, pr2)
 
     # create inequality constraint
     obstacle = Box(extents=[0.5, 0.5, 1.2], with_sdf=True)
@@ -70,8 +56,13 @@ if __name__ == "__main__":
     global_ineq_const = IneqCompositeConst([collfree_const, selcolfree_const])
 
     # construct problem
-    problem = Problem(start, box_const, goal_eq_const, global_ineq_const, None)
+    box_const = robot_config.get_box_const()
+    motion_step_box = robot_config.get_default_motion_step_box()
+    problem = Problem(
+        start, box_const, goal_eq_const, global_ineq_const, None, motion_step_box_=motion_step_box
+    )
 
+    # solve problem by ompl
     ompl_config = OMPLSolverConfig(n_max_call=10000, algorithm=Algorithm.RRT, simplify=True)
     ompl_solver = OMPLSolver.init(ompl_config)
     ompl_solver.setup(problem)
@@ -79,8 +70,9 @@ if __name__ == "__main__":
     print(result.time_elapsed)
     assert result.traj is not None
 
-    n_wp = 40
+    # smooth by trajectory optimization (if enabled)
     if smooth_by_nlp:
+        n_wp = 40
         sqp_config = SQPBasedSolverConfig(n_wp=n_wp)
         nlp_solver = SQPBasedSolver.init(sqp_config)
         nlp_solver.setup(problem)
@@ -88,6 +80,7 @@ if __name__ == "__main__":
         print(result.time_elapsed)
         assert result.traj is not None
 
+    # visualization using skrobot
     def robot_updator(robot, q) -> None:
         set_robot_state(robot, robot_config._get_control_joint_names(), q, base_type=base_type)
 

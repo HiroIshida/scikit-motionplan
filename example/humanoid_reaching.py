@@ -4,8 +4,7 @@ import time
 import numpy as np
 from skrobot.coordinates import Coordinates
 from skrobot.model.primitives import Axis, Box
-from skrobot.utils.urdf import mesh_simplify_factor
-from skrobot.viewers import TrimeshSceneViewer
+from skrobot.viewers import PyrenderViewer
 from tinyfk import BaseType
 
 from skmp.constraint import CollFreeConst, IneqCompositeConst, PoseConstraint
@@ -15,7 +14,6 @@ from skmp.satisfy import SatisfactionConfig, satisfy_by_optimization_with_budget
 from skmp.solver.interface import Problem
 from skmp.solver.myrrt_solver import MyRRTConfig, MyRRTConnectSolver
 from skmp.solver.nlp_solver import SQPBasedSolver, SQPBasedSolverConfig
-from skmp.visualization.collision_visualizer import CollisionSphereVisualizationManager
 
 np.random.seed(5)
 
@@ -30,8 +28,9 @@ if __name__ == "__main__":
 
     box = Box([1.0, 3.0, 0.1], with_sdf=True)
     box.translate([0.8, 0.0, 1.1])
-    with mesh_simplify_factor(0.3):
-        jaxon = Jaxon()
+    print("loading robot model may take a while...")
+    jaxon = Jaxon()
+    print("finish loading")
     config = JaxonConfig()
 
     # determine initial coordinate
@@ -47,6 +46,7 @@ if __name__ == "__main__":
     ineq_const = IneqCompositeConst([com_const, col_const])
 
     # solve ik to determine start state (random)
+    print("determiningg q_init by solving IK")
     efkin = config.get_endeffector_kin()
     eq_const_start = PoseConstraint.from_skrobot_coords(start_coords_list, efkin, jaxon)
     bounds = config.get_box_const()
@@ -77,12 +77,11 @@ if __name__ == "__main__":
         eq_const_path_plan,
         motion_step_box_=config.get_motion_step_box(),
     )
-    print("start solving rrt (with ik)")
+    print("start solving IK and rrt to plan path from q_init to goal const")
     ts = time.time()
-
     rrt_conf = MyRRTConfig(10000, satisfaction_conf=SatisfactionConfig(n_max_eval=50))
     rrt = MyRRTConnectSolver.init(rrt_conf)
-    rrt_parallel = rrt.as_parallel_solver(12)
+    rrt_parallel = rrt.as_parallel_solver(8)
     rrt_parallel.setup(problem)
     result = rrt_parallel.solve()
     assert result.traj is not None
@@ -109,14 +108,11 @@ if __name__ == "__main__":
         result = smooth_result  # type: ignore
 
     if with_visualize:
-        vis = TrimeshSceneViewer()
+        vis = PyrenderViewer()
         vis.add(box)
         vis.add(jaxon)
-        vis.add(com_box)
         ax = Axis.from_coords(goal_rarm_co)
         vis.add(ax)
-        colvis = CollisionSphereVisualizationManager(colkin, vis)
-        colvis.update(jaxon)
 
         vis.show()
         time.sleep(4)
@@ -125,7 +121,5 @@ if __name__ == "__main__":
             set_robot_state(
                 jaxon, config._get_control_joint_names(), q, base_type=BaseType.FLOATING
             )
-            colvis.update(jaxon)  # type: ignore
-            vis.redraw()
-            time.sleep(1.0)
+            time.sleep(0.5)
         time.sleep(10)
