@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from enum import Enum
 from itertools import product
 from pathlib import Path
-from typing import Dict, List, Literal
+from typing import Dict, List, Literal, Optional, Tuple
 
 import numpy as np
 from skrobot.models import PR2
@@ -199,13 +199,16 @@ class PR2Config:
             assert self.base_type == BaseType.FIXED
         return np.array(motion_step_box)
 
-    def get_box_const(self) -> BoxConst:
+    def get_box_const(self, base_bound: Optional[Tuple[np.ndarray, np.ndarray]] = None) -> BoxConst:
         if self.base_type == BaseType.PLANER:
-            base_bounds = np.array([-1.0, -2.0, -1.0]), np.array([2.0, 2.0, 1.0])
+            if base_bound is None:
+                base_bound = np.array([-1.0, -2.0, -1.0]), np.array([2.0, 2.0, 1.0])
         elif self.base_type == BaseType.FLOATING:
-            base_bounds = -np.ones(6), np.ones(6)
+            if base_bound is None:
+                base_bound = -np.ones(6), np.ones(6)
         else:
-            base_bounds = None
+            assert self.base_type == BaseType.FIXED
+            assert base_bound is None
 
         pr2 = PR2()
         lb_list = []
@@ -221,8 +224,8 @@ class PR2Config:
             lb_list.append(min_angle)
             ub_list.append(max_angle)
 
-        if base_bounds is not None:
-            lb, ub = base_bounds
+        if base_bound is not None:
+            lb, ub = base_bound
             n_dof_base = len(lb)
             assert n_dof_base in (3, 6)
             for i in range(n_dof_base):
