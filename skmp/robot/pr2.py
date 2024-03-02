@@ -171,6 +171,34 @@ class PR2Config:
         )
         return kinmap
 
+    def get_default_motion_step_box(self) -> np.ndarray:
+        table = {
+            "r_shoulder_pan_joint": 0.05,
+            "r_shoulder_lift_joint": 0.05,
+            "r_upper_arm_roll_joint": 0.1,
+            "r_elbow_flex_joint": 0.1,
+            "r_forearm_roll_joint": 0.2,
+            "r_wrist_flex_joint": 0.2,
+            "r_wrist_roll_joint": 0.2,
+            "l_shoulder_pan_joint": 0.05,
+            "l_shoulder_lift_joint": 0.05,
+            "l_upper_arm_roll_joint": 0.1,
+            "l_elbow_flex_joint": 0.1,
+            "l_forearm_roll_joint": 0.2,
+            "l_wrist_flex_joint": 0.2,
+            "l_wrist_roll_joint": 0.2,
+            "torso_lift_joint": 0.05,  # 5cm
+        }
+        joint_names = self.get_control_joint_names()
+        motion_step_box = [table[joint_name] for joint_name in joint_names]
+        if self.base_type == BaseType.FLOATING:
+            motion_step_box += [0.05, 0.05, 0.05, 0.05, 0.05, 0.05]
+        elif self.base_type == BaseType.PLANER:
+            motion_step_box += [0.05, 0.05, 0.05]
+        else:
+            assert self.base_type == BaseType.FIXED
+        return np.array(motion_step_box)
+
     def get_box_const(self) -> BoxConst:
         if self.base_type == BaseType.PLANER:
             base_bounds = np.array([-1.0, -2.0, -1.0]), np.array([2.0, 2.0, 1.0])
