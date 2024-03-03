@@ -210,7 +210,9 @@ class PR2Config:
         else:
             assert self.base_type == BaseType.FIXED
             assert base_bound is None
-        lb_list, ub_list = self._get_box_const_without_base(tuple(self.get_control_joint_names()))
+        lb_list_, ub_list_ = self._get_box_const_without_base(tuple(self.get_control_joint_names()))
+        lb_list = copy.deepcopy(lb_list_)
+        ub_list = copy.deepcopy(ub_list_)
         if base_bound is not None:
             lb, ub = base_bound
             n_dof_base = len(lb)
