@@ -289,8 +289,9 @@ class NearestNeigborSolver(AbstractSolver[ConfigT, ResultT, np.ndarray]):
             for guiding_traj in trajs_without_none:
                 if guiding_traj is not None:
                     result = self.internal_solver._solve(guiding_traj)
-                    self.previous_false_positive = False
-                    return result
+                    if result.traj is not None:
+                        self.previous_false_positive = False
+                        return result
             self.previous_false_positive = True
             return self.get_result_type().abnormal()
         else:
