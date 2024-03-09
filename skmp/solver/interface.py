@@ -227,7 +227,7 @@ class NearestNeigborSolver(AbstractSolver[ConfigT, ResultT, np.ndarray]):
     vec_descs: np.ndarray
     trajectories: List[Optional[Trajectory]]  # None means no trajectory is available
     knn: int
-    infeasibility_threshold: float
+    infeasibility_threshold: int
     previous_est_positive: Optional[bool] = None
     previous_false_positive: Optional[bool] = None
 
@@ -238,7 +238,7 @@ class NearestNeigborSolver(AbstractSolver[ConfigT, ResultT, np.ndarray]):
         config: ConfigT,  # for internal solver
         dataset: List[Tuple[np.ndarray, Optional[Trajectory]]],
         knn: int = 1,
-        infeasibility_threshold: Optional[float] = None,
+        infeasibility_threshold: Optional[int] = None,
     ) -> "NearestNeigborSolver[ConfigT, ResultT]":
         assert knn > 0
 
