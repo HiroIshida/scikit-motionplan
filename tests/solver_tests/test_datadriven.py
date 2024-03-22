@@ -23,7 +23,7 @@ def test_nearest_neighbor_solver():
 
     dataset = list(zip(descs, trajs))
     for knn in range(1, 6):
-        nn_solver = NearestNeigborSolver.init(OMPLSolver, conf, dataset, knn)  # type: ignore
+        nn_solver = NearestNeigborSolver.init(OMPLSolver, conf, dataset, knn, conservative=True)  # type: ignore
 
         if knn == 1:
             nn_solver.infeasibility_threshold == 1
