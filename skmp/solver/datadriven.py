@@ -79,6 +79,9 @@ class ChunkedLibrary(Generic[DataT]):
         return cls(chunk_list, edit_flags, file_path, n_per_chunk, td_path)
 
     def __getitem__(self, idx: int) -> DataT:
+        if idx < 0:
+            n_data = len(self)
+            idx += n_data
         chunk_idx, idx_in_chunk = divmod(idx, self.n_per_chunk)
         if self.chunk_list[chunk_idx] is None:
             file_path = self._td_path / f"chunk_{chunk_idx}.pkl"
