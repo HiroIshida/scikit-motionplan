@@ -5,10 +5,11 @@ import subprocess
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Generic, List, Optional, Tuple, Type, TypeVar, Union, Sequence
+from typing import Generic, List, Optional, Tuple, Type, TypeVar, Union
 
 import numpy as np
 import tqdm
+from sklearn.neighbors import BallTree
 
 from skmp.solver.interface import (
     AbstractScratchSolver,
@@ -146,7 +147,7 @@ class ChunkedLibrary(Generic[DataT]):
 class NearestNeigborSolver(AbstractSolver[ConfigT, ResultT, np.ndarray]):
     config: ConfigT
     internal_solver: AbstractScratchSolver[ConfigT, ResultT]
-    vec_descs: np.ndarray
+    tree: BallTree
     trajectories: List[Optional[Trajectory]]  # None means no trajectory is available
     knn: int
     infeasibility_threshold: int
@@ -162,11 +163,14 @@ class NearestNeigborSolver(AbstractSolver[ConfigT, ResultT, np.ndarray]):
         solver_type: Type[AbstractScratchSolver[ConfigT, ResultT]],
         config: ConfigT,
         knn: int = 1,
+        leaf_size: int = 5,
         infeasibility_threshold: Optional[int] = None,
         conservative: bool = False,
     ) -> "NearestNeigborSolver[ConfigT, ResultT]":
         dataset = [cfdataset[i][1:] for i in range(n_data_use)]
-        return cls.init(solver_type, config, dataset, knn, infeasibility_threshold, conservative)
+        return cls.init(
+            solver_type, config, dataset, knn, leaf_size, infeasibility_threshold, conservative
+        )
 
     @classmethod
     def init(
@@ -175,6 +179,7 @@ class NearestNeigborSolver(AbstractSolver[ConfigT, ResultT, np.ndarray]):
         config: ConfigT,  # for internal solver
         dataset: List[Tuple[np.ndarray, Optional[Trajectory]]],
         knn: int = 1,
+        leaf_size: int = 5,
         infeasibility_threshold: Optional[int] = None,
         conservative: bool = False,
     ) -> "NearestNeigborSolver[ConfigT, ResultT]":
@@ -183,6 +188,7 @@ class NearestNeigborSolver(AbstractSolver[ConfigT, ResultT, np.ndarray]):
         tmp, trajectories = zip(*dataset)
         vec_descs = np.array(tmp)
         internal_solver = solver_type.init(config)
+        tree = BallTree(vec_descs, leaf_size=leaf_size)
 
         if infeasibility_threshold is None:
             # do leave-one-out cross validation
@@ -195,8 +201,9 @@ class NearestNeigborSolver(AbstractSolver[ConfigT, ResultT, np.ndarray]):
             for threshold in thresholds:
                 error = 0
                 for i, (desc, traj) in enumerate(dataset):
-                    sqdists = np.sum((vec_descs - desc) ** 2, axis=1)
-                    k_nearests = np.argsort(sqdists)[1 : knn + 1]  # +1 because itself is included
+                    k_nearests = tree.query(np.array([desc]), k=knn + 1, return_distance=False)[0][
+                        1:
+                    ]
                     none_count_in_knn = sum(1 for idx in k_nearests if trajectories[idx] is None)
                     seems_infeasible = none_count_in_knn >= threshold
                     actually_infeasible = traj is None
@@ -208,7 +215,7 @@ class NearestNeigborSolver(AbstractSolver[ConfigT, ResultT, np.ndarray]):
         return cls(
             config,
             internal_solver,
-            vec_descs,
+            tree,
             list(trajectories),
             knn,
             infeasibility_threshold,
@@ -216,8 +223,9 @@ class NearestNeigborSolver(AbstractSolver[ConfigT, ResultT, np.ndarray]):
         )
 
     def _knn_trajectories(self, query_desc: np.ndarray) -> List[Optional[Trajectory]]:
-        sqdists = np.sum((self.vec_descs - query_desc) ** 2, axis=1)
-        k_nearests = np.argsort(sqdists)[: self.knn]
+        # sqdists = np.sum((self.vec_descs - query_desc) ** 2, axis=1)
+        # k_nearests = np.argsort(sqdists)[: self.knn]
+        k_nearests = self.tree.query(np.array([query_desc]), k=self.knn, return_distance=False)[0]
         return [self.trajectories[i] for i in k_nearests]
 
     def _solve(self, query_desc: Optional[np.ndarray] = None) -> ResultT:

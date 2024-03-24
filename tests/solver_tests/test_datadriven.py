@@ -29,16 +29,16 @@ def test_nearest_neighbor_solver():
             nn_solver.infeasibility_threshold == 1
 
         nn_solver.setup(problem)
-        ret = nn_solver.solve(np.zeros((1, 1)))
+        ret = nn_solver.solve(np.zeros((1,)))
         assert ret.traj is not None
         assert nn_solver.previous_est_positive
         assert not nn_solver.previous_false_positive
 
         # shold detec the problem as infeasible...
         nn_solver.setup(problem)
-        ret = nn_solver.solve(np.ones((1, 1)))
+        ret = nn_solver.solve(np.ones((1,)))
         assert ret.traj is None
-        ret = nn_solver.solve(-np.ones((1, 1)))
+        ret = nn_solver.solve(-np.ones((1,)))
         assert ret.traj is None
         assert not nn_solver.previous_est_positive
         assert nn_solver.previous_false_positive is None
