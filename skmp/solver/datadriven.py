@@ -152,6 +152,7 @@ class NearestNeigborSolver(AbstractSolver[ConfigT, ResultT, np.ndarray]):
     knn: int
     infeasibility_threshold: int
     conservative: bool
+    axes: Optional[np.ndarray]
     previous_est_positive: Optional[bool] = None
     previous_false_positive: Optional[bool] = None
 
@@ -166,10 +167,18 @@ class NearestNeigborSolver(AbstractSolver[ConfigT, ResultT, np.ndarray]):
         leaf_size: int = 5,
         infeasibility_threshold: Optional[int] = None,
         conservative: bool = False,
+        axes: Optional[np.ndarray] = None,
     ) -> "NearestNeigborSolver[ConfigT, ResultT]":
         dataset = [cfdataset[i][1:] for i in range(n_data_use)]
         return cls.init(
-            solver_type, config, dataset, knn, leaf_size, infeasibility_threshold, conservative
+            solver_type,
+            config,
+            dataset,
+            knn,
+            leaf_size,
+            infeasibility_threshold,
+            conservative,
+            axes,
         )
 
     @classmethod
@@ -182,11 +191,14 @@ class NearestNeigborSolver(AbstractSolver[ConfigT, ResultT, np.ndarray]):
         leaf_size: int = 5,
         infeasibility_threshold: Optional[int] = None,
         conservative: bool = False,
+        axes: Optional[np.ndarray] = None,
     ) -> "NearestNeigborSolver[ConfigT, ResultT]":
         assert knn > 0
 
         tmp, trajectories = zip(*dataset)
         vec_descs = np.array(tmp)
+        if axes is not None:
+            vec_descs = vec_descs[:, axes]
         internal_solver = solver_type.init(config)
         tree = BallTree(vec_descs, leaf_size=leaf_size)
 
@@ -220,11 +232,12 @@ class NearestNeigborSolver(AbstractSolver[ConfigT, ResultT, np.ndarray]):
             knn,
             infeasibility_threshold,
             conservative,
+            axes,
         )
 
     def _knn_trajectories(self, query_desc: np.ndarray) -> List[Optional[Trajectory]]:
-        # sqdists = np.sum((self.vec_descs - query_desc) ** 2, axis=1)
-        # k_nearests = np.argsort(sqdists)[: self.knn]
+        if self.axes is not None:
+            query_desc = query_desc[self.axes]
         k_nearests = self.tree.query(np.array([query_desc]), k=self.knn, return_distance=False)[0]
         return [self.trajectories[i] for i in k_nearests]
 
