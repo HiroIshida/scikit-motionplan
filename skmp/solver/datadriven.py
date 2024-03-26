@@ -196,9 +196,17 @@ class NearestNeigborSolver(AbstractSolver[ConfigT, ResultT, np.ndarray]):
         assert knn > 0
 
         tmp, trajectories = zip(*dataset)
+
         vec_descs = np.array(tmp)
         if axes is not None:
             vec_descs = vec_descs[:, axes]
+
+        if not conservative:
+            # extract the only feasible data
+            indices = np.array([i for i, traj in enumerate(trajectories) if traj is not None])
+            trajectories = [traj for traj in trajectories if traj is not None]
+            vec_descs = vec_descs[indices]
+
         internal_solver = solver_type.init(config)
         tree = BallTree(vec_descs, leaf_size=leaf_size)
 
@@ -251,7 +259,11 @@ class NearestNeigborSolver(AbstractSolver[ConfigT, ResultT, np.ndarray]):
             if self.conservative:
                 self.previous_est_positive = not seems_infeasible
 
-            if self.conservative and seems_infeasible:
+            if not self.conservative:
+                # as the database is constructed with only feasible data
+                assert not seems_infeasible
+
+            if seems_infeasible:
                 return self.get_result_type().abnormal()
 
             for guiding_traj in trajs_without_none:
