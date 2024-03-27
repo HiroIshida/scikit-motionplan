@@ -11,6 +11,7 @@ from typing import (
     Generic,
     Optional,
     Protocol,
+    Tuple,
     Type,
     TypeVar,
     Union,
@@ -199,15 +200,17 @@ class StaticSolutionVisualizer(SolutionVisualizerBase[SceneWrapper]):
     def viewer_type(cls) -> Type[SceneWrapper]:
         return SceneWrapper
 
-    def save_image(self, path: Union[Path, str]) -> None:
+    def save_image(self, path: Union[Path, str], resol: Tuple[int, int] = (640, 480)) -> None:
         if isinstance(path, str):
             path = Path(path)
 
-        png = self.viewer.save_image(resolution=[640, 480], visible=True, flags=self.flags)
+        png = self.viewer.save_image(resolution=resol, visible=True, flags=self.flags)
         with path.open(mode="wb") as f:
             f.write(png)
 
-    def save_trajectory_gif(self, trajectory: Trajectory, path: Union[Path, str]) -> None:
+    def save_trajectory_gif(
+        self, trajectory: Trajectory, path: Union[Path, str], resol: Tuple[int, int] = (640, 480)
+    ) -> None:
 
         with tempfile.TemporaryDirectory() as td:
             td_path = Path(td)
@@ -220,7 +223,7 @@ class StaticSolutionVisualizer(SolutionVisualizerBase[SceneWrapper]):
                 time.sleep(0.5)
                 file_path = td_path / "{}.png".format(i)
                 file_path_list.append(file_path)
-                self.save_image(file_path)
+                self.save_image(file_path, resol)
 
             images = []
             for file_path in file_path_list:
