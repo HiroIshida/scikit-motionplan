@@ -172,6 +172,9 @@ class SQPBasedSolver(AbstractScratchSolver[SQPBasedSolverConfig, SQPBasedSolverR
         else:
             assert False
 
+        traj_ineq_const.determine_sparse_pattern()
+        traj_eq_const.determine_sparse_pattern()
+
         ctol_ineq = config.osqpsqp_config.ctol_ineq
 
         def ineq_tighten(x):
