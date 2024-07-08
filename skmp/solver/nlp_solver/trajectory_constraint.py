@@ -26,7 +26,9 @@ from skmp.constraint import (
 
 
 class GlobalConstraintProtocol(Protocol):
-    def evaluate(self, __qs: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def evaluate(
+        self, __qs: np.ndarray, __determine_sparse_pattern: bool
+    ) -> Tuple[np.ndarray, np.ndarray]:
         ...
 
 
@@ -35,7 +37,7 @@ class TrajectoryConstraint(ABC, Mapping, Generic[ConstraintT]):
     n_dof: int
     n_wp: int
     local_constraint_table: MutableMapping[int, ConstraintT]  # constraint on sigle waypoint
-    global_constraint_table: List[GlobalConstraintProtocol]
+    global_constraint_list: List[GlobalConstraintProtocol]
 
     def add(self, idx: int, constraint: ConstraintT, force: bool = False) -> None:
         assert idx > -1
@@ -130,9 +132,9 @@ class TrajectoryConstraint(ABC, Mapping, Generic[ConstraintT]):
             head += dim_codomain
 
         # then evaluate global constraints
-        if len(self.global_constraint_table) > 0:
+        if len(self.global_constraint_list) > 0:
             values, jacobis = zip(
-                *[cons.evaluate(traj_vector) for cons in self.global_constraint_table]
+                *[cons.evaluate(traj_vector, False) for cons in self.global_constraint_list]
             )
             global_value_total = np.hstack(values)
             global_jacobi_total = np.vstack(jacobis)
@@ -219,7 +221,9 @@ class MotionStepInequalityConstraint:
     def dim_codomain(self):
         return self.n_dof * (self.n_wp - 1)
 
-    def evaluate(self, traj_vector: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def evaluate(
+        self, traj_vector: np.ndarray, determine_sparse_pattern: bool
+    ) -> Tuple[np.ndarray, np.ndarray]:
         # original constratint -W < AX < W will be split into the two
         # left: 0 < AX + W
         # right: 0 < -AX + W
@@ -235,4 +239,10 @@ class MotionStepInequalityConstraint:
 
         eval_concat = np.hstack((left_eval, right_eval))
         jac_concat = np.vstack((left_jac, right_jac))
-        return eval_concat, jac_concat
+        if determine_sparse_pattern:
+            # all nonzero element of A is 1
+            jac_dummy = np.zeros_like(jac_concat)
+            jac_dummy[jac_dummy != 0] = 1
+            return eval_concat, jac_dummy
+        else:
+            return eval_concat, jac_concat

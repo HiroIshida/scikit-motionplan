@@ -165,7 +165,7 @@ class SQPBasedSolver(AbstractScratchSolver[SQPBasedSolverConfig, SQPBasedSolverR
         msconst = MotionStepInequalityConstraint(n_dof, n_wp, motion_step_box)
 
         if config.motion_step_satisfaction == "explicit":
-            traj_ineq_const.global_constraint_table.append(msconst)
+            traj_ineq_const.global_constraint_list.append(msconst)
             post_motion_step_validator = None
         elif config.motion_step_satisfaction in ["post", "debug_ignore"]:
             post_motion_step_validator = msconst
@@ -220,7 +220,7 @@ class SQPBasedSolver(AbstractScratchSolver[SQPBasedSolverConfig, SQPBasedSolverR
 
         success = raw_result.success
         if success and self.post_motion_step_validator is not None:
-            vals, _ = self.post_motion_step_validator.evaluate(raw_result.x)
+            vals, _ = self.post_motion_step_validator.evaluate(raw_result.x, False)
             if np.any(vals < 0):
                 if self.config.motion_step_satisfaction == "post":
                     success = False
