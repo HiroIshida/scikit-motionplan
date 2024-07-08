@@ -44,10 +44,7 @@ class Problem:
         if self.skip_init_feasibility_check:
             return True, ""
         msg_list = []
-        if not np.all(self.start < self.box_const.ub):
-            msg_list.append("q_start doesn't satisfy BoxConst upper")
-        if not np.all(self.start > self.box_const.lb):
-            msg_list.append("q_start doesn't satisfy BoxConst lower")
+        self.box_const.write_violation_info(self.start, msg_list)
         if self.global_ineq_const is not None:
             if not self.global_ineq_const.is_valid(self.start):
                 if isinstance(self.global_ineq_const, IneqCompositeConst):
@@ -57,7 +54,7 @@ class Problem:
                 else:
                     msg_list.append("q_start doesn't satisfy {}".format(self.global_ineq_const))
         is_init_feasible = len(msg_list) == 0
-        msg_concat = ", ".join(msg_list)
+        msg_concat = "\n".join(msg_list)
         return is_init_feasible, msg_concat
 
     @property

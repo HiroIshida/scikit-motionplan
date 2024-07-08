@@ -186,12 +186,28 @@ class EqCompositeConst(AbstractEqConst, _CompositeConst[AbstractEqConst]):
 class BoxConst(AbstractIneqConst):
     lb: np.ndarray
     ub: np.ndarray
+    names: Optional[List[str]]
 
-    def __init__(self, lb: np.ndarray, ub: np.ndarray) -> None:
+    def __init__(self, lb: np.ndarray, ub: np.ndarray, names: Optional[List[str]] = None) -> None:
         self.lb = lb
         self.ub = ub
+        if names is None:
+            names = ["<unnamed>" for _ in range(len(lb))]
+
+        assert len(names) == len(lb)
+        self.names = names
         self.reflect_skrobot_model(None)
         self.assign_id_value()
+
+    def write_violation_info(self, q: np.ndarray, msgs: List[str]):
+        lb_violation_indices = np.where(q < self.lb)[0]
+        ub_violation_indices = np.where(q > self.ub)[0]
+        if len(lb_violation_indices) == 0 and len(ub_violation_indices) == 0:
+            return
+        for i, name in zip(lb_violation_indices, self.names):
+            msgs.append(f"lb violation: {name} {q[i]} < {self.lb[i]}")
+        for i, name in zip(ub_violation_indices, self.names):
+            msgs.append(f"ub violation: {name} {q[i]} > {self.ub[i]}")
 
     @classmethod
     def from_urdf(
@@ -204,6 +220,7 @@ class BoxConst(AbstractIneqConst):
         urdf = load_urdf_model_using_cache(urdf_path.expanduser())
         b_min = []
         b_max = []
+        names = joint_names
         for joint_name in joint_names:
             limit: JointLimit = urdf.joint_map[joint_name].limit
 
@@ -218,6 +235,7 @@ class BoxConst(AbstractIneqConst):
                 b_max.append(limit.upper)
 
         if base_bounds is not None:
+            names += ["x", "y", "z", "roll", "pitch", "yaw"]
             lb, ub = base_bounds
             n_dof_base = len(lb)
             assert n_dof_base in (3, 6)
@@ -225,7 +243,7 @@ class BoxConst(AbstractIneqConst):
                 b_min.append(lb[i])
                 b_max.append(ub[i])
 
-        return cls(np.array(b_min), np.array(b_max))
+        return cls(np.array(b_min), np.array(b_max), names)
 
     def _evaluate(self, qs: np.ndarray, with_jacobian: bool) -> Tuple[np.ndarray, np.ndarray]:
         n_point, dim = qs.shape
