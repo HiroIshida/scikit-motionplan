@@ -65,10 +65,9 @@ def test_sqp_based_solver():
     init_traj = ompl_solver.solve().traj
     assert init_traj is not None
 
-    config1 = SQPBasedSolverConfig(n_wp=30, motion_step_satisfaction="implicit")
-    config2 = SQPBasedSolverConfig(n_wp=100, motion_step_satisfaction="explicit")
-    config3 = SQPBasedSolverConfig(n_wp=100, motion_step_satisfaction="post")
-    for config in [config1, config2, config3]:
+    config1 = SQPBasedSolverConfig(n_wp=100, motion_step_satisfaction="explicit")
+    config2 = SQPBasedSolverConfig(n_wp=100, motion_step_satisfaction="post")
+    for config in [config1, config2]:
         solver = SQPBasedSolver.init(config)
         solver.setup(problem)
         result = solver.solve(init_traj.resample(config.n_wp))

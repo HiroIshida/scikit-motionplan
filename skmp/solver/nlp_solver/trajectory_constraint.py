@@ -15,7 +15,6 @@ from typing import (
 )
 
 import numpy as np
-from scipy.linalg import block_diag
 
 from skmp.constraint import (
     AbstractEqConst,
@@ -24,7 +23,6 @@ from skmp.constraint import (
     EqCompositeConst,
     IneqCompositeConst,
 )
-from skmp.solver.motion_step_box import interpolate_fractions
 
 
 class GlobalConstraintProtocol(Protocol):
@@ -157,8 +155,6 @@ class TrajectoryEqualityConstraint(TrajectoryConstraint[AbstractEqConst]):
 
 @dataclass
 class TrajectoryInequalityConstraint(TrajectoryConstraint[AbstractIneqConst]):
-    motion_step_box: Optional[np.ndarray] = None
-
     def __post_init__(self):
         assert self.is_homogeneous()  # temporary limitation
 
@@ -173,7 +169,6 @@ class TrajectoryInequalityConstraint(TrajectoryConstraint[AbstractIneqConst]):
         n_dof: int,
         local_const: Optional[AbstractIneqConst] = None,
         global_consts: Optional[List[GlobalConstraintProtocol]] = None,
-        motion_step_box: Optional[np.ndarray] = None,
     ) -> "TrajectoryInequalityConstraint":
         table: Dict[int, AbstractIneqConst] = {}
         if local_const is not None:
@@ -182,63 +177,10 @@ class TrajectoryInequalityConstraint(TrajectoryConstraint[AbstractIneqConst]):
 
         if global_consts is None:
             global_consts = []
-        return cls(n_dof, n_wp, table, global_consts, motion_step_box)
-
-    def _get_linear_map_to_interp_points(self, traj_vector):
-        assert self.motion_step_box is not None
-        traj = traj_vector.reshape(-1, self.n_dof)
-        block_list = []
-        for i in range(len(traj) - 1):
-            include_q1 = i == 0
-            fractions = interpolate_fractions(
-                self.motion_step_box, traj[i], traj[i + 1], include_q1
-            )
-            fractions_np = np.array(fractions)
-            # like, (1 - t) * q1 + t * q2
-            block = np.vstack((1 - fractions_np, fractions_np)).T
-            block_list.append(block)
-
-        # create block matrix
-        n1 = sum(b.shape[0] for b in block_list)
-        block_diaged = np.zeros((n1, self.n_wp))
-        head = 0
-        for i, block in enumerate(block_list):
-            n1_local, n2_local = block.shape
-            block_diaged[head : head + n1_local, i : i + n2_local] = block
-            head += n1_local
-        block_diaged_expaneded = np.kron(block_diaged, np.eye(self.n_dof))
-        return block_diaged_expaneded
-
-    def _get_eval_points(self, traj_vector: np.ndarray) -> List[np.ndarray]:
-        assert self.motion_step_box is not None
-        traj = traj_vector.reshape(-1, self.n_dof)
-        points = []
-        for i in range(len(traj) - 1):
-            q1, q2 = traj[i], traj[i + 1]
-            include_q1 = i == 0
-            fractions = np.array(interpolate_fractions(self.motion_step_box, q1, q2, include_q1))
-            Q = q1[:, None] * (1 - fractions) + q2[:, None] * fractions
-            points.extend(list(Q.T))
-        return points
+        return cls(n_dof, n_wp, table, global_consts)
 
     def evaluate(self, traj_vector: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-        # if motion_step_box is set, this interpolate between waypoints and check
-        # ineq const for the interped points. So, the dim_codomain is dynamically hanges
-        # depending on traj_vector.
-        # Note that currently supports only homogenious case as __post_init__ checks
-
-        if self.motion_step_box is None:
-            return super().evaluate(traj_vector)
-        else:
-            cons = self.local_constraint_table[0]  # NOTE: assume homogenious
-            eval_points = self._get_eval_points(traj_vector)
-            rets_zipped = [cons.evaluate_single(q, True) for q in eval_points]
-            values, jacobis = zip(*rets_zipped)
-            value = np.hstack(values)
-
-            linear_map = self._get_linear_map_to_interp_points(traj_vector)
-            jacobi = block_diag(*jacobis).dot(linear_map)
-            return value, jacobi
+        return super().evaluate(traj_vector)
 
 
 @dataclass

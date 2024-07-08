@@ -36,14 +36,3 @@ def test_TrajectoryInequalityConstraint():
     points = np.array([[-1.0, 0.9], [-0.5, 0.9], [0.5, 0.9], [1.0, 0.9]])
     f, _ = ineq_const.evaluate(points.flatten())
     np.testing.assert_almost_equal((f > 0), np.array([True, True, True, True]))
-
-    # test with motion_step_box enabled
-    y = 1.0 - 1e-4
-    ineq_const.motion_step_box = np.ones(2) * 0.1
-    points = np.array([[-1.0, y], [-0.5, y], [0.55, y], [1.0, y]])
-    f, _ = ineq_const.evaluate(points.flatten())
-    n_eval_point = 5 + 11 + 6
-    assert len(f) == n_eval_point
-
-    # because [0.0, y] will be evaluated we have
-    assert sum(f < 0) == 1
