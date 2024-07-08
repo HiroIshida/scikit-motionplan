@@ -15,6 +15,7 @@ from typing import (
 )
 
 import numpy as np
+from scipy.sparse import csc_matrix
 
 from skmp.constraint import (
     AbstractEqConst,
@@ -23,6 +24,27 @@ from skmp.constraint import (
     EqCompositeConst,
     IneqCompositeConst,
 )
+
+
+class CachedCscMatrix:
+    csc: csc_matrix
+    row_indices: np.ndarray
+    col_indices: np.ndarray
+
+    def __init__(self, dense: np.ndarray):
+        # dense to boolean
+        dense.astype(int)
+
+        self.csc = csc_matrix(dense)
+        row_indices, col_indices = self.csc.nonzero()
+        self.row_indices = row_indices
+        self.col_indices = col_indices
+
+    def update(self, dense: np.ndarray):
+        self.csc = csc_matrix(
+            (dense[self.row_indices, self.col_indices], (self.row_indices, self.col_indices)),
+            shape=dense.shape,
+        )
 
 
 class GlobalConstraintProtocol(Protocol):
@@ -38,6 +60,12 @@ class TrajectoryConstraint(ABC, Mapping, Generic[ConstraintT]):
     n_wp: int
     local_constraint_table: MutableMapping[int, ConstraintT]  # constraint on sigle waypoint
     global_constraint_list: List[GlobalConstraintProtocol]
+    cached_csc_matrix: Optional[CachedCscMatrix] = None
+
+    def determine_sparse_pattern(self) -> None:
+        assert self.cached_csc_matrix is None, "sparse pattern is already cached"
+        traj_vector = np.zeros(self.n_dof * self.n_wp)
+        self.evaluate(traj_vector, determine_sparse_pattern=True)
 
     def add(self, idx: int, constraint: ConstraintT, force: bool = False) -> None:
         assert idx > -1
@@ -97,7 +125,12 @@ class TrajectoryConstraint(ABC, Mapping, Generic[ConstraintT]):
     def __len__(self) -> int:
         return len(self.local_constraint_table)
 
-    def evaluate(self, traj_vector: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def evaluate(
+        self, traj_vector: np.ndarray, determine_sparse_pattern: bool = False
+    ) -> Tuple[np.ndarray, csc_matrix]:
+        if determine_sparse_pattern:
+            assert self.cached_csc_matrix is None, "sparse pattern is already cached"
+
         # first evaluate local constraints
         traj = traj_vector.reshape(-1, self.n_dof)
 
@@ -128,13 +161,19 @@ class TrajectoryConstraint(ABC, Mapping, Generic[ConstraintT]):
             idx_end = (i + 1) * self.n_dof
             jacobi = jacobi_dict[i]
             dim_codomain = jacobi.shape[0]
-            local_jacobi_total[head : head + dim_codomain, idx_start:idx_end] = jacobi
+            if determine_sparse_pattern:
+                local_jacobi_total[head : head + dim_codomain, idx_start:idx_end] = 1.0
+            else:
+                local_jacobi_total[head : head + dim_codomain, idx_start:idx_end] = jacobi
             head += dim_codomain
 
         # then evaluate global constraints
         if len(self.global_constraint_list) > 0:
             values, jacobis = zip(
-                *[cons.evaluate(traj_vector, False) for cons in self.global_constraint_list]
+                *[
+                    cons.evaluate(traj_vector, determine_sparse_pattern)
+                    for cons in self.global_constraint_list
+                ]
             )
             global_value_total = np.hstack(values)
             global_jacobi_total = np.vstack(jacobis)
@@ -145,7 +184,15 @@ class TrajectoryConstraint(ABC, Mapping, Generic[ConstraintT]):
         value_total = np.hstack([local_value_total, global_value_total])
         jacobi_total = np.vstack([local_jacobi_total, global_jacobi_total])
 
-        return value_total, jacobi_total
+        if determine_sparse_pattern:
+            self.cached_csc_matrix = CachedCscMatrix(jacobi_total)
+        else:
+            if self.cached_csc_matrix is None:
+                raise ValueError(
+                    "sparse pattern is not cached, please call with determine_sparse_pattern=True"
+                )
+            self.cached_csc_matrix.update(jacobi_total)
+        return value_total, self.cached_csc_matrix.csc
 
 
 @dataclass
@@ -180,9 +227,6 @@ class TrajectoryInequalityConstraint(TrajectoryConstraint[AbstractIneqConst]):
         if global_consts is None:
             global_consts = []
         return cls(n_dof, n_wp, table, global_consts)
-
-    def evaluate(self, traj_vector: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-        return super().evaluate(traj_vector)
 
 
 @dataclass
@@ -240,9 +284,8 @@ class MotionStepInequalityConstraint:
         eval_concat = np.hstack((left_eval, right_eval))
         jac_concat = np.vstack((left_jac, right_jac))
         if determine_sparse_pattern:
-            # all nonzero element of A is 1
-            jac_dummy = np.zeros_like(jac_concat)
-            jac_dummy[jac_dummy != 0] = 1
+            jac_dummy = np.zeros(jac_concat.shape)
+            jac_dummy[jac_concat != 0] = 1.0
             return eval_concat, jac_dummy
         else:
             return eval_concat, jac_concat
