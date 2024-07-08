@@ -1,4 +1,5 @@
 import argparse
+import pickle
 import time
 
 import numpy as np
@@ -19,9 +20,11 @@ np.random.seed(5)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument("--cached", action="store_true", help="use cached rrt solution")
     parser.add_argument("--visualize", action="store_true", help="visualize")
     args = parser.parse_args()
     with_visualize = args.visualize
+    use_cached: bool = args.cached
 
     com_box = Box([0.25, 0.5, 5.0], with_sdf=True)
     com_box.visual_mesh.visual.face_colors = [255, 0, 100, 100]
@@ -41,7 +44,7 @@ if __name__ == "__main__":
         Coordinates([0.7, +0.2, 1.5], rot=[0, -0.5 * np.pi, 0]),
     ]
     colkin = config.get_collision_kin()
-    col_const = CollFreeConst(colkin, box.sdf, jaxon, only_closest_feature=False)
+    col_const = CollFreeConst(colkin, box.sdf, jaxon, only_closest_feature=True)
     com_const = config.get_com_stability_const(jaxon, com_box)
     ineq_const = IneqCompositeConst([com_const, col_const])
 
@@ -77,15 +80,24 @@ if __name__ == "__main__":
         eq_const_path_plan,
         motion_step_box_=config.get_motion_step_box(),
     )
-    print("start solving IK and rrt to plan path from q_init to goal const")
-    ts = time.time()
-    rrt_conf = MyRRTConfig(10000, satisfaction_conf=SatisfactionConfig(n_max_eval=50))
-    rrt = MyRRTConnectSolver.init(rrt_conf)
-    rrt_parallel = rrt.as_parallel_solver(8)
-    rrt_parallel.setup(problem)
-    result = rrt_parallel.solve()
-    assert result.traj is not None
-    print("time to solve rrt: {}".format(time.time() - ts))
+
+    if not use_cached:
+        print("start solving IK and rrt to plan path from q_init to goal const")
+        ts = time.time()
+        rrt_conf = MyRRTConfig(10000, satisfaction_conf=SatisfactionConfig(n_max_eval=50))
+        rrt = MyRRTConnectSolver.init(rrt_conf)
+        rrt_parallel = rrt.as_parallel_solver(8)
+        rrt_parallel.setup(problem)
+        result = rrt_parallel.solve()
+        assert result.traj is not None
+        print("time to solve rrt: {}".format(time.time() - ts))
+        cached = result.traj
+        # save cached result to /tmp/humanoid_reaching_cache_rrt.pkl
+        with open("/tmp/humanoid_reaching_cache_rrt.pkl", "wb") as f:
+            pickle.dump(cached, f)
+    else:
+        with open("/tmp/humanoid_reaching_cache_rrt.pkl", "rb") as f:
+            cached = pickle.load(f)
 
     print("smooth out the result")
     solver = SQPBasedSolver.init(
@@ -100,7 +112,7 @@ if __name__ == "__main__":
         )
     )
     solver.setup(problem)
-    smooth_result = solver.solve(result.traj)  # type: ignore
+    smooth_result = solver.solve(cached)  # type: ignore
     if smooth_result.traj is None:
         print("sqp: fail to smooth")
     else:
