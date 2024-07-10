@@ -559,6 +559,58 @@ class RelativePoseConstraint(AbstractEqConst):
         self.efkin.reflect_skrobot_model(robot_model)
 
 
+class FixedZAxisConstraint(AbstractEqConst):
+    efkin: ArticulatedEndEffectorKinematicsMap
+    n_feature: int
+
+    def __init__(
+        self,
+        efkin: ArticulatedEndEffectorKinematicsMap,
+        robot_model: RobotModel,
+    ):
+        efkin = copy.deepcopy(efkin)
+        n_feature = len(efkin.tinyfk_feature_ids)
+
+        current_feature_ids = copy.deepcopy(efkin.tinyfk_feature_ids)
+        for feature_id in current_feature_ids:
+            efkin.add_new_feature_point(feature_id, np.array([1, 0, 0]), None)
+
+        for feature_id in current_feature_ids:
+            efkin.add_new_feature_point(feature_id, np.array([0, 1, 0]), None)
+
+        self.n_feature = n_feature
+        self.efkin = efkin
+        self.reflect_skrobot_model(robot_model)
+        self.assign_id_value()
+
+    def _evaluate(self, qs: np.ndarray, with_jacobian: bool) -> Tuple[np.ndarray, np.ndarray]:
+        n_point, n_dim = qs.shape
+        xs, jacs = self.efkin.map(qs)
+        # xs: n_point, n_feature x 3, xyzrpy
+        tmp = xs.reshape(n_point, 3, self.n_feature, -1)
+        diff_x = tmp[:, 1, :, :] - tmp[:, 0, :, :]
+        diff_x_z = diff_x[:, :, 2]
+        diff_y = tmp[:, 2, :, :] - tmp[:, 0, :, :]
+        diff_y_z = diff_y[:, :, 2]
+        diffs = np.concatenate([diff_x_z, diff_y_z], axis=1).reshape(n_point, -1)
+
+        if not with_jacobian:
+            return diffs, self.dummy_jacobian()
+        tmp = jacs.reshape(n_point, 3, self.n_feature, -1, n_dim)
+        diff_x_jacs = tmp[:, 1, :, :] - tmp[:, 0, :, :]
+        diff_x_jacs_z = diff_x_jacs[:, :, 2, :]
+        diff_y_jacs = tmp[:, 2, :, :] - tmp[:, 0, :, :]
+        diff_y_jacs_z = diff_y_jacs[:, :, 2, :]
+        jacs_diff = np.concatenate([diff_x_jacs_z, diff_y_jacs_z], axis=1).reshape(
+            n_point, -1, n_dim
+        )
+        return diffs, jacs_diff
+
+    def _reflect_skrobot_model(self, robot_model: Optional[RobotModel]) -> None:
+        assert robot_model is not None
+        self.efkin.reflect_skrobot_model(robot_model)
+
+
 class FCLSelfCollFreeConst(AbstractIneqConst):
     robot_model: RobotModel
     joint_names: List[str]

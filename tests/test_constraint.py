@@ -11,6 +11,7 @@ from skmp.constraint import (
     AbstractConst,
     CollFreeConst,
     ConfigPointConst,
+    FixedZAxisConstraint,
     IneqCompositeConst,
     PairWiseSelfCollFreeConst,
     PoseConstraint,
@@ -158,6 +159,14 @@ def test_realtive_pose_const():
 
     # check if id_value is assigned
     assert isinstance(relconst.id_value, str)
+
+
+def test_fixed_zaxis_const():
+    config = PR2Config(base_type=BaseType.FIXED, control_arm="dual")
+    pr2 = PR2()
+    efkin = config.get_endeffector_kin()
+    fixconst = FixedZAxisConstraint(efkin, pr2)
+    check_jacobian(fixconst, 14)
 
 
 def test_pair_wise_selfcollfree_const():
