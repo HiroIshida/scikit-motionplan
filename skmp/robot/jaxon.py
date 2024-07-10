@@ -4,7 +4,8 @@ from pathlib import Path
 from typing import Dict, List, Optional, Union
 
 import numpy as np
-from robot_descriptions.jaxon_description import URDF_PATH as JAXON_URDF_PATH
+
+# from robot_descriptions.jaxon_description import URDF_PATH as JAXON_URDF_PATH
 from skrobot.coordinates import CascadedCoords
 from skrobot.coordinates.math import rotation_matrix, rpy_angle
 from skrobot.model.primitives import Box, MeshLink
@@ -18,6 +19,8 @@ from skmp.kinematics import (
     ArticulatedEndEffectorKinematicsMap,
     AttachedObstacleCollisionKinematicsMap,
 )
+
+JAXON_URDF_PATH = str(Path("~/misc/jaxon_urdf_private/JAXON_RED.urdf").expanduser())
 
 
 class Jaxon(RobotModelFromURDF):
