@@ -1,13 +1,13 @@
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional
 
 import numpy as np
 from robot_descriptions.jaxon_description import URDF_PATH as JAXON_URDF_PATH
 from skrobot.coordinates import CascadedCoords
 from skrobot.coordinates.math import rotation_matrix, rpy_angle
-from skrobot.model.primitives import Box, MeshLink
+from skrobot.model.primitives import Box
 from skrobot.models.urdf import RobotModelFromURDF
 from tinyfk import BaseType, KinematicModel, RotationType
 
@@ -124,7 +124,7 @@ class JaxonConfig:
         return kinmap
 
     def get_attached_obstacle_kin(
-        self, relative_position: np.ndarray, shape: Union[Box, MeshLink]
+        self, relative_position: np.ndarray, shape: Box
     ) -> AttachedObstacleCollisionKinematicsMap:
         kinmap = AttachedObstacleCollisionKinematicsMap(
             self.urdf_path(),

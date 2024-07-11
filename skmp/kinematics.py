@@ -224,7 +224,7 @@ class AttachedObstacleCollisionKinematicsMap(ArticulatedKinematicsMapBase):
         attach_link_name: str,
         relative_position: np.ndarray,
         shape: Box,
-        n_sample: int = 300,
+        n_grid: int = 6,
         base_type: BaseType = BaseType.FIXED,
         fksolver_init_hook: Optional[Callable[[KinematicModel], None]] = None,
         margin=0.0,
@@ -237,17 +237,15 @@ class AttachedObstacleCollisionKinematicsMap(ArticulatedKinematicsMapBase):
 
         # sample grid points from the shape and add them as feature points
         assert shape.sdf is not None
-        N = 6
         extent = shape._extents
         grid = np.meshgrid(
-            np.linspace(-0.5 * extent[0], 0.5 * extent[0], N),
-            np.linspace(-0.5 * extent[1], 0.5 * extent[1], N),
-            np.linspace(-0.5 * extent[2], 0.5 * extent[2], N),
+            np.linspace(-0.5 * extent[0], 0.5 * extent[0], n_grid),
+            np.linspace(-0.5 * extent[1], 0.5 * extent[1], n_grid),
+            np.linspace(-0.5 * extent[2], 0.5 * extent[2], n_grid),
         )
         grid_points = np.stack([g.flatten() for g in grid], axis=1)
         grid_points = shape.transform_vector(grid_points)
         grid_points = grid_points[shape.sdf(grid_points) > -1e-2]
-        print(f"grid_points: {grid_points.shape}")
 
         points_from_center = grid_points - shape.worldpos()
         points_from_link = points_from_center + relative_position
