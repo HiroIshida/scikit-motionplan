@@ -2,7 +2,7 @@ import time
 
 import numpy as np
 from skrobot.coordinates import Coordinates
-from skrobot.model.primitives import Axis, Box
+from skrobot.model.primitives import Axis, Box, PointCloudLink
 from skrobot.viewers import PyrenderViewer
 from tinyfk import BaseType, RotationType
 
@@ -48,6 +48,7 @@ if __name__ == "__main__":
         jaxon, com_box, ["RARM_LINK7", "LARM_LINK7"], [5.0, 5.0]
     )
     ineq_const = IneqCompositeConst([com_const_with_force])
+    obstacle_kin = config.get_attached_obstacle_kin(np.array([0.25, 0.0, -0.19]), box)
 
     # solve ik to determine start state (random)
     print("determining q_init by solving IK")
@@ -158,6 +159,14 @@ if __name__ == "__main__":
     vis.show()
     time.sleep(1)
     for q in smooth_result.traj:
-        set_robot_state(jaxon, config._get_control_joint_names(), q, base_type=BaseType.FLOATING)
         time.sleep(0.5)
+        set_robot_state(jaxon, config._get_control_joint_names(), q, base_type=BaseType.FLOATING)
+        pointss, _ = obstacle_kin.map_skrobot_model(jaxon)
+        points = pointss[0]
+        # check if these points are collision free
+        dists = ground.sdf(points)
+        print(f"min dist: {np.min(dists)}")
+
+        points_vis = PointCloudLink(points)
+        vis.add(points_vis)
         vis.redraw()
