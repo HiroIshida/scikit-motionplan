@@ -6,7 +6,7 @@ from typing import Callable, Dict, List, Optional, Protocol, Tuple, Union
 import numpy as np
 from skrobot.coordinates.math import rpy_angle
 from skrobot.model import RobotModel
-from skrobot.model.primitives import Box, MeshLink
+from skrobot.model.primitives import Box
 from tinyfk import BaseType, KinematicModel, RotationType
 
 from skmp.collision import SphereCollection
@@ -223,7 +223,7 @@ class AttachedObstacleCollisionKinematicsMap(ArticulatedKinematicsMapBase):
         joint_names: List[str],
         attach_link_name: str,
         relative_position: np.ndarray,
-        shape: Union[Box, MeshLink],
+        shape: Box,
         n_sample: int = 300,
         base_type: BaseType = BaseType.FIXED,
         fksolver_init_hook: Optional[Callable[[KinematicModel], None]] = None,
@@ -235,10 +235,21 @@ class AttachedObstacleCollisionKinematicsMap(ArticulatedKinematicsMapBase):
         if fksolver_init_hook is not None:
             fksolver_init_hook(fksolver)
 
-        # sample many points from the shape and add them as feature points
+        # sample grid points from the shape and add them as feature points
         assert shape.sdf is not None
-        points, _ = shape.sdf.surface_points(n_sample)
-        points_from_center = points - shape.worldpos()
+        N = 6
+        extent = shape._extents
+        grid = np.meshgrid(
+            np.linspace(-0.5 * extent[0], 0.5 * extent[0], N),
+            np.linspace(-0.5 * extent[1], 0.5 * extent[1], N),
+            np.linspace(-0.5 * extent[2], 0.5 * extent[2], N),
+        )
+        grid_points = np.stack([g.flatten() for g in grid], axis=1)
+        grid_points = shape.transform_vector(grid_points)
+        grid_points = grid_points[shape.sdf(grid_points) > -1e-2]
+        print(f"grid_points: {grid_points.shape}")
+
+        points_from_center = grid_points - shape.worldpos()
         points_from_link = points_from_center + relative_position
         attach_link_id = fksolver.get_link_ids([attach_link_name])[0]
         feature_names = []
@@ -255,8 +266,8 @@ class AttachedObstacleCollisionKinematicsMap(ArticulatedKinematicsMapBase):
 
         self.dim_cspace = dim_cspace
         self.dim_tspace = 3
-        self.n_feature = len(points)
-        self.radius_list = [margin] * len(points)
+        self.n_feature = len(grid_points)
+        self.radius_list = [margin] * len(grid_points)
         self.fksolver = fksolver
         self.tinyfk_joint_ids = fksolver.get_joint_ids(joint_names)
         self.control_joint_names = joint_names

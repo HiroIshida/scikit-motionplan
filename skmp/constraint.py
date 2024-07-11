@@ -518,8 +518,6 @@ class RelativePoseConstraint(AbstractEqConst):
         efkin: ArticulatedEndEffectorKinematicsMap,
         robot_model: RobotModel,
     ):
-        assert efkin.rot_type == RotationType.RPY  # TODO: support xyzw
-
         efkin = copy.deepcopy(efkin)
 
         # we consider relative pose from feature-1 to feature-2
