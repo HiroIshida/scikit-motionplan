@@ -6,6 +6,7 @@ from typing import Callable, Dict, List, Optional, Protocol, Tuple, Union
 import numpy as np
 from skrobot.coordinates.math import rpy_angle
 from skrobot.model import RobotModel
+from skrobot.model.primitives import Box, MeshLink
 from tinyfk import BaseType, KinematicModel, RotationType
 
 from skmp.collision import SphereCollection
@@ -211,6 +212,57 @@ class ArticulatedEndEffectorKinematicsMap(ArticulatedKinematicsMapBase):
         else:
             assert False
         self._rot_type = rot_type
+
+
+class AttachedObstacleCollisionKinematicsMap(ArticulatedKinematicsMapBase):
+    # if some obstacle is attached to the link (e.g. a box attached when robot is holding it)
+
+    def __init__(
+        self,
+        urdfpath: Path,
+        joint_names: List[str],
+        attach_link_name: str,
+        relative_position: np.ndarray,
+        shape: Union[Box, MeshLink],
+        n_sample: int = 300,
+        base_type: BaseType = BaseType.FIXED,
+        fksolver_init_hook: Optional[Callable[[KinematicModel], None]] = None,
+        margin=0.0,
+    ):
+
+        urdfpath_str = str(urdfpath.expanduser())
+        fksolver = KinematicModel(urdfpath_str)
+        if fksolver_init_hook is not None:
+            fksolver_init_hook(fksolver)
+
+        # sample many points from the shape and add them as feature points
+        assert shape.sdf is not None
+        points, _ = shape.sdf.surface_points(n_sample)
+        points_from_center = points - shape.worldpos()
+        points_from_link = points_from_center + relative_position
+        attach_link_id = fksolver.get_link_ids([attach_link_name])[0]
+        feature_names = []
+        for pt in points_from_link:
+            feature_name = "pt_{}".format(uuid.uuid4())
+            feature_names.append(feature_name)
+            fksolver.add_new_link(feature_name, attach_link_id, pt)
+
+        dim_cspace = (
+            len(joint_names)
+            + (base_type == BaseType.PLANER) * 3
+            + (base_type == BaseType.FLOATING) * 6
+        )
+
+        self.dim_cspace = dim_cspace
+        self.dim_tspace = 3
+        self.n_feature = len(points)
+        self.radius_list = [margin] * len(points)
+        self.fksolver = fksolver
+        self.tinyfk_joint_ids = fksolver.get_joint_ids(joint_names)
+        self.control_joint_names = joint_names
+        self._base_type = base_type
+        self._rot_type = RotationType.IGNORE
+        self.tinyfk_feature_ids = fksolver.get_link_ids(feature_names)
 
 
 class ArticulatedCollisionKinematicsMap(ArticulatedKinematicsMapBase):

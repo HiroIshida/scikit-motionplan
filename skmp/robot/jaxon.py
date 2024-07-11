@@ -1,13 +1,13 @@
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 import numpy as np
 from robot_descriptions.jaxon_description import URDF_PATH as JAXON_URDF_PATH
 from skrobot.coordinates import CascadedCoords
 from skrobot.coordinates.math import rotation_matrix, rpy_angle
-from skrobot.model.primitives import Box
+from skrobot.model.primitives import Box, MeshLink
 from skrobot.models.urdf import RobotModelFromURDF
 from tinyfk import BaseType, KinematicModel, RotationType
 
@@ -16,6 +16,7 @@ from skmp.constraint import BoxConst, COMStabilityConst, NeuralSelfCollFreeConst
 from skmp.kinematics import (
     ArticulatedCollisionKinematicsMap,
     ArticulatedEndEffectorKinematicsMap,
+    AttachedObstacleCollisionKinematicsMap,
 )
 
 
@@ -118,6 +119,20 @@ class JaxonConfig:
             endeffector_names,
             base_type=BaseType.FLOATING,
             rot_type=rot_type,
+            fksolver_init_hook=self.add_end_coords,
+        )
+        return kinmap
+
+    def get_attached_obstacle_kin(
+        self, relative_position: np.ndarray, shape: Union[Box, MeshLink]
+    ) -> AttachedObstacleCollisionKinematicsMap:
+        kinmap = AttachedObstacleCollisionKinematicsMap(
+            self.urdf_path(),
+            self._get_control_joint_names(),
+            "rarm_end_coords",
+            relative_position,
+            shape,
+            base_type=BaseType.FLOATING,
             fksolver_init_hook=self.add_end_coords,
         )
         return kinmap
