@@ -43,7 +43,7 @@ class Problem:
     def check_init_feasibility(self) -> Tuple[bool, str]:
         if self.skip_init_feasibility_check:
             return True, ""
-        msg_list = []
+        msg_list = []  # type: ignore
         self.box_const.write_violation_info(self.start, msg_list)
         if self.global_ineq_const is not None:
             if not self.global_ineq_const.is_valid(self.start):

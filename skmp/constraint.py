@@ -204,6 +204,7 @@ class BoxConst(AbstractIneqConst):
         ub_violation_indices = np.where(q > self.ub)[0]
         if len(lb_violation_indices) == 0 and len(ub_violation_indices) == 0:
             return
+        assert self.names is not None
         for i, name in zip(lb_violation_indices, self.names):
             msgs.append(f"lb violation: {name} {q[i]} < {self.lb[i]}")
         for i, name in zip(ub_violation_indices, self.names):
@@ -854,8 +855,8 @@ class COMStabilityConst(AbstractIneqConst):
     base_type: BaseType
     model: RobotModel
     com_box: Box
-    action_link_ids: np.ndarray
-    action_forces: np.ndarray
+    action_link_ids: List[int]
+    action_forces: List[float]
 
     def __init__(
         self,
@@ -884,7 +885,8 @@ class COMStabilityConst(AbstractIneqConst):
             self.action_forces = []
         else:
             self.action_link_ids = fksolver.get_link_ids(action_link_names)
-            self.action_forces = np.array(action_forces)
+            assert action_forces is not None
+            self.action_forces = action_forces
 
         self.dim_cspace = dim_cspace
         self.fksolver = fksolver
