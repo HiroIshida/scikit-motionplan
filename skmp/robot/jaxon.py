@@ -389,7 +389,13 @@ class JaxonConfig:
             self.urdf_path(), self._get_control_joint_names(), robot_model, BaseType.FLOATING
         )
 
-    def get_com_stability_const(self, robot_model: Jaxon, com_box: Box) -> COMStabilityConst:
+    def get_com_stability_const(
+        self,
+        robot_model: Jaxon,
+        com_box: Box,
+        action_link_names: Optional[List[str]] = None,
+        action_forces: Optional[List[float]] = None,
+    ) -> COMStabilityConst:
         fksolver = KinematicModel(self.urdf_path())
         fksolver.get_joint_ids(self._get_control_joint_names())
 
@@ -399,5 +405,7 @@ class JaxonConfig:
             BaseType.FLOATING,
             robot_model,
             com_box,
+            action_link_names,
+            action_forces,
         )
         return const

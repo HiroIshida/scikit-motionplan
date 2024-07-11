@@ -854,6 +854,8 @@ class COMStabilityConst(AbstractIneqConst):
     base_type: BaseType
     model: RobotModel
     com_box: Box
+    action_link_ids: np.ndarray
+    action_forces: np.ndarray
 
     def __init__(
         self,
@@ -862,6 +864,8 @@ class COMStabilityConst(AbstractIneqConst):
         base_type: BaseType,
         robot_model: RobotModel,
         com_box: Box,
+        action_link_names: Optional[List[str]] = None,
+        action_forces: Optional[List[float]] = None,
     ):
 
         dim_cspace = (
@@ -873,6 +877,14 @@ class COMStabilityConst(AbstractIneqConst):
         urdfpath_str = str(urdfpath.expanduser())
         fksolver = KinematicModel(urdfpath_str)
         tinyfk_joint_ids = fksolver.get_joint_ids(joint_names)
+
+        if action_link_names is None:
+            self.action_link_ids = []
+            assert action_forces is None
+            self.action_forces = []
+        else:
+            self.action_link_ids = fksolver.get_link_ids(action_link_names)
+            self.action_forces = np.array(action_forces)
 
         self.dim_cspace = dim_cspace
         self.fksolver = fksolver
@@ -889,7 +901,12 @@ class COMStabilityConst(AbstractIneqConst):
 
         n_point, n_dim = qs.shape
         xs, jacs_tmp = self.fksolver.solve_com_fk(
-            qs, self.tinyfk_joint_ids, self.base_type, with_jacobian
+            qs,
+            self.tinyfk_joint_ids,
+            self.action_link_ids,
+            self.action_forces,
+            self.base_type,
+            with_jacobian,
         )
         jacs = jacs_tmp.reshape(n_point, 1, 3, n_dim)
         # xss: R^{n_point, 3}
