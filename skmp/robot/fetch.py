@@ -59,22 +59,22 @@ class FetchConfig:
         return kinmap
 
     def get_self_body_obstacles(self) -> List[Link]:
-        base = Box([0.57, 0.55, 0.32], face_colors=[255, 255, 255, 200])
+        base = Box([0.57, 0.55, 0.32], face_colors=[255, 255, 255, 200], with_sdf=True)
         base.translate([0.005, 0.0, 0.2])
-        torso = Box([0.16, 0.16, 1.0], face_colors=[255, 255, 255, 200])
+        torso = Box([0.16, 0.16, 1.0], face_colors=[255, 255, 255, 200], with_sdf=True)
         torso.translate([-0.12, 0.0, 0.5])
 
-        neck_lower = Box([0.1, 0.18, 0.08], face_colors=[255, 255, 255, 200])
+        neck_lower = Box([0.1, 0.18, 0.08], face_colors=[255, 255, 255, 200], with_sdf=True)
         neck_lower.translate([0.0, 0.0, 0.97])
-        neck_upper = Box([0.05, 0.17, 0.15], face_colors=[255, 255, 255, 200])
+        neck_upper = Box([0.05, 0.17, 0.15], face_colors=[255, 255, 255, 200], with_sdf=True)
         neck_upper.translate([-0.035, 0.0, 0.92])
 
-        torso_left = Cylinder(0.1, 1.0, face_colors=[255, 255, 255, 200])
+        torso_left = Cylinder(0.1, 1.0, face_colors=[255, 255, 255, 200], with_sdf=True)
         torso_left.translate([-0.143, 0.09, 0.5])
-        torso_right = Cylinder(0.1, 1.0, face_colors=[255, 255, 255, 200])
+        torso_right = Cylinder(0.1, 1.0, face_colors=[255, 255, 255, 200], with_sdf=True)
         torso_right.translate([-0.143, -0.09, 0.5])
 
-        head = Cylinder(0.28, 0.12, face_colors=[255, 255, 255, 200])
+        head = Cylinder(0.28, 0.12, face_colors=[255, 255, 255, 200], with_sdf=True)
         head.translate([0.0, 0.0, 1.04])
         self_body_obstacles = [base, torso, neck_lower, neck_upper, torso_left, torso_right, head]
         return self_body_obstacles
