@@ -12,9 +12,9 @@ from skmp.solver.ompl_solver import OMPLSolver, OMPLSolverConfig
 conf = FetchConfig()
 fetch = Fetch()
 fetch.reset_pose()
-q_init = get_robot_state(fetch, conf.joint_names)
+q_init = get_robot_state(fetch, conf.get_control_joint_names())
 fetch.init_pose()
-q_final = get_robot_state(fetch, conf.joint_names)
+q_final = get_robot_state(fetch, conf.get_control_joint_names())
 
 ineq_const = conf.get_selcol_consts(fetch)
 box_const = conf.get_box_const()
@@ -32,7 +32,7 @@ v.add(fetch)
 v.show()
 time.sleep(1.0)
 for q in res.traj.resample(30):
-    set_robot_state(fetch, conf.joint_names, q)
+    set_robot_state(fetch, conf.get_control_joint_names(), q)
     v.redraw()
     time.sleep(0.4)
 
