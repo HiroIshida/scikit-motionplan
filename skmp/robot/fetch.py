@@ -2,21 +2,25 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Set, Tuple
 
+import pkg_resources
 from skrobot.models import Fetch
+from tinyfk import BaseType
 
 from skmp.constraint import BoxConst, FCLSelfCollFreeConst
+from skmp.kinematics import ArticulatedCollisionKinematicsMap
+from skmp.robot.utils import load_collision_spheres
 
 
 @dataclass
 class FetchConfig:
-    with_torso: bool = True
+    base_type: BaseType = BaseType.FIXED
+    use_torso: bool = True
 
     @classmethod
     def urdf_path(cls) -> Path:
         return Path("~/.skrobot/fetch_description/fetch.urdf").expanduser()
 
-    @property
-    def joint_names(self) -> List[str]:
+    def get_control_joint_names(self) -> List[str]:
         joint_names = [
             "shoulder_pan_joint",
             "shoulder_lift_joint",
@@ -27,16 +31,30 @@ class FetchConfig:
             "wrist_roll_joint",
         ]
 
-        if self.with_torso:
+        if self.use_torso:
             joint_names = ["torso_lift_joint"] + joint_names
         return joint_names
 
     def get_box_const(self, eps: float = 1e-4) -> BoxConst:
         # set eps to satisfy that default postion is in the bounds
-        bounds = BoxConst.from_urdf(self.urdf_path(), self.joint_names)
+        bounds = BoxConst.from_urdf(self.urdf_path(), self.get_control_joint_names())
         bounds.lb -= eps
         bounds.ub += eps
         return bounds
+
+    def get_collision_kin(self) -> ArticulatedCollisionKinematicsMap:
+        collision_config_path = pkg_resources.resource_filename(
+            "skmp", "robot/fetch_coll_spheres.yaml"
+        )
+        link_wise_sphere_collection = load_collision_spheres(collision_config_path)
+        control_joint_names = self.get_control_joint_names()
+        kinmap = ArticulatedCollisionKinematicsMap(
+            self.urdf_path(),
+            control_joint_names,
+            link_wise_sphere_collection,
+            base_type=self.base_type,
+        )
+        return kinmap
 
     def get_selcol_consts(self, robot_model: Fetch):
         arm_links = [
@@ -51,7 +69,9 @@ class FetchConfig:
             "r_gripper_finger_link",
             "l_gripper_finger_link",
         ]
-        return FCLSelfCollFreeConst(robot_model, arm_links, self.joint_names, self.ignore_pairs)
+        return FCLSelfCollFreeConst(
+            robot_model, arm_links, self.get_control_joint_names(), self.ignore_pairs
+        )
 
     @property
     def ignore_pairs(self) -> Set[Tuple[str, str]]:

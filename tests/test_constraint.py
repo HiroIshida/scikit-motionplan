@@ -200,11 +200,11 @@ def test_fcl_mesh_self_collfree_const():
     fetch = Fetch()
     fetch.reset_pose()
     selcol = fetch_conf.get_selcol_consts(fetch)
-    q = get_robot_state(fetch, fetch_conf.joint_names)
+    q = get_robot_state(fetch, fetch_conf.get_control_joint_names())
     assert selcol.is_valid(q)
 
     fetch.shoulder_lift_joint.joint_angle(0.5)
-    q = get_robot_state(fetch, fetch_conf.joint_names)
+    q = get_robot_state(fetch, fetch_conf.get_control_joint_names())
     assert not selcol.is_valid(q)
 
 
