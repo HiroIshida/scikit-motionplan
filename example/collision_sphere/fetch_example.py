@@ -28,7 +28,12 @@ fetch.r_gripper_finger_joint.joint_angle(0.1)
 fetch.l_gripper_finger_joint.joint_angle(0.1)
 colkin.reflect_skrobot_model(fetch)
 colvis.update(fetch)
+
+self_body_obstacles = conf.get_self_body_obstacles()
+
 vis.add(fetch)
+for obs in self_body_obstacles:
+    vis.add(obs)
 vis.show()
 
 time.sleep(1000)
