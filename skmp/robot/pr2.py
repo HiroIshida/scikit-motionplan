@@ -1,5 +1,4 @@
 import copy
-import uuid
 from dataclasses import dataclass
 from enum import Enum
 from functools import lru_cache
@@ -9,16 +8,15 @@ from typing import Dict, List, Literal, Optional, Tuple
 
 import numpy as np
 import pkg_resources
-import yaml
 from skrobot.models import PR2
 from tinyfk import BaseType, RotationType
 
-from skmp.collision import SphereCollection
 from skmp.constraint import BoxConst, PairWiseSelfCollFreeConst
 from skmp.kinematics import (
     ArticulatedCollisionKinematicsMap,
     ArticulatedEndEffectorKinematicsMap,
 )
+from skmp.robot.utils import load_collision_spheres
 
 
 class CollisionMode(Enum):
@@ -264,23 +262,10 @@ class PR2Config:
             assert False
 
     def get_collision_kin(self, whole_body: bool = False) -> ArticulatedCollisionKinematicsMap:
-        collision_config_path = pkg_resources.resource_filename("skmp", "robot/pr2_collision.yaml")
-        with open(collision_config_path, "r") as f:
-            collision_config = yaml.safe_load(f)
-        d = collision_config["collision_spheres"]
-
-        def unique_name(link_name) -> str:
-            return link_name + str(uuid.uuid4())[:13]
-
-        link_wise_sphere_collection: Dict[str, SphereCollection] = {}
-        for link_name, vals in d.items():
-            spheres_d = vals["spheres"]
-            tmp_list = []
-            for spec in spheres_d:
-                vals = np.array(spec)
-                center, r = vals[:3], vals[3]
-                tmp_list.append((center, r, unique_name(link_name)))
-            link_wise_sphere_collection[link_name] = SphereCollection(*list(zip(*tmp_list)))
+        collision_config_path = pkg_resources.resource_filename(
+            "skmp", "robot/pr2_coll_spheres.yaml"
+        )
+        link_wise_sphere_collection = load_collision_spheres(collision_config_path)
 
         if self.base_type != BaseType.FIXED:
             whole_body = True

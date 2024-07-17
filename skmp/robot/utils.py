@@ -1,7 +1,10 @@
+import uuid
+from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple, Union
 
 import fcl
 import numpy as np
+import yaml
 from fcl import BVHModel, CollisionObject, Transform
 from skrobot.coordinates import Coordinates
 from skrobot.coordinates.math import rpy_angle, rpy_matrix
@@ -9,6 +12,28 @@ from skrobot.model.link import Link
 from skrobot.model.robot_model import RobotModel
 from tinyfk import BaseType
 from trimesh import Trimesh
+
+from skmp.kinematics import SphereCollection
+
+
+def load_collision_spheres(yaml_file_path: Path) -> Dict[str, SphereCollection]:
+    with open(yaml_file_path, "r") as f:
+        collision_config = yaml.safe_load(f)
+    d = collision_config["collision_spheres"]
+
+    def unique_name(link_name) -> str:
+        return link_name + str(uuid.uuid4())[:13]
+
+    link_wise_sphere_collection: Dict[str, SphereCollection] = {}
+    for link_name, vals in d.items():
+        spheres_d = vals["spheres"]
+        tmp_list = []
+        for spec in spheres_d:
+            vals = np.array(spec)
+            center, r = vals[:3], vals[3]
+            tmp_list.append((center, r, unique_name(link_name)))
+        link_wise_sphere_collection[link_name] = SphereCollection(*list(zip(*tmp_list)))
+    return link_wise_sphere_collection
 
 
 def set_robot_state(
