@@ -628,6 +628,7 @@ class FCLSelfCollFreeConst(AbstractIneqConst):
         self.fcl_col_manager = manager
 
         self.reflect_skrobot_model(robot_model)
+        self.assign_id_value()
 
     def _evaluate(self, qs: np.ndarray, with_jacobian: bool) -> Tuple[np.ndarray, np.ndarray]:
         values = []
