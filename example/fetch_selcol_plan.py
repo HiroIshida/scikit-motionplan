@@ -1,11 +1,12 @@
 import argparse
 import time
+from dataclasses import dataclass
+from typing import List
 
 import numpy as np
 from skrobot.coordinates import Coordinates
 from skrobot.model.primitives import Axis, Box
 from skrobot.models import Fetch
-from skrobot.sdf import UnionSDF
 from skrobot.viewers import PyrenderViewer
 
 from skmp.constraint import (
@@ -19,6 +20,18 @@ from skmp.robot.utils import get_robot_state, set_robot_state
 from skmp.satisfy import satisfy_by_optimization_with_budget
 from skmp.solver.interface import Problem
 from skmp.solver.ompl_solver import OMPLSolver, OMPLSolverConfig
+from skmp.utils import sksdf_to_cppsdf
+
+
+@dataclass
+class UnionSDF:
+    sdfs: List
+
+    def __call__(self, pts):
+        sd_vals_list = [sdf(pts) for sdf in self.sdfs]
+        sd_vals_union = np.min(np.array(sd_vals_list), axis=0)
+        return sd_vals_union
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--approx", action="store_true", help="approximate")
@@ -37,7 +50,7 @@ box_const = conf.get_box_const()
 # define self collision free constraint
 self_body_obstacles = conf.get_self_body_obstacles()
 colkin = conf.get_collision_kin()
-sdf = UnionSDF([obs.sdf for obs in self_body_obstacles])
+sdf = UnionSDF([sksdf_to_cppsdf(obs.sdf) for obs in self_body_obstacles])
 approx_selcol_free_const = CollFreeConst(colkin, sdf, fetch)
 exact_selcol_free_const = conf.get_selcol_consts(fetch)  # gradient is not provided
 
@@ -45,7 +58,7 @@ exact_selcol_free_const = conf.get_selcol_consts(fetch)  # gradient is not provi
 table = Box([1.0, 2.0, 0.05], with_sdf=True)
 table.translate([1.0, 0.0, 0.8])
 colkin = conf.get_collision_kin()
-col_free_const = CollFreeConst(colkin, table.sdf, fetch)
+col_free_const = CollFreeConst(colkin, sksdf_to_cppsdf(table.sdf), fetch)
 
 # composite ineq const
 ineq_const = IneqCompositeConst([approx_selcol_free_const, col_free_const])

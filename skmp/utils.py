@@ -2,6 +2,12 @@ import copy
 from pathlib import Path
 from typing import Dict
 
+import psdf
+from skrobot.sdf.signed_distance_function import (
+    BoxSDF,
+    CylinderSDF,
+    SignedDistanceFunction,
+)
 from skrobot.utils.checksum import checksum_md5
 from skrobot.utils.urdf import URDF
 
@@ -30,3 +36,15 @@ def load_urdf_model_using_cache(file_path: Path, with_geometry: bool = False):
         return copy.deepcopy(_loaded_urdf_models_with_geometry[hashvalue])
     else:
         return copy.deepcopy(_loaded_urdf_models[hashvalue])
+
+
+def sksdf_to_cppsdf(sksdf: SignedDistanceFunction):
+    pose = psdf.Pose(sksdf.worldpos(), sksdf.worldrot())
+    if isinstance(sksdf, BoxSDF):
+        sdf = psdf.BoxSDF(sksdf._width, pose)
+
+    elif isinstance(sksdf, CylinderSDF):
+        sdf = psdf.CylinderSDF(sksdf._radius, sksdf._height, pose)
+    else:
+        raise ValueError("Unsupported SDF type")
+    return lambda pts: sdf.evaluate(pts.T)
