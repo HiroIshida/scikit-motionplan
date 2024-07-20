@@ -6,10 +6,13 @@ import pkg_resources
 from skrobot.model import Link
 from skrobot.model.primitives import Box, Cylinder
 from skrobot.models import Fetch
-from tinyfk import BaseType
+from tinyfk import BaseType, RotationType
 
 from skmp.constraint import BoxConst, FCLSelfCollFreeConst
-from skmp.kinematics import ArticulatedCollisionKinematicsMap
+from skmp.kinematics import (
+    ArticulatedCollisionKinematicsMap,
+    ArticulatedEndEffectorKinematicsMap,
+)
 from skmp.robot.utils import load_collision_spheres
 
 
@@ -43,6 +46,18 @@ class FetchConfig:
         bounds.lb -= eps
         bounds.ub += eps
         return bounds
+
+    def get_endeffector_kin(
+        self, rot_type: RotationType = RotationType.RPY
+    ) -> ArticulatedEndEffectorKinematicsMap:
+        kinmap = ArticulatedEndEffectorKinematicsMap(
+            self.urdf_path(),
+            self.get_control_joint_names(),
+            ["gripper_link"],
+            base_type=self.base_type,
+            rot_type=rot_type,
+        )
+        return kinmap
 
     def get_collision_kin(self) -> ArticulatedCollisionKinematicsMap:
         collision_config_path = pkg_resources.resource_filename(
