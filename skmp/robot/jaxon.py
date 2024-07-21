@@ -9,6 +9,7 @@ from skrobot.coordinates import CascadedCoords
 from skrobot.coordinates.math import rotation_matrix, rpy_angle
 from skrobot.model.primitives import Box
 from skrobot.models.urdf import RobotModelFromURDF
+from skrobot.sdf import BoxSDF
 from tinyfk import BaseType, KinematicModel, RotationType
 
 from skmp.collision import SphereCollection
@@ -18,6 +19,7 @@ from skmp.kinematics import (
     ArticulatedEndEffectorKinematicsMap,
     AttachedObstacleCollisionKinematicsMap,
 )
+from skmp.utils import sksdf_to_cppsdf
 
 
 class Jaxon(RobotModelFromURDF):
@@ -413,6 +415,11 @@ class JaxonConfig:
     ) -> COMStabilityConst:
         fksolver = KinematicModel(self.urdf_path())
         fksolver.get_joint_ids(self._get_control_joint_names())
+
+        assert isinstance(com_box.sdf, BoxSDF)
+        if isinstance(com_box.sdf, BoxSDF):
+            # NOTE: skrobot's setter does not allow to set sdf directly. so...
+            com_box._sdf = sksdf_to_cppsdf(com_box.sdf)
 
         const = COMStabilityConst(
             self.urdf_path(),
