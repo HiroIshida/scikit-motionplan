@@ -1,7 +1,7 @@
 import uuid
-from dataclasses import dataclass
+from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Protocol, Tuple, Union
+from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 from skrobot.coordinates.math import rpy_angle
@@ -11,66 +11,6 @@ from tinyfk import BaseType, KinematicModel, RotationType
 
 from skmp.collision import SphereCollection
 from skmp.utils import load_urdf_model_using_cache
-
-
-class KinematicsMapProtocol(Protocol):
-    @property
-    def dim_cspace(self) -> int:
-        ...
-
-    @property
-    def dim_tspace(self) -> int:
-        ...
-
-    @property
-    def n_feature(self) -> int:
-        ...
-
-    def map(self, points_cspace: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-        """maps points in C-space to points in the task space.
-        points_cspace: R^(n_points, n_feature)
-        return: R^(n_points, n_feature, n_task), R^(n_points, n_feature, n_task, n_dof)
-        """
-        ...
-
-
-class CollisionKinmaticsMapProtocol(KinematicsMapProtocol, Protocol):
-    @property
-    def radius_list(self) -> List[float]:
-        ...
-
-
-@dataclass
-class TrivialKinmaticsMap:
-    """Map when C-space and task space are equal, and thus the map is identical"""
-
-    dim: int
-    radius: float
-
-    @property
-    def dim_cspace(self) -> int:
-        return self.dim
-
-    @property
-    def dim_tspace(self) -> int:
-        return self.dim
-
-    @property
-    def n_feature(self) -> int:
-        return 1
-
-    @property
-    def radius_list(self) -> List[float]:
-        return [self.radius]
-
-    def map(self, points_cspace: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-        """maps points in C-space to points in the task space."""
-        n_point, n_dim_cspace = points_cspace.shape
-        points_tspace = points_cspace.reshape(n_point, self.n_feature, self.dim_tspace)
-
-        tmp = np.stack([np.eye(self.dim) for _ in range(n_point)])
-        jacobians = tmp.reshape(n_point, self.n_feature, self.dim_tspace, self.dim_cspace)
-        return points_tspace, jacobians
 
 
 class ArticulatedKinematicsMapBase:
@@ -214,7 +154,13 @@ class ArticulatedEndEffectorKinematicsMap(ArticulatedKinematicsMapBase):
         self._rot_type = rot_type
 
 
-class AttachedObstacleCollisionKinematicsMap(ArticulatedKinematicsMapBase):
+class ArticulatedCollisionSpheresKinematicsMapBase(ArticulatedKinematicsMapBase, ABC):
+    @abstractmethod
+    def get_radius_list(self) -> List[float]:
+        pass
+
+
+class AttachedObstacleCollisionKinematicsMap(ArticulatedCollisionSpheresKinematicsMapBase):
     # if some obstacle is attached to the link (e.g. a box attached when robot is holding it)
 
     def __init__(
@@ -273,8 +219,11 @@ class AttachedObstacleCollisionKinematicsMap(ArticulatedKinematicsMapBase):
         self._rot_type = RotationType.IGNORE
         self.tinyfk_feature_ids = fksolver.get_link_ids(feature_names)
 
+    def get_radius_list(self) -> List[float]:
+        return self.radius_list
 
-class ArticulatedCollisionKinematicsMap(ArticulatedKinematicsMapBase):
+
+class ArticulatedCollisionKinematicsMap(ArticulatedCollisionSpheresKinematicsMapBase):
     radius_list: List[float]
     sphere_name_list: List[str]
     sphere_center_list: List[np.ndarray]
@@ -338,3 +287,6 @@ class ArticulatedCollisionKinematicsMap(ArticulatedKinematicsMapBase):
         self.fksolver = fksolver
         self._base_type = base_type
         self._rot_type = rot_type
+
+    def get_radius_list(self) -> List[float]:
+        return self.radius_list

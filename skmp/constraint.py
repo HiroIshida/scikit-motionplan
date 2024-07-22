@@ -27,9 +27,8 @@ from skrobot.utils.urdf import JointLimit
 from tinyfk import BaseType, KinematicModel, RotationType
 
 from skmp.kinematics import (
-    ArticulatedCollisionKinematicsMap,
+    ArticulatedCollisionSpheresKinematicsMapBase,
     ArticulatedEndEffectorKinematicsMap,
-    CollisionKinmaticsMapProtocol,
 )
 from skmp.robot.utils import FCLCollisionManager, set_robot_state
 from skmp.utils import load_urdf_model_using_cache
@@ -268,14 +267,14 @@ class BoxConst(AbstractIneqConst):
 
 
 class CollFreeConst(AbstractIneqConst):
-    colkin: CollisionKinmaticsMapProtocol
+    colkin: ArticulatedCollisionSpheresKinematicsMapBase
     sdf: Callable[[np.ndarray], np.ndarray]
     only_closest_feature: bool
     distance_margin: float
 
     def __init__(
         self,
-        colkin: CollisionKinmaticsMapProtocol,
+        colkin: ArticulatedCollisionSpheresKinematicsMapBase,
         sdf: Callable[[np.ndarray], np.ndarray],
         robot_model: RobotModel,
         only_closest_feature: bool = False,
@@ -312,7 +311,7 @@ class CollFreeConst(AbstractIneqConst):
         values = np.zeros([n_point, 1])
         Js = np.zeros([n_point, 1, dim_cspace])
 
-        radii = np.array(self.colkin.radius_list)
+        radii = np.array(self.colkin.get_radius_list())
         for i in range(n_point):
             xs = xss[i]
             sds_stacked = self.sdf(xs)
@@ -357,7 +356,7 @@ class CollFreeConst(AbstractIneqConst):
         sds_stacked = self.sdf(xs_stacked)
 
         # compute sd_vals_stacked
-        margin_radius = np.tile(np.array(self.colkin.radius_list), n_point)
+        margin_radius = np.tile(np.array(self.colkin.get_radius_list()), n_point)
         fs_stacked = sds_stacked - margin_radius
         fss = fs_stacked.reshape(n_point, n_feature)
 
@@ -683,14 +682,14 @@ class SkrobotMeshSelfCollFreeConst(AbstractIneqConst):
 
 
 class PairWiseSelfCollFreeConst(AbstractIneqConst):
-    colkin: ArticulatedCollisionKinematicsMap
+    colkin: ArticulatedCollisionSpheresKinematicsMapBase
     check_sphere_id_pairs: List[Tuple[int, int]]
     check_sphere_pair_sqdists: np.ndarray  # pair sqdist means (r1 + r2) ** 2
     only_closest_feature: bool
 
     def __init__(
         self,
-        colkin: ArticulatedCollisionKinematicsMap,
+        colkin: ArticulatedCollisionSpheresKinematicsMapBase,
         robot_model: RobotModel,
         id_pairs: Optional[List[Tuple[int, int]]] = None,
         only_closest_feature: bool = False,
@@ -698,7 +697,7 @@ class PairWiseSelfCollFreeConst(AbstractIneqConst):
 
         # create sphere_id_raius_table
         sphere_id_raius_table = {}
-        for sphere_id, radius in zip(colkin.tinyfk_feature_ids, colkin.radius_list):
+        for sphere_id, radius in zip(colkin.tinyfk_feature_ids, colkin.get_radius_list()):
             sphere_id_raius_table[sphere_id] = radius
 
         all_index_pairs = list(itertools.combinations(colkin.tinyfk_feature_ids, 2))
