@@ -29,6 +29,7 @@ from tinyfk import BaseType, KinematicModel, RotationType
 from skmp.kinematics import (
     ArticulatedCollisionKinematicsMap,
     ArticulatedEndEffectorKinematicsMap,
+    CollisionKinmaticsMapProtocol,
 )
 from skmp.robot.utils import FCLCollisionManager, set_robot_state
 from skmp.utils import load_urdf_model_using_cache
@@ -267,14 +268,14 @@ class BoxConst(AbstractIneqConst):
 
 
 class CollFreeConst(AbstractIneqConst):
-    colkin: ArticulatedCollisionKinematicsMap
+    colkin: CollisionKinmaticsMapProtocol
     sdf: Callable[[np.ndarray], np.ndarray]
     only_closest_feature: bool
     distance_margin: float
 
     def __init__(
         self,
-        colkin: ArticulatedCollisionKinematicsMap,
+        colkin: CollisionKinmaticsMapProtocol,
         sdf: Callable[[np.ndarray], np.ndarray],
         robot_model: RobotModel,
         only_closest_feature: bool = False,

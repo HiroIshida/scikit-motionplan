@@ -40,7 +40,7 @@ class SceneWrapper(trimesh.Scene):
         super(SceneWrapper, self).__init__()
         self._links = collections.OrderedDict()
 
-    def show(self):
+    def show(self, viewer=None, **kwargs):
         pass
 
     def redraw(self):

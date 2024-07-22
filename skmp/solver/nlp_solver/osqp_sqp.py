@@ -138,7 +138,7 @@ class OsqpSqpSolver:
                     A=A,
                     warm_start=True,
                     verbose=osqp_verbose,
-                    **osqp_kwargs
+                    **osqp_kwargs,
                 )
             else:
                 prob.update(l=l - relax_step_now, u=u + relax_step_now)

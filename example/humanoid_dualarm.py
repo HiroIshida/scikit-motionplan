@@ -203,15 +203,9 @@ if __name__ == "__main__":
             jaxon, config._get_control_joint_names(), res_start.q, base_type=BaseType.FLOATING
         )
 
-        # pointss, _ = obstacle_kin.map_skrobot_model(jaxon)
-        # points = pointss[0]
-        # points_vis = PointCloudLink(points)
-        # vis.add(points_vis)
-
         vis.show()
         time.sleep(4)
-        if smooth_result.traj is None:
-            smooth_result = result
+        assert smooth_result.traj is not None
         for q in smooth_result.traj.resample(40):
             time.sleep(0.15)
             set_robot_state(

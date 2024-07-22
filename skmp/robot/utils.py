@@ -32,7 +32,7 @@ def load_collision_spheres(yaml_file_path: Path) -> Dict[str, SphereCollection]:
             vals = np.array(spec)
             center, r = vals[:3], vals[3]
             tmp_list.append((center, r, unique_name(link_name)))
-        link_wise_sphere_collection[link_name] = SphereCollection(*list(zip(*tmp_list)))
+        link_wise_sphere_collection[link_name] = SphereCollection(*list(zip(*tmp_list)))  # type: ignore
     return link_wise_sphere_collection
 
 
