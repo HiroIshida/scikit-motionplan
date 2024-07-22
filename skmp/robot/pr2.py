@@ -12,10 +12,7 @@ from skrobot.models import PR2
 from tinyfk import BaseType, RotationType
 
 from skmp.constraint import BoxConst, PairWiseSelfCollFreeConst
-from skmp.kinematics import (
-    ArticulatedCollisionKinematicsMap,
-    ArticulatedEndEffectorKinematicsMap,
-)
+from skmp.kinematics import CollSphereKinematicsMap, EndEffectorKinematicsMap
 from skmp.robot.utils import load_collision_spheres
 
 
@@ -162,8 +159,8 @@ class PR2Config:
 
     def get_endeffector_kin(
         self, rot_type: RotationType = RotationType.RPY
-    ) -> ArticulatedEndEffectorKinematicsMap:
-        kinmap = ArticulatedEndEffectorKinematicsMap(
+    ) -> EndEffectorKinematicsMap:
+        kinmap = EndEffectorKinematicsMap(
             self.urdf_path(),
             self.get_control_joint_names(),
             self._get_endeffector_names(),
@@ -261,7 +258,7 @@ class PR2Config:
         else:
             assert False
 
-    def get_collision_kin(self, whole_body: bool = False) -> ArticulatedCollisionKinematicsMap:
+    def get_collision_kin(self, whole_body: bool = False) -> CollSphereKinematicsMap:
         collision_config_path = pkg_resources.resource_filename(
             "skmp", "robot/pr2_coll_spheres.yaml"
         )
@@ -289,7 +286,7 @@ class PR2Config:
 
         control_joint_names = self.get_control_joint_names()
 
-        kinmap = ArticulatedCollisionKinematicsMap(
+        kinmap = CollSphereKinematicsMap(
             self.urdf_path(),
             control_joint_names,
             link_wise_sphere_collection,

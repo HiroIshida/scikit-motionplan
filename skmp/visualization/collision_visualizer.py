@@ -6,7 +6,7 @@ from skrobot.model import RobotModel
 from skrobot.model.primitives import Sphere
 from skrobot.viewers import TrimeshSceneViewer
 
-from skmp.kinematics import ArticulatedCollisionKinematicsMap
+from skmp.kinematics import CollSphereKinematicsMap
 
 
 class SphereColor:
@@ -15,14 +15,14 @@ class SphereColor:
 
 
 class CollisionSphereVisualizationManager:
-    kinmap: ArticulatedCollisionKinematicsMap
+    kinmap: CollSphereKinematicsMap
     viewer: TrimeshSceneViewer
     sphere_list: List[Sphere]
     sdf: Optional[Callable[[np.ndarray], np.ndarray]]
 
     def __init__(
         self,
-        kinmap: ArticulatedCollisionKinematicsMap,
+        kinmap: CollSphereKinematicsMap,
         viewer: TrimeshSceneViewer,
         sdf: Optional[Callable[[np.ndarray], np.ndarray]] = None,
     ):

@@ -11,10 +11,7 @@ from tinyfk import BaseType, KinematicModel, RotationType
 
 from skmp.collision import SphereCollection
 from skmp.constraint import BoxConst
-from skmp.kinematics import (
-    ArticulatedCollisionKinematicsMap,
-    ArticulatedEndEffectorKinematicsMap,
-)
+from skmp.kinematics import CollSphereKinematicsMap, EndEffectorKinematicsMap
 
 END_COORDS_TRANSLATION = 0.25
 
@@ -65,7 +62,7 @@ class A0BConfig:
         )
 
     def get_endeffector_kin(self):
-        kinmap = ArticulatedEndEffectorKinematicsMap(
+        kinmap = EndEffectorKinematicsMap(
             self.urdf_path,
             self._get_control_joint_names(),
             ["rarm_end_coords"],
@@ -75,7 +72,7 @@ class A0BConfig:
         )
         return kinmap
 
-    def get_collision_kin(self) -> ArticulatedCollisionKinematicsMap:
+    def get_collision_kin(self) -> CollSphereKinematicsMap:
         collision_link_names = ["RARM_LINK{}".format(i) for i in range(6)]
 
         link_wise_sphere_collection: Dict[str, SphereCollection] = {}
@@ -124,7 +121,7 @@ class A0BConfig:
         link_wise_sphere_collection[link_name] = SphereCollection(*list(zip(*collection)))
         collision_link_names.append(link_name)
 
-        kinmap = ArticulatedCollisionKinematicsMap(
+        kinmap = CollSphereKinematicsMap(
             self.urdf_path,
             self._get_control_joint_names(),
             link_wise_sphere_collection=link_wise_sphere_collection,

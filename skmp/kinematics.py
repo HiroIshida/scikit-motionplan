@@ -13,7 +13,7 @@ from skmp.collision import SphereCollection
 from skmp.utils import load_urdf_model_using_cache
 
 
-class ArticulatedKinematicsMapBase:
+class KinematicsMapBase:
     dim_cspace: int
     dim_tspace: int
     n_feature: int
@@ -106,7 +106,7 @@ class ArticulatedKinematicsMapBase:
         self.n_feature += 1
 
 
-class ArticulatedEndEffectorKinematicsMap(ArticulatedKinematicsMapBase):
+class EndEffectorKinematicsMap(KinematicsMapBase):
     def __init__(
         self,
         urdfpath: Path,
@@ -154,13 +154,13 @@ class ArticulatedEndEffectorKinematicsMap(ArticulatedKinematicsMapBase):
         self._rot_type = rot_type
 
 
-class ArticulatedCollisionSpheresKinematicsMapBase(ArticulatedKinematicsMapBase, ABC):
+class CollSpheresKinematicsMapBase(KinematicsMapBase, ABC):
     @abstractmethod
     def get_radius_list(self) -> List[float]:
         pass
 
 
-class AttachedObstacleCollisionKinematicsMap(ArticulatedCollisionSpheresKinematicsMapBase):
+class AttachedObstacleCollPointsKinematicsMap(CollSpheresKinematicsMapBase):
     # if some obstacle is attached to the link (e.g. a box attached when robot is holding it)
 
     def __init__(
@@ -223,7 +223,7 @@ class AttachedObstacleCollisionKinematicsMap(ArticulatedCollisionSpheresKinemati
         return self.radius_list
 
 
-class ArticulatedCollisionKinematicsMap(ArticulatedCollisionSpheresKinematicsMapBase):
+class CollSphereKinematicsMap(CollSpheresKinematicsMapBase):
     radius_list: List[float]
     sphere_name_list: List[str]
     sphere_center_list: List[np.ndarray]

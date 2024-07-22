@@ -9,10 +9,7 @@ from skrobot.models import Fetch
 from tinyfk import BaseType, RotationType
 
 from skmp.constraint import BoxConst, FCLSelfCollFreeConst
-from skmp.kinematics import (
-    ArticulatedCollisionKinematicsMap,
-    ArticulatedEndEffectorKinematicsMap,
-)
+from skmp.kinematics import CollSphereKinematicsMap, EndEffectorKinematicsMap
 from skmp.robot.utils import load_collision_spheres
 
 
@@ -49,8 +46,8 @@ class FetchConfig:
 
     def get_endeffector_kin(
         self, rot_type: RotationType = RotationType.RPY
-    ) -> ArticulatedEndEffectorKinematicsMap:
-        kinmap = ArticulatedEndEffectorKinematicsMap(
+    ) -> EndEffectorKinematicsMap:
+        kinmap = EndEffectorKinematicsMap(
             self.urdf_path(),
             self.get_control_joint_names(),
             ["gripper_link"],
@@ -59,13 +56,13 @@ class FetchConfig:
         )
         return kinmap
 
-    def get_collision_kin(self) -> ArticulatedCollisionKinematicsMap:
+    def get_collision_kin(self) -> CollSphereKinematicsMap:
         collision_config_path = pkg_resources.resource_filename(
             "skmp", "robot/fetch_coll_spheres.yaml"
         )
         link_wise_sphere_collection = load_collision_spheres(collision_config_path)
         control_joint_names = self.get_control_joint_names()
-        kinmap = ArticulatedCollisionKinematicsMap(
+        kinmap = CollSphereKinematicsMap(
             self.urdf_path(),
             control_joint_names,
             link_wise_sphere_collection,

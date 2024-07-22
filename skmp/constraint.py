@@ -26,10 +26,7 @@ from skrobot.model.primitives import Box
 from skrobot.utils.urdf import JointLimit
 from tinyfk import BaseType, KinematicModel, RotationType
 
-from skmp.kinematics import (
-    ArticulatedCollisionSpheresKinematicsMapBase,
-    ArticulatedEndEffectorKinematicsMap,
-)
+from skmp.kinematics import CollSpheresKinematicsMapBase, EndEffectorKinematicsMap
 from skmp.robot.utils import FCLCollisionManager, set_robot_state
 from skmp.utils import load_urdf_model_using_cache
 
@@ -267,14 +264,14 @@ class BoxConst(AbstractIneqConst):
 
 
 class CollFreeConst(AbstractIneqConst):
-    colkin: ArticulatedCollisionSpheresKinematicsMapBase
+    colkin: CollSpheresKinematicsMapBase
     sdf: Callable[[np.ndarray], np.ndarray]
     only_closest_feature: bool
     distance_margin: float
 
     def __init__(
         self,
-        colkin: ArticulatedCollisionSpheresKinematicsMapBase,
+        colkin: CollSpheresKinematicsMapBase,
         sdf: Callable[[np.ndarray], np.ndarray],
         robot_model: RobotModel,
         only_closest_feature: bool = False,
@@ -433,14 +430,14 @@ class ConfigPointConst(AbstractEqConst):
 
 
 class PoseConstraint(AbstractEqConst):
-    efkin: ArticulatedEndEffectorKinematicsMap
+    efkin: EndEffectorKinematicsMap
     desired_poses: List[np.ndarray]
     debug_rank_deficiency: bool = False
 
     def __init__(
         self,
         desired_poses: List[np.ndarray],
-        efkin: ArticulatedEndEffectorKinematicsMap,
+        efkin: EndEffectorKinematicsMap,
         robot_model: RobotModel,
         debug_rank_deficiency: bool,
     ) -> None:
@@ -478,7 +475,7 @@ class PoseConstraint(AbstractEqConst):
     def from_skrobot_coords(
         cls,
         co_list: List[Coordinates],
-        efkin: ArticulatedEndEffectorKinematicsMap,
+        efkin: EndEffectorKinematicsMap,
         robot_model: RobotModel,
         debug_rank_deficiency: bool = False,
     ) -> "PoseConstraint":
@@ -510,12 +507,12 @@ class PoseConstraint(AbstractEqConst):
 
 class RelativePoseConstraint(AbstractEqConst):
     desired_relative_position: np.ndarray  # todo: extend this to pose
-    efkin: ArticulatedEndEffectorKinematicsMap
+    efkin: EndEffectorKinematicsMap
 
     def __init__(
         self,
         desired_relative_position: np.ndarray,
-        efkin: ArticulatedEndEffectorKinematicsMap,
+        efkin: EndEffectorKinematicsMap,
         robot_model: RobotModel,
     ):
         efkin = copy.deepcopy(efkin)
@@ -559,12 +556,12 @@ class RelativePoseConstraint(AbstractEqConst):
 
 
 class FixedZAxisConstraint(AbstractEqConst):
-    efkin: ArticulatedEndEffectorKinematicsMap
+    efkin: EndEffectorKinematicsMap
     n_feature: int
 
     def __init__(
         self,
-        efkin: ArticulatedEndEffectorKinematicsMap,
+        efkin: EndEffectorKinematicsMap,
         robot_model: RobotModel,
     ):
         efkin = copy.deepcopy(efkin)
@@ -682,14 +679,14 @@ class SkrobotMeshSelfCollFreeConst(AbstractIneqConst):
 
 
 class PairWiseSelfCollFreeConst(AbstractIneqConst):
-    colkin: ArticulatedCollisionSpheresKinematicsMapBase
+    colkin: CollSpheresKinematicsMapBase
     check_sphere_id_pairs: List[Tuple[int, int]]
     check_sphere_pair_sqdists: np.ndarray  # pair sqdist means (r1 + r2) ** 2
     only_closest_feature: bool
 
     def __init__(
         self,
-        colkin: ArticulatedCollisionSpheresKinematicsMapBase,
+        colkin: CollSpheresKinematicsMapBase,
         robot_model: RobotModel,
         id_pairs: Optional[List[Tuple[int, int]]] = None,
         only_closest_feature: bool = False,

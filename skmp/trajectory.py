@@ -5,7 +5,7 @@ from typing import Callable, List, Optional, Tuple, overload
 
 import numpy as np
 
-from skmp.kinematics import ArticulatedEndEffectorKinematicsMap
+from skmp.kinematics import EndEffectorKinematicsMap
 
 
 class InvalidSamplePointError(Exception):
@@ -19,7 +19,7 @@ class EuclideanMetric:
 
 @dataclass
 class EndEffectorDistanceMetric:
-    efkin: ArticulatedEndEffectorKinematicsMap
+    efkin: EndEffectorKinematicsMap
 
     def __post_init__(self):
         assert self.efkin.n_feature == 1

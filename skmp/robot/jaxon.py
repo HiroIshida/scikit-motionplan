@@ -15,9 +15,9 @@ from tinyfk import BaseType, KinematicModel, RotationType
 from skmp.collision import SphereCollection
 from skmp.constraint import BoxConst, COMStabilityConst, NeuralSelfCollFreeConst
 from skmp.kinematics import (
-    ArticulatedCollisionKinematicsMap,
-    ArticulatedEndEffectorKinematicsMap,
-    AttachedObstacleCollisionKinematicsMap,
+    AttachedObstacleCollPointsKinematicsMap,
+    CollSphereKinematicsMap,
+    EndEffectorKinematicsMap,
 )
 from skmp.utils import sksdf_to_cppsdf
 
@@ -115,7 +115,7 @@ class JaxonConfig:
         if larm:
             endeffector_names.append("larm_end_coords")
 
-        kinmap = ArticulatedEndEffectorKinematicsMap(
+        kinmap = EndEffectorKinematicsMap(
             self.urdf_path(),
             self._get_control_joint_names(),
             endeffector_names,
@@ -127,8 +127,8 @@ class JaxonConfig:
 
     def get_attached_obstacle_kin(
         self, relative_position: np.ndarray, shape: Box
-    ) -> AttachedObstacleCollisionKinematicsMap:
-        kinmap = AttachedObstacleCollisionKinematicsMap(
+    ) -> AttachedObstacleCollPointsKinematicsMap:
+        kinmap = AttachedObstacleCollPointsKinematicsMap(
             self.urdf_path(),
             self._get_control_joint_names(),
             "rarm_end_coords",
@@ -141,7 +141,7 @@ class JaxonConfig:
 
     def get_collision_kin(
         self, rsole: bool = True, lsole: bool = True, rgripper: bool = True, lgripper: bool = True
-    ) -> ArticulatedCollisionKinematicsMap:
+    ) -> CollSphereKinematicsMap:
         link_wise_sphere_collection: Dict[str, SphereCollection] = {}
 
         collision_link_names = []
@@ -328,7 +328,7 @@ class JaxonConfig:
         link_wise_sphere_collection[link_name] = SphereCollection(*list(zip(*collection)))
         collision_link_names.append(link_name)
 
-        kinmap = ArticulatedCollisionKinematicsMap(
+        kinmap = CollSphereKinematicsMap(
             self.urdf_path(),
             self._get_control_joint_names(),
             link_wise_sphere_collection,

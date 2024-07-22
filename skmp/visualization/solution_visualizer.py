@@ -23,7 +23,7 @@ import trimesh
 from skrobot.model import CascadedLink, Link, RobotModel
 from skrobot.viewers import TrimeshSceneViewer
 
-from skmp.kinematics import ArticulatedCollisionKinematicsMap
+from skmp.kinematics import CollSphereKinematicsMap
 from skmp.trajectory import Trajectory
 from skmp.visualization.collision_visualizer import CollisionSphereVisualizationManager
 
@@ -121,7 +121,7 @@ class SolutionVisualizerBase(Generic[ViewerT]):
         robot_updator: Optional[Callable[[RobotModel, np.ndarray], None]] = None,
         show_wireframe: bool = False,
         enable_colvis: bool = False,
-        colkin: Optional[ArticulatedCollisionKinematicsMap] = None,
+        colkin: Optional[CollSphereKinematicsMap] = None,
         sdf: Optional[Callable[[np.ndarray], np.ndarray]] = None,
     ):
 
