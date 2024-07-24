@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Set, Tuple
 
+import numpy as np
 import pkg_resources
 from skrobot.model import Link
 from skrobot.model.primitives import Box, Cylinder
@@ -90,6 +91,26 @@ class FetchConfig:
         head.translate([0.0, 0.0, 1.04])
         self_body_obstacles = [base, torso, neck_lower, neck_upper, torso_left, torso_right, head]
         return self_body_obstacles
+
+    def get_reachability_box(self, use_precomputed: bool = True) -> Tuple[np.ndarray, np.ndarray]:
+        if use_precomputed:
+            b_min = np.array([-0.60046263, -1.08329689, -0.18025853])
+            b_max = np.array([1.10785484, 1.08329689, 2.12170273])
+        else:
+            # take around 10 seconds due to solving FK for 8 ** 8 points
+            N = 8
+            box_const = self.get_box_const()
+            grid_ranges = [
+                np.linspace(start, stop, N) for start, stop in zip(box_const.lb, box_const.ub)
+            ]
+            mesh = np.meshgrid(*grid_ranges)
+            grid_points = np.vstack([m.ravel() for m in mesh]).T
+            kin = self.get_endeffector_kin(RotationType.IGNORE)
+            X, _ = kin.map(grid_points, with_jacobian=False)
+            X = X.reshape(-1, 3)
+            b_min = np.min(X, axis=0)
+            b_max = np.max(X, axis=0)
+        return b_min, b_max
 
     def get_selcol_consts(self, robot_model: Fetch):
         arm_links = [
