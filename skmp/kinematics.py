@@ -40,7 +40,9 @@ class KinematicsMapBase:
 
         assert len(base_pose_6d) == 6
 
-    def map(self, points_cspace: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def map(
+        self, points_cspace: np.ndarray, with_jacobian: bool = True
+    ) -> Tuple[np.ndarray, np.ndarray]:
         n_point, n_dim_cspace = points_cspace.shape
 
         f_tmp, j_tmp = self.fksolver.solve_fk(
@@ -48,15 +50,21 @@ class KinematicsMapBase:
             self.tinyfk_feature_ids,
             self.tinyfk_joint_ids,
             base_type=self._base_type,
-            with_jacobian=True,
+            with_jacobian=with_jacobian,
             rot_type=self._rot_type,
         )
+
         points_tspace = f_tmp.reshape(n_point, self.n_feature, self.dim_tspace)
+        if not with_jacobian:
+            return points_tspace, np.empty(0)
+
         jacobians = j_tmp.reshape(n_point, self.n_feature, self.dim_tspace, self.dim_cspace)
         self._map_cache = (points_tspace, jacobians)
         return points_tspace, jacobians
 
-    def map_skrobot_model(self, robot_model: RobotModel) -> Tuple[np.ndarray, np.ndarray]:
+    def map_skrobot_model(
+        self, robot_model: RobotModel, with_jacobian: bool = True
+    ) -> Tuple[np.ndarray, np.ndarray]:
         joint_list = [robot_model.__dict__[name] for name in self.control_joint_names]
         av_joint = np.array([j.joint_angle() for j in joint_list])
         if self._base_type == BaseType.PLANER:
@@ -73,7 +81,7 @@ class KinematicsMapBase:
             av_whole = av_joint
         else:
             assert False
-        return self.map(np.expand_dims(av_whole, axis=0))
+        return self.map(np.expand_dims(av_whole, axis=0), with_jacobian=with_jacobian)
 
     def reflect_skrobot_model(self, robot_model: RobotModel):
         """reflecting skrobot model configuratin to tinyfk solver configuration"""
