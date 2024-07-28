@@ -60,4 +60,4 @@ def _sksdf_to_cppsdf(sksdf: SignedDistanceFunction) -> psdf.SDFBase:
 
 def sksdf_to_cppsdf(sksdf: SignedDistanceFunction) -> Callable[[np.ndarray], np.ndarray]:
     cppsdf = _sksdf_to_cppsdf(sksdf)
-    return lambda P: cppsdf.evaluate(P.T)
+    return lambda P: cppsdf.evaluate_batch(P.T)

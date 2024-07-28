@@ -15,7 +15,7 @@ install_requires = [
     "ompl-thin>=0.0.16",
     "selcol>=0.0.3.2",
     "threadpoolctl",
-    "psdf",
+    "psdf>=0.0.2",
     "types-PyYAML",
 ]
 
