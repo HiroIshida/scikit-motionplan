@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import find_packages, setup
 
 setup_requires = []
 
@@ -27,6 +27,7 @@ setup(
     author_email="h-ishida@jsk.imi.i.u-tokyo.ac.jp",
     license="MIT",
     install_requires=install_requires,
+    packages=find_packages(include=["skmp*"]),
     package_data={
         "skmp": ["py.typed", "robot/fetch_coll_spheres.yaml", "robot/pr2_coll_spheres.yaml"]
     },
