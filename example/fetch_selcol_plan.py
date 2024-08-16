@@ -13,7 +13,6 @@ from skmp.robot.fetch import FetchConfig
 from skmp.robot.utils import get_robot_state, set_robot_state
 from skmp.solver.interface import Problem
 from skmp.solver.ompl_solver import OMPLSolver, OMPLSolverConfig
-from skmp.utils import sksdf_to_cppsdf
 from skmp.visualization.collision_visualizer import CollisionSphereVisualizationManager
 
 if __name__ == "__main__":
@@ -40,9 +39,8 @@ if __name__ == "__main__":
     ground = Box([2.0, 2.0, 0.05], with_sdf=True)
     all_obstacles = [table, ground] + self_body_obstacles
 
-    union_sdf = UnionSDF([obs.sdf for obs in all_obstacles])
+    sdf = UnionSDF([obs.sdf for obs in all_obstacles])
     colkin = conf.get_collision_kin()
-    sdf = sksdf_to_cppsdf(union_sdf)  # convert to sdf lib written in cpp (psdf library)
     coll_free_const = CollFreeConst(colkin, sdf, fetch)
 
     # define goal constraint

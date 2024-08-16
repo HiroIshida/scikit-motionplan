@@ -22,7 +22,6 @@ from skmp.satisfy import SatisfactionConfig, satisfy_by_optimization_with_budget
 from skmp.solver.interface import Problem
 from skmp.solver.myrrt_solver import MyRRTConfig, MyRRTConnectSolver
 from skmp.solver.nlp_solver import SQPBasedSolver, SQPBasedSolverConfig
-from skmp.utils import sksdf_to_cppsdf
 
 np.random.seed(0)
 
@@ -44,7 +43,6 @@ if __name__ == "__main__":
     axis_list = [Axis.from_coords(co) for co in [rarm_target, larm_target, table]]
 
     env_sdf = UnionSDF([obstacle.sdf for obstacle in obstacles])
-    env_sdf = sksdf_to_cppsdf(env_sdf)
     obstacles = [obstacle for obstacle in obstacles]
 
     com_box = Box([0.25, 0.5, 5.0], with_sdf=True)
