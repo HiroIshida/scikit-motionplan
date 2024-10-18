@@ -3,14 +3,15 @@ import time
 
 import numpy as np
 from skrobot.coordinates import Coordinates
-from skrobot.model.primitives import Axis, Box
+from skrobot.model.primitives import Axis
 from skrobot.models import Fetch
-from skrobot.sdf import UnionSDF
 from skrobot.viewers import PyrenderViewer
 
+from tinyfk import RotationType
 from skmp.constraint import CollFreeConst, IneqCompositeConst, PoseConstraint
 from skmp.robot.fetch import FetchConfig
 from skmp.robot.utils import get_robot_state, set_robot_state
+from skmp.robot.robot import RobotSurrounding, SurroundingList, EndEffectorList
 from skmp.solver.interface import Problem
 from skmp.solver.ompl_solver import OMPLSolver, OMPLSolverConfig
 from skmp.visualization.collision_visualizer import CollisionSphereVisualizationManager
@@ -23,23 +24,37 @@ if __name__ == "__main__":
 
     np.random.seed(0)
 
+    end_effector_list = EndEffectorList(
+        link_names=["gripper_link"],
+        end_effector_names=["gripper_link"],
+        positions=[[0.0, 0, 0.0]],
+        rpys=[[0, 0, 0]],
+    )
+
     # basic setups
-    conf = FetchConfig()
+    conf = FetchConfig(end_effector_list)
     fetch = Fetch()
     fetch.reset_pose()
     q_init = get_robot_state(fetch, conf.get_control_joint_names())
-    efkin = conf.get_endeffector_kin()
+    efkin = conf.get_endeffector_kin(rot_type = RotationType.RPY)
     box_const = conf.get_box_const()
 
+    # define surrounding
+    surrounding_list = SurroundingList(
+        name=["table", "ground"],
+        shape=["Box", "Box"],
+        size=[[1.0, 2.0, 0.05], [2.0, 2.0, 0.05]],
+        position=[[1.0, 0.0, 0.8], [0.0, 0.0, 0.0]],
+        rpy=[[0, 0, 0], [0, 0, 0]],
+        color=[[120, 120, 120, 120], [120, 120, 120, 120]],
+    )
+    surrounding = RobotSurrounding(surrounding_list)
     # define (+self) collision free constraint
     # NOTE: for handling self-collision of fetch robot, we handle self bodies are obstacles
     self_body_obstacles = conf.get_self_body_obstacles()
-    table = Box([1.0, 2.0, 0.05], with_sdf=True)
-    table.translate([1.0, 0.0, 0.8])
-    ground = Box([2.0, 2.0, 0.05], with_sdf=True)
-    all_obstacles = [table, ground] + self_body_obstacles
+    surrounding.append_sdf(self_body_obstacles)
 
-    sdf = UnionSDF([obs.sdf for obs in all_obstacles])
+    sdf = surrounding.get_sdf_list()
     colkin = conf.get_collision_kin()
     coll_free_const = CollFreeConst(colkin, sdf, fetch)
 
@@ -67,8 +82,9 @@ if __name__ == "__main__":
     if args.visualize:
         v = PyrenderViewer()
         v.add(fetch)
-        v.add(table)
-        v.add(ground)
+        object_list = surrounding.get_object_list()
+        for obj in object_list:
+            v.add(obj)
         target_axis = Axis.from_coords(goal_coords)
         v.add(target_axis)
         colvisman = CollisionSphereVisualizationManager(colkin, v, sdf)  # visualize approx spheres
@@ -80,4 +96,4 @@ if __name__ == "__main__":
             v.redraw()
             time.sleep(0.4)
 
-        time.sleep(1000)
+        input("Press any key to exit")

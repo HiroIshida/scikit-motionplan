@@ -2,14 +2,14 @@ import argparse
 import time
 
 import numpy as np
-from skrobot.model.primitives import Axis, Box
-from skrobot.sdf import UnionSDF
+from skrobot.model.primitives import Axis
 from skrobot.utils.urdf import mesh_simplify_factor
 from skrobot.viewers import TrimeshSceneViewer
 
 from skmp.constraint import CollFreeConst, ConfigPointConst, PoseConstraint
-from skmp.robot.a0b import A0B, A0BConfig, A0BSurrounding
+from skmp.robot.a0b import A0BConfig
 from skmp.robot.utils import set_robot_state
+from skmp.robot.robot import EndEffectorList, SurroundingList, Robot, RobotSurrounding
 from skmp.satisfy import satisfy_by_optimization_with_budget
 from skmp.solver.interface import Problem
 from skmp.solver.ompl_solver import OMPLSolver, OMPLSolverConfig
@@ -23,35 +23,41 @@ if __name__ == "__main__":
     with_visualize = args.visualize
     with_colvis = args.colvis
 
+    end_effector_list = EndEffectorList(
+        link_names=["RARM_LINK5"],
+        end_effector_names=["rarm_end_coords"],
+        positions=[[0.25, 0, 0.0]],
+        rpys=[[0, 0, 0]],
+    )
     urdf_path = "/home/h-ishida/Downloads/a0b/A0B_original.urdf"
     with mesh_simplify_factor(0.3):
-        model = A0B(urdf_path)
+        model = Robot(urdf_path, end_effector_list)
 
-    surrounding = A0BSurrounding()
+    surrounding_list = SurroundingList(
+        name=["pole", "table", "obstacle"],
+        shape=["Box", "Box", "Box"],
+        size=[[0.2, 0.2, 1.5], [2.0, 2.0, 0.1], [0.05, 0.05, 0.4]],
+        position=[[-0.2, 0, -0.75], [0.0, 0.0, -0.5], [0.5, 0.15, -0.3]],
+        rpy=[[0, 0, 0], [0, 0, 0], [0, 0, 0]],
+        color=[[120, 120, 120, 120], [120, 120, 0, 120], [120, 0, 0, 120]],
+    )
+    surrounding = RobotSurrounding(surrounding_list)
+    # union signed distance function
+    sdf = surrounding.get_sdf_list()
 
-    conf = A0BConfig(urdf_path)
+    conf = A0BConfig(urdf_path, end_effector_list)
     efkin = conf.get_endeffector_kin()
     colkin = conf.get_collision_kin()
     box_const = conf.get_box_const()
 
-    vis = TrimeshSceneViewer()
+    # inequality constraint
+    coll_free_const = CollFreeConst(colkin, sdf, model)
 
     # define target coords
     co_target = surrounding.table.copy_worldcoords()
     co_target.translate([0.25, 0.3, 0.1])
     co_target.rotate(np.pi * 0.5, "y")
     ax_target = Axis.from_coords(co_target)
-
-    # define custom obstacle
-    obstacle = Box([0.05, 0.05, 0.4], with_sdf=True)
-    obstacle.translate([0.3, 0.15, -0.3])
-
-    # union signed distance function
-    sdf = UnionSDF([surrounding.pole.sdf, surrounding.table.sdf, obstacle.sdf])
-    # sdf = UnionSDF([surrounding.pole.sdf, surrounding.table.sdf])
-
-    # inequality constraint
-    coll_free_const = CollFreeConst(colkin, sdf, model)
 
     # equatlity constraint
     pose_const = PoseConstraint.from_skrobot_coords([co_target], efkin, model)
@@ -82,6 +88,7 @@ if __name__ == "__main__":
     print("time to solve rrt: {}".format(rrt_result.time_elapsed))
 
     if with_visualize:
+        vis = TrimeshSceneViewer()
         if with_colvis:
             colvis = CollisionSphereVisualizationManager(colkin, vis)
             colvis.update(model)
@@ -89,17 +96,17 @@ if __name__ == "__main__":
         ax = Axis.from_cascoords(model.rarm_end_coords)
         vis.add(model)
         vis.add(ax_target)
-        vis.add(surrounding.table)
-        vis.add(surrounding.pole)
-        vis.add(obstacle)
+        object_list = surrounding.get_object_list()
+        for obj in object_list:
+            vis.add(obj)
         vis.show()
-        time.sleep(3)
+        time.sleep(1)
 
         for q in rrt_result.traj.resample(10):
-            set_robot_state(model, conf._get_control_joint_names(), q)
+            set_robot_state(model, conf.get_control_joint_names(), q)
             vis.redraw()
             if with_colvis:
                 colvis.update(model)  # type: ignore
             time.sleep(1)
 
-        time.sleep(100)
+        input('Press any key to stop')
