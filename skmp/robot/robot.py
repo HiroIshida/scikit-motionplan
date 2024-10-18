@@ -46,10 +46,10 @@ class Robot(RobotModelFromURDF):
             end_effector_list.rpys,
         ):
             setattr(self, end_effector_name, CascadedCoords(getattr(self, link_name), name=end_effector_name))
-            getattr(self, end_effector_name).translate(position)
             getattr(self, end_effector_name).rotate(rpy[0], "x")
             getattr(self, end_effector_name).rotate(rpy[1], "y")
             getattr(self, end_effector_name).rotate(rpy[2], "z")
+            getattr(self, end_effector_name).translate(position)
 
 
 class RobotSurrounding:
@@ -71,10 +71,10 @@ class RobotSurrounding:
             try:
                 shapeClass = getattr(module, shape)
                 setattr(self, name, shapeClass(size, with_sdf=True))
-                getattr(self, name).translate(position)
                 getattr(self, name).rotate(rpy[0], "x")
                 getattr(self, name).rotate(rpy[1], "y")
                 getattr(self, name).rotate(rpy[2], "z")
+                getattr(self, name).translate(position)
                 getattr(self, name).set_color(color)
                 self.sdf_list.append(getattr(self, name).sdf)
             except ImportError as e:
