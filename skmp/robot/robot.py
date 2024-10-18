@@ -75,7 +75,7 @@ class RobotSurrounding:
                 getattr(self, name).rotate(rpy[0], "x")
                 getattr(self, name).rotate(rpy[1], "y")
                 getattr(self, name).rotate(rpy[2], "z")
-                getattr(self, name).visual_mesh.visual.face_colors = color
+                getattr(self, name).set_color(color)
                 self.sdf_list.append(getattr(self, name).sdf)
             except ImportError as e:
                 print(f"Error importing {shape}: {e}")
