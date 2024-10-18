@@ -112,7 +112,7 @@ class RobotConfig:
             try:
                 robot_model.add_new_link(end_effector_name, link_id, position, rpy)
             except Exception as e:
-                print(f"Error adding {end_effector_name}: {e}")
+                print(f"[Warning] Failed to add {end_effector_name}: {e}")
 
     def get_endeffector_kin(
             self,
