@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Set, Tuple
 
@@ -13,15 +12,21 @@ from skmp.constraint import BoxConst, FCLSelfCollFreeConst
 from skmp.kinematics import CollSphereKinematicsMap, EndEffectorKinematicsMap
 from skmp.robot.utils import load_collision_spheres
 
+from skmp.robot.robot import RobotConfig, EndEffectorList
 
-@dataclass
-class FetchConfig:
-    base_type: BaseType = BaseType.FIXED
-    use_torso: bool = True
+class FetchConfig(RobotConfig):
+    urdf_path: Path
 
-    @classmethod
-    def urdf_path(cls) -> Path:
-        return Path("~/.skrobot/fetch_description/fetch.urdf").expanduser()
+    def __init__(
+            self,
+            end_effector_list: EndEffectorList,
+            use_torso: bool = True,
+            base_type: BaseType = BaseType.FIXED,
+            urdf_path: str = "~/.skrobot/fetch_description/fetch.urdf"
+    ):
+        super().__init__(urdf_path, end_effector_list)
+        self.use_torso = use_torso
+        self.base_type = base_type
 
     def get_control_joint_names(self) -> List[str]:
         joint_names = [
@@ -40,22 +45,10 @@ class FetchConfig:
 
     def get_box_const(self, eps: float = 1e-4) -> BoxConst:
         # set eps to satisfy that default postion is in the bounds
-        bounds = BoxConst.from_urdf(self.urdf_path(), self.get_control_joint_names())
+        bounds = BoxConst.from_urdf(self.urdf_path, self.get_control_joint_names())
         bounds.lb -= eps
         bounds.ub += eps
         return bounds
-
-    def get_endeffector_kin(
-        self, rot_type: RotationType = RotationType.RPY
-    ) -> EndEffectorKinematicsMap:
-        kinmap = EndEffectorKinematicsMap(
-            self.urdf_path(),
-            self.get_control_joint_names(),
-            ["gripper_link"],
-            base_type=self.base_type,
-            rot_type=rot_type,
-        )
-        return kinmap
 
     def get_collision_kin(self) -> CollSphereKinematicsMap:
         collision_config_path = pkg_resources.resource_filename(
@@ -64,7 +57,7 @@ class FetchConfig:
         link_wise_sphere_collection = load_collision_spheres(collision_config_path)
         control_joint_names = self.get_control_joint_names()
         kinmap = CollSphereKinematicsMap(
-            self.urdf_path(),
+            self.urdf_path,
             control_joint_names,
             link_wise_sphere_collection,
             base_type=self.base_type,

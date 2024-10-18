@@ -1,76 +1,29 @@
 import copy
 import uuid
-from pathlib import Path
-from typing import Dict, List
-
 import numpy as np
-from skrobot.coordinates import CascadedCoords
-from skrobot.model.primitives import Box
-from skrobot.models.urdf import RobotModelFromURDF
-from tinyfk import BaseType, KinematicModel, RotationType
+from pathlib import Path
+from typing import List, Dict
 
-from skmp.collision import SphereCollection
+from tinyfk import BaseType
 from skmp.constraint import BoxConst
-from skmp.kinematics import CollSphereKinematicsMap, EndEffectorKinematicsMap
+from skmp.collision import SphereCollection
+from skmp.kinematics import CollSphereKinematicsMap
 
-END_COORDS_TRANSLATION = 0.25
-
-
-class A0B(RobotModelFromURDF):
-    def __init__(self, urdf_path):
-        # model is not publicaly available..?
-        super().__init__(urdf_file=urdf_path)
-        self.rarm_end_coords = CascadedCoords(self.RARM_LINK5, name="rarm_end_coords")
-        self.rarm_end_coords.translate([END_COORDS_TRANSLATION, 0, 0.0])
+from skmp.robot.robot import RobotConfig, EndEffectorList
 
 
-class A0BSurrounding:
-    pole: Box
-    table: Box
-
-    def __init__(self):
-        pass
-
-        pole = Box([0.2, 0.2, 1.5], with_sdf=True)
-        pole.translate([-0.2, 0, -0.75])
-        pole.visual_mesh.visual.face_colors = [255, 255, 255, 120]
-        self.pole = pole
-
-        table = Box([2.0, 2.0, 0.1], with_sdf=True)
-        table.translate([0.0, 0.0, -0.5])
-        table.visual_mesh.visual.face_colors = [255, 255, 255, 120]
-        self.table = table
-
-
-class A0BConfig:
+class A0BConfig(RobotConfig):
     urdf_path: Path
+    end_effector_list: EndEffectorList
 
-    def __init__(self, urdf_path: str):
-        self.urdf_path = Path(urdf_path).expanduser()
+    def __init__(self, urdf_path: str, end_effector_list: EndEffectorList):
+        super().__init__(urdf_path, end_effector_list)
 
-    def _get_control_joint_names(self) -> List[str]:
+    def get_control_joint_names(self) -> List[str]:
         names = []
         for i in range(6):
             names.append("RARM_JOINT{}".format(i))
         return names
-
-    @staticmethod
-    def add_end_coords(robot_model: KinematicModel) -> None:
-        rarm_id = robot_model.get_link_ids(["RARM_LINK5"])[0]
-        robot_model.add_new_link(
-            "rarm_end_coords", rarm_id, np.array([END_COORDS_TRANSLATION, 0, 0.0])
-        )
-
-    def get_endeffector_kin(self):
-        kinmap = EndEffectorKinematicsMap(
-            self.urdf_path,
-            self._get_control_joint_names(),
-            ["rarm_end_coords"],
-            base_type=BaseType.FIXED,
-            rot_type=RotationType.XYZW,
-            fksolver_init_hook=self.add_end_coords,
-        )
-        return kinmap
 
     def get_collision_kin(self) -> CollSphereKinematicsMap:
         collision_link_names = ["RARM_LINK{}".format(i) for i in range(6)]
@@ -123,12 +76,12 @@ class A0BConfig:
 
         kinmap = CollSphereKinematicsMap(
             self.urdf_path,
-            self._get_control_joint_names(),
+            self.get_control_joint_names(),
             link_wise_sphere_collection=link_wise_sphere_collection,
             base_type=BaseType.FIXED,
         )
         return kinmap
 
     def get_box_const(self) -> BoxConst:
-        bounds = BoxConst.from_urdf(self.urdf_path, self._get_control_joint_names())
+        bounds = BoxConst.from_urdf(self.urdf_path, self.get_control_joint_names())
         return bounds
