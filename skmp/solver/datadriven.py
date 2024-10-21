@@ -5,7 +5,7 @@ import subprocess
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Generic, List, Optional, Tuple, Type, TypeVar, Union
+from typing import Callable, Generic, List, Optional, Tuple, Type, TypeVar, Union
 
 import numpy as np
 import tqdm
@@ -153,6 +153,7 @@ class NearestNeigborSolver(AbstractSolver[ConfigT, ResultT, np.ndarray]):
     infeasibility_threshold: int
     conservative: bool
     axes: Optional[np.ndarray]
+    deserializer: Optional[Callable[[bytes], np.ndarray]] = None
     previous_est_positive: Optional[bool] = None
     previous_false_positive: Optional[bool] = None
 
@@ -168,6 +169,9 @@ class NearestNeigborSolver(AbstractSolver[ConfigT, ResultT, np.ndarray]):
         infeasibility_threshold: Optional[int] = None,
         conservative: bool = False,
         axes: Optional[np.ndarray] = None,
+        deserializer: Optional[
+            Callable[[bytes], np.ndarray]
+        ] = None,  # in case param is provided as bytes
     ) -> "NearestNeigborSolver[ConfigT, ResultT]":
         dataset = [cfdataset[i][1:] for i in range(n_data_use)]
         return cls.init(
@@ -179,6 +183,7 @@ class NearestNeigborSolver(AbstractSolver[ConfigT, ResultT, np.ndarray]):
             infeasibility_threshold,
             conservative,
             axes,
+            deserializer,
         )
 
     @classmethod
@@ -192,14 +197,18 @@ class NearestNeigborSolver(AbstractSolver[ConfigT, ResultT, np.ndarray]):
         infeasibility_threshold: Optional[int] = None,
         conservative: bool = False,
         axes: Optional[np.ndarray] = None,
+        deserializer: Optional[Callable[[bytes], np.ndarray]] = None,
     ) -> "NearestNeigborSolver[ConfigT, ResultT]":
         assert knn > 0
 
         tmp, trajectories = zip(*dataset)
 
-        vec_descs = np.array(tmp)
-        if axes is not None:
-            vec_descs = vec_descs[:, axes]
+        if deserializer:
+            vec_descs = np.array([deserializer(t) for t in tqdm.tqdm(tmp)])
+        else:
+            vec_descs = np.array(tmp)
+            if axes is not None:
+                vec_descs = vec_descs[:, axes]
 
         if not conservative:
             # extract the only feasible data
@@ -241,6 +250,7 @@ class NearestNeigborSolver(AbstractSolver[ConfigT, ResultT, np.ndarray]):
             infeasibility_threshold,
             conservative,
             axes,
+            deserializer,
         )
 
     def _knn_trajectories(self, query_desc: np.ndarray) -> List[Optional[Trajectory]]:
@@ -251,6 +261,10 @@ class NearestNeigborSolver(AbstractSolver[ConfigT, ResultT, np.ndarray]):
 
     def _solve(self, query_desc: Optional[np.ndarray] = None) -> ResultT:
         if query_desc is not None:
+            if isinstance(query_desc, bytes):
+                assert self.deserializer is not None
+                query_desc = self.deserializer(query_desc)
+
             trajs = self._knn_trajectories(query_desc)
             trajs_without_none = [traj for traj in trajs if traj is not None]
             count_none = len(trajs) - len(trajs_without_none)
