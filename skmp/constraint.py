@@ -30,7 +30,6 @@ from skmp.kinematics import (
     ArticulatedCollisionKinematicsMap,
     ArticulatedEndEffectorKinematicsMap,
 )
-from skmp.robot.utils import FCLCollisionManager, set_robot_state
 from skmp.utils import load_urdf_model_using_cache
 
 
@@ -539,42 +538,6 @@ class RelativePoseConstraint(AbstractEqConst):
     def _reflect_skrobot_model(self, robot_model: Optional[RobotModel]) -> None:
         assert robot_model is not None
         self.efkin.reflect_skrobot_model(robot_model)
-
-
-class FCLSelfCollFreeConst(AbstractIneqConst):
-    robot_model: RobotModel
-    joint_names: List[str]
-    fcl_col_manager: FCLCollisionManager
-
-    def __init__(
-        self,
-        robot_model: RobotModel,
-        link_name_group: List[str],
-        joint_names: List[str],
-        ignore_pairs: Optional[Set[Tuple[str, str]]] = None,
-    ):
-        manager = FCLCollisionManager(robot_model, link_name_group, ignore_pairs)
-        self.robot_model = robot_model
-        self.joint_names = joint_names
-        self.fcl_col_manager = manager
-
-        self.reflect_skrobot_model(robot_model)
-
-    def _evaluate(self, qs: np.ndarray, with_jacobian: bool) -> Tuple[np.ndarray, np.ndarray]:
-        values = []
-        for q in qs:
-            set_robot_state(self.robot_model, self.joint_names, q)
-            # TODO: currenlty refection of skrobot model is too slow.
-            # consider replacing this with tinyfk
-            self.fcl_col_manager.reflect_skrobot(self.robot_model)
-            is_valid = not self.fcl_col_manager.check_self_collision()
-            values.append(float(is_valid) - 0.5)
-        assert not with_jacobian
-        return np.array(values), self.dummy_jacobian()
-
-    def _reflect_skrobot_model(self, robot_model: RobotModel) -> None:
-        for joint_self, joint_other in zip(self.robot_model.joint_list, robot_model.joint_list):
-            joint_self.joint_angle(joint_other.joint_angle())
 
 
 class SkrobotMeshSelfCollFreeConst(AbstractIneqConst):
